@@ -1,7 +1,7 @@
 # HomeFinder — Architecture Guide
 
-**Version:** 2026.03.14
-**Last Updated:** 2026-03-14
+**Version:** 2026.03.15
+**Last Updated:** 2026-03-15
 
 ---
 
@@ -165,6 +165,17 @@ Master-only interface for managing market instances:
 - CRUD operations on `registry.db`
 - Map picker for setting site center and zip codes
 - Database initialization for new sites
+- Site creation now seeds agent profiles (with branding) and principal-agent relationships from the creating user's site, not just user accounts
+
+**Template structure** (refactored from 1 file to 5):
+```
+templates/admin/
+  ├─ site_manager.html        # Shell template
+  ├─ _site_card.html          # Site card partial
+  ├─ _site_create_modal.html  # Create modal partial
+  ├─ _site_edit_modal.html    # Edit modal partial
+  └─ site_manager.js          # Client-side logic
+```
 
 ### Social Blueprint (`/social`)
 
@@ -191,10 +202,16 @@ RapidAPI (Zillow/Realtor)
 Pipeline fetch     ← bin/scheduled_pipeline.py (nightly)
     │                 or /fetch-now (manual)
     ▼
-Dedup + Upsert     ← match by source_id
+Pre-dedup          ← normalize addresses, merge richer data
+    │
+    ▼
+Upsert             ← create new or update existing Listing rows
     │
     ▼
 Score (18 factors)  ← app/scraper/scorer.py
+    │
+    ▼
+Post-dedup         ← deduplicate_existing() marks DB dupes as status="duplicate"
     │
     ▼
 Place geocode       ← Census TIGER/Line (SC only)
@@ -418,12 +435,12 @@ home_finder_agents/
 │   │   ├── admin_routes.py  # Owner/master admin
 │   │   ├── watch_routes.py  # Street Watch
 │   │   ├── tour_routes.py   # Tour planning
-│   │   └── preferences_routes.py
+│   │   └── preferences_routes.py  # Refactored: shell + 4 partials + 2 JS files
 │   ├── scraper/
 │   │   ├── pipeline.py      # Orchestrator
 │   │   ├── zillow.py        # Zillow RapidAPI
 │   │   ├── realtor.py       # Realtor RapidAPI
-│   │   ├── scorer.py        # 18-factor scoring (includes proximity POI)
+│   │   ├── scorer.py        # 18-factor scoring + dedup functions
 │   │   ├── geocoder.py      # Address geocoding
 │   │   └── scheduler.py     # (legacy, replaced by Task Scheduler)
 │   ├── services/

@@ -258,7 +258,7 @@ Idempotent migrations cover 8 social tables: `social_shares`, `social_reactions`
 
 Each listing receives 18 sub-scores (0–100). The composite score is a weighted average using the user's importance weights (0–10 scale). The 18th factor (proximity_poi) is per-user -- each user selects their own landmark from site-wide landmarks or their personal landmarks (stored in `user_landmarks` within `preferences_json`, max 3).
 
-**Detail page map:** The listing detail page map displays all landmarks (site-wide + user-defined) as red star icons with hover tooltips. Below the map, a "Map with Landmarks" link opens Google Maps in directions mode with landmarks as waypoints and the listing as destination. A landmark count indicator is shown below the map.
+**Detail page map:** The listing detail page map displays all landmarks (site-wide + user-defined) as red star icons with hover tooltips. Below the map, a "Directions from [landmark name]" link opens Google Maps with driving directions from the user's selected POI landmark to the listing.
 
 | Factor | Max Score Trigger | Min Score Trigger |
 |--------|-------------------|-------------------|
@@ -338,15 +338,27 @@ Each user's composite is recalculated on-demand using their personal weights and
 
 ```
 1. Fetch     → Zillow + Realtor APIs for all site zip codes
-2. Dedup     → Match by source_id
+2. Pre-Dedup → Normalize addresses + merge richer data per field
 3. Upsert    → Create new or update existing Listing rows
 4. Track     → Maintain price_history_json for changes
 5. Score     → Compute 18-factor deal scores
-6. Enrich    → Backfill details (photos, description) on first view
+6. Post-Dedup→ deduplicate_existing() marks DB duplicates as status="duplicate"
 7. Geocode   → Assign Census place names (SC)
 8. Watch     → Detect events (new, price drop, back on market)
 9. Digest    → Send Street Watch email alerts
 ```
+
+### Deduplication
+
+Two layers of deduplication run during each pipeline execution:
+
+1. **Pre-upsert dedup** (`_deduplicate_listings()`) — Normalizes addresses via `_normalize_address()` (lowercase, strip punctuation, expand abbreviations like St to Street, Rd to Road, N to North, etc.), groups by normalized address, and merges duplicates via `_merge_listing_data()` (richer data wins per field: more photos, longer description, True beats False for boolean features).
+
+2. **Post-upsert DB cleanup** (`deduplicate_existing()`) — Runs after every pipeline, finds existing duplicate listings in the database by normalized address, merges richer data into the keeper, and marks duplicates as `status="duplicate"`.
+
+### Detail Page Enrichment (AJAX)
+
+Enrichment is no longer a blocking call on page load. The detail page renders instantly and shows a **"Fetch Property Details"** button if the listing lacks enrichment data. The button triggers an AJAX POST to `/listing/<id>/enrich`, which fetches details from Zillow/Realtor. The endpoint returns JSON with updated fields. HTTP status codes: 200 (success), 429 (quota exceeded), 503 (API unavailable).
 
 ### Scheduling
 
@@ -427,12 +439,13 @@ Browser hard-refresh: **Ctrl+Shift+R** (for template/static changes)
 | GET | `/welcome` | Market selector |
 | GET | `/` | Listing grid with filters and scores |
 | GET | `/listing/<id>` | Property detail page |
+| POST | `/listing/<id>/enrich` | AJAX detail enrichment from Zillow/Realtor |
 | POST | `/listing/<id>/flag` | Toggle flag (AJAX) |
 | POST | `/listing/<id>/note` | Save notes (AJAX) |
 | POST | `/listing/<id>/analyze` | AI deal brief (AJAX) |
 | GET | `/map` | Interactive map |
 | GET | `/digest` | Email-style summary |
-| GET, POST | `/preferences` | Scoring weights editor |
+| GET, POST | `/preferences` | Scoring weights editor; owners see target area labeling; masters see all zips with `canAddZips` to add/remove from site |
 | POST | `/analyze-portfolio` | AI portfolio analysis |
 | POST | `/analyze-preferences` | AI preference coaching |
 | GET | `/agent/dashboard` | Agent client roster |
@@ -474,7 +487,7 @@ Browser hard-refresh: **Ctrl+Shift+R** (for template/static changes)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/admin/sites` | List all markets |
-| POST | `/admin/sites/create` | Create new market |
+| POST | `/admin/sites/create` | Create new market (seeds agent profiles + principal links) |
 | POST | `/admin/sites/<key>/edit` | Update market config |
 | POST | `/admin/sites/<key>/toggle` | Activate/deactivate |
 | POST | `/admin/sites/<key>/delete` | Delete market |

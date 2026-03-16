@@ -58,10 +58,12 @@ Suspended agents:
 The pipeline runs automatically every night at 3 AM via Windows Task Scheduler:
 
 1. Fetches new listings from Zillow and Realtor for all site zip codes
-2. Updates prices and statuses on existing listings
-3. Scores all listings using the 18-factor system
-4. Detects Street Watch events (new listings, price drops, back on market)
-5. Sends email alerts to watchers
+2. Deduplicates fetched data (normalizes addresses, merges richer data per field)
+3. Updates prices and statuses on existing listings
+4. Scores all listings using the 18-factor system
+5. Runs post-upsert deduplication on existing DB listings (marks duplicates as status="duplicate")
+6. Detects Street Watch events (new listings, price drops, back on market)
+7. Sends email alerts to watchers
 
 ### Manual Trigger
 
@@ -177,10 +179,11 @@ The preview calls the actual Anthropic API, so each test incurs a small API cost
 
 ## Target Areas & Zip Codes
 
-Your site's zip codes and area mappings are configured in the Site Manager (master access) or via your preferences:
+As an owner, you can label target areas and assign zip codes to them directly from the **Preferences** page:
 
-- **Zip codes** determine which areas the pipeline fetches listings for
-- **Target areas** group zip codes into named neighborhoods (e.g., "West Ashley" = 29407, 29414)
+- **Area name input + clickable zip map** — type an area name and click zips on the map to assign or unassign them to that area
+- **Zip list is controlled by the master** — you can only assign zips that the master has added to the site. If you try to add a zip not in the master's list, a warning is displayed. You can choose not to use a zip by leaving it unassigned to any area.
+- **Save Target Areas** button saves your area-to-zip mappings
 - **Avoid areas** can be set per-user to exclude neighborhoods from scoring
 
 ---
@@ -265,12 +268,16 @@ Control API costs with tiered billing plans and usage quotas.
 | **Pro** | 500 | 2,000 | $50 |
 | **Unlimited** | Unlimited | Unlimited | Custom |
 
+### Detail Enrichment
+
+Listing detail pages now load instantly. If a listing has not been enriched with full property details, users see a **"Fetch Property Details"** button that triggers an AJAX call to fetch data from Zillow/Realtor. This avoids blocking page loads and gives users control over when enrichment happens.
+
 ### Quota Enforcement
 
 When a site exceeds its quota:
 - **AI analysis requests** return a 429 (rate limited) error with a message explaining the limit
 - **Fetch calls** are blocked during pipeline runs
-- **Detail enrichment** is silently skipped to avoid surprise costs
+- **Detail enrichment** returns a 429 error with a clear message when quota is exceeded
 
 ### Budget Alerts
 

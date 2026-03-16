@@ -56,9 +56,9 @@ Click **Map** in the navigation to see all listings plotted on an interactive ma
 Click any listing to see the full detail page:
 
 - **Photo gallery** with full-size images
-- **Property details** — beds, baths, sqft, lot size, year built, HOA, tax
+- **Property details** — beds, baths, sqft, lot size, year built, HOA, tax. If the listing has not yet been enriched with full details, a **"Fetch Property Details"** button appears. Click it to fetch data from Zillow/Realtor via AJAX -- a spinner shows progress, and the description and additional fields appear without a full page reload. If many fields are updated, the page auto-reloads to show all changes. If the API quota is exceeded (429) or the service is unavailable (503), an appropriate message is displayed with a "Try Again" option. Already-enriched listings show their description immediately.
 - **18-factor deal score breakdown** — see exactly how each factor contributes (including proximity to your selected landmark)
-- **Landmarks on the map** — all site-wide and personal landmarks appear on the detail page map as red star icons with hover tooltips. Below the map, a "Map with Landmarks" link opens Google Maps in directions mode with all landmarks as waypoints and the listing as destination, so you can visualize distances on one map. A separate "Google Maps" link remains for a single-location view.
+- **Google Maps directions** — a "Directions from [landmark name]" link opens Google Maps with driving directions from your selected POI landmark to the listing
 - **AI Deal Brief** — click "Analyze" for a Claude AI assessment
 - **Your Notes** — add personal notes and track visit status
 - **Watch This Street** — one-click to monitor the street for new listings
@@ -125,6 +125,7 @@ Navigate to **Preferences** to adjust:
 - **Must-have features** — garage, porch, patio requirements
 - **Distance from landmark** — select a point of interest from the dropdown to enable proximity scoring
 - **Avoid areas** — neighborhoods to exclude from scoring
+- **Target areas** (owner and master only) — name groups of zip codes as areas; owners can label and assign zips from the master's zip list but cannot add new zips
 
 Your deal scores update instantly based on your preferences.
 

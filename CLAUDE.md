@@ -24,7 +24,7 @@ python run_waitress.py
 
 Run the data pipeline:
 ```bash
-python pipeline.py --site charleston          # fetch + score
+python pipeline.py --site charleston          # fetch + dedup + score
 python pipeline.py --site charleston --rescore # re-score only
 ```
 
@@ -46,6 +46,9 @@ python pipeline.py --site charleston --rescore # re-score only
 **Background:**
 - APScheduler runs pipeline at 3AM daily for all active sites
 - `pipeline.py` is the CLI entry point for manual runs
+- Pipeline includes two dedup layers: pre-upsert address normalization + post-upsert `deduplicate_existing()` cleanup
+
+**Detail enrichment:** AJAX-based via `POST /listing/<id>/enrich` — detail page renders instantly; unenriched listings show a "Fetch Property Details" button instead of blocking on page load.
 
 ## Key Conventions
 
@@ -61,7 +64,7 @@ python pipeline.py --site charleston --rescore # re-score only
 
 - **`app/models.py`** — ORM models: User, AgentProfile, Listing, DealScore, UserFlag, ListingNote, ApiCallLog, CachedAnalysis, AgentClientNote, OwnerAgentNote, PromptOverride, StreetWatch, StreetWatchAlert
 - **`app/models_social.py`** — Social models: SocialShare, SocialReaction, SocialCollection, SocialCollectionItem, Referral, UserPoints, UserPointLog, FriendListing
-- **`app/scraper/scorer.py`** — 18-factor deal score computation (includes proximity POI)
+- **`app/scraper/scorer.py`** — 18-factor deal score computation (includes proximity POI); dedup functions: `_normalize_address()`, `_merge_listing_data()`, `_deduplicate_listings()`, `deduplicate_existing()`
 - **`app/services/deal_analyst.py`** — Claude AI integration for deal briefs, portfolio analysis, preference coaching
 - **`app/services/registry.py`** — Registry.db CRUD (raw sqlite3, not ORM); includes `landmarks_json` per-site column for POI landmarks, `scheduler_locked` (master-only scheduler disable), `max_fetches_per_run` (pipeline listing cap)
 - **`app/services/points.py`** — Points system: 7 earning actions, 50/day cap, leaderboard queries
@@ -74,8 +77,8 @@ python pipeline.py --site charleston --rescore # re-score only
 
 `master` > `owner` > `agent` > `client`/`principal` > guest (no account)
 
-- **Master:** Site registry management, masquerade as anyone, all capabilities
-- **Owner:** Metrics, agent approval, site-wide prompts, manual pipeline trigger, user management (suspend/reactivate/delete via `/admin/users`), billing configuration (`/admin/billing`)
+- **Master:** Site registry management, masquerade as anyone, all capabilities; can add/remove zips from site via Preferences map (`canAddZips` flag); site creation seeds agent profiles + principal links
+- **Owner:** Metrics, agent approval, site-wide prompts, manual pipeline trigger, user management (suspend/reactivate/delete via `/admin/users`), billing configuration (`/admin/billing`), target area labeling (assign zips from master's list but cannot add new zips)
 - **Agent:** Client roster, branding, agent-specific prompts, masquerade as own clients, share on behalf of clients, direct listing creation (source="agent"), friend listing review/approve/reject workflow
 - **Principal:** Agent-managed user (preferences read-only)
 - **Guest:** Browse, flag (session-persisted), AI deal analysis, share via link — no login needed
@@ -109,15 +112,15 @@ Four tiers: **free**, **basic**, **pro**, **unlimited**. Each tier defines usage
 
 ## Docs
 
-- `docs/AGENT_GUIDE.md` — agent role guide
-- `docs/ARCHITECTURE.md` — system architecture overview
-- `docs/DEPLOYMENT_GUIDE.md` — deployment instructions
-- `docs/OWNER_GUIDE.md` — owner role guide
-- `docs/ROLES_AND_PERMISSIONS.md` — role hierarchy and permissions
+- `docs/agent/AGENT_GUIDE.md` — agent role guide
+- `docs/master/ARCHITECTURE.md` — system architecture overview
+- `docs/master/DEPLOYMENT_GUIDE.md` — deployment instructions
+- `docs/owner/OWNER_GUIDE.md` — owner role guide
+- `docs/owner/ROLES_AND_PERMISSIONS.md` — role hierarchy and permissions
 - `docs/SCORING_DEEP_DIVE.md` — 18-factor deal scoring details
 - `docs/SOCIAL_CONCEPT.md` — social features concept/design
-- `docs/SOCIAL_TECH_SPEC.md` — social features technical spec
+- `docs/master/SOCIAL_TECH_SPEC.md` — social features technical spec
 - `docs/STREET_WATCH.md` — street watch feature docs
-- `docs/TECHNICAL_REFERENCE.md` — developer technical reference
-- `docs/TESTING.md` — test suite documentation
+- `docs/master/TECHNICAL_REFERENCE.md` — developer technical reference
+- `docs/master/TESTING.md` — test suite documentation
 - `docs/USER_GUIDE.md` — end-user feature guide

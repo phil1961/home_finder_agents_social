@@ -1,7 +1,7 @@
 # HomeFinder — Testing Guide
 
-**Version:** 2026.03.14
-**Last Updated:** 2026-03-14
+**Version:** 2026.03.15
+**Last Updated:** 2026-03-15
 
 ---
 
@@ -263,6 +263,18 @@ def test_new_feature(self, req_ctx):
 **Referral lifecycle:** Create a referrer user, simulate a referred signup, verify the `Referral` record links both users, then confirm points are awarded to the referrer.
 
 **Friend listing approval:** Create a `FriendListing`, call the agent review endpoint, assert status transitions (`active` -> `approved` or `rejected`), and verify that approval creates a corresponding `Listing` row with `listing_id` back-linked.
+
+---
+
+## Recent Changes Affecting Tests
+
+### Pipeline Deduplication (2026-03-15)
+
+The pipeline now includes two deduplication layers: pre-upsert dedup on fetched data and post-upsert `deduplicate_existing()` cleanup. Address normalization expands abbreviations (St to Street, Rd to Road, etc.) and merges richer data per field. Tests involving pipeline runs or listing creation should account for potential dedup of listings with similar normalized addresses.
+
+### AJAX Detail Enrichment (2026-03-15)
+
+The `/listing/<id>/enrich` endpoint replaces blocking enrichment on page load. It returns JSON with updated fields and uses HTTP status codes 200 (success), 429 (quota exceeded), and 503 (API unavailable). Tests for the detail page should verify that unenriched listings show the fetch button rather than blocking on load.
 
 ---
 
