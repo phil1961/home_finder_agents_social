@@ -1,0 +1,177 @@
+<!--
+  File: app/templates/dashboard/admin_billing.html
+  App Version: 2026.03.14 | File Version: 1.0.0
+  Last Modified: 2026-03-14
+-->
+{% extends "base.html" %}
+{% block title %}Billing &amp; Quotas — HomeFinder{% endblock %}
+
+{% block head %}
+<style>
+    .plan-card { border-radius: 12px; transition: box-shadow .2s; cursor: pointer; }
+    .plan-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.12); }
+    .plan-card.active { border: 2px solid #2563eb; box-shadow: 0 2px 12px rgba(37,99,235,0.25); }
+    .usage-bar { height: 22px; border-radius: 6px; }
+    .usage-bar .progress-bar { border-radius: 6px; transition: width .6s ease; }
+    .stat-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.6px; color: #6b7280; }
+    .stat-value { font-size: 1.6rem; font-weight: 700; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <h3 class="mb-0"><i class="bi bi-credit-card me-2"></i>Billing &amp; Quotas</h3>
+    <span class="badge bg-primary ms-3 fs-6 text-capitalize">{{ billing.plan }}</span>
+</div>
+
+<!-- ── Usage Summary Cards ─────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="stat-label">AI Analyses This Cycle</div>
+                <div class="stat-value">{{ billing.ai_calls }}{% if billing.monthly_limit_ai > 0 %}<small class="text-muted fw-normal"> / {{ billing.monthly_limit_ai }}</small>{% endif %}</div>
+                {% if billing.monthly_limit_ai > 0 %}
+                <div class="progress usage-bar mt-2">
+                    <div class="progress-bar {% if billing.ai_pct >= 90 %}bg-danger{% elif billing.ai_pct >= 70 %}bg-warning{% else %}bg-success{% endif %}"
+                         style="width: {{ billing.ai_pct }}%">{{ billing.ai_pct }}%</div>
+                </div>
+                {% else %}
+                <div class="text-muted small mt-1">Unlimited</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="stat-label">Fetch Calls This Cycle</div>
+                <div class="stat-value">{{ billing.fetch_calls }}{% if billing.monthly_limit_fetch > 0 %}<small class="text-muted fw-normal"> / {{ billing.monthly_limit_fetch }}</small>{% endif %}</div>
+                {% if billing.monthly_limit_fetch > 0 %}
+                <div class="progress usage-bar mt-2">
+                    <div class="progress-bar {% if billing.fetch_pct >= 90 %}bg-danger{% elif billing.fetch_pct >= 70 %}bg-warning{% else %}bg-info{% endif %}"
+                         style="width: {{ billing.fetch_pct }}%">{{ billing.fetch_pct }}%</div>
+                </div>
+                {% else %}
+                <div class="text-muted small mt-1">Unlimited</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <div class="stat-label">Budget Spend This Cycle</div>
+                <div class="stat-value">${{ "%.2f"|format(billing.total_cost) }}{% if billing.monthly_budget > 0 %}<small class="text-muted fw-normal"> / ${{ "%.2f"|format(billing.monthly_budget) }}</small>{% endif %}</div>
+                {% if billing.monthly_budget > 0 %}
+                <div class="progress usage-bar mt-2">
+                    <div class="progress-bar {% if billing.budget_pct >= 90 %}bg-danger{% elif billing.budget_pct >= 70 %}bg-warning{% else %}bg-primary{% endif %}"
+                         style="width: {{ billing.budget_pct }}%">{{ billing.budget_pct }}%</div>
+                </div>
+                {% else %}
+                <div class="text-muted small mt-1">No cap</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<p class="text-muted small mb-4">
+    <i class="bi bi-calendar3 me-1"></i>
+    Current billing cycle started: <strong>{{ billing.cycle_start.strftime('%b %d, %Y') }}</strong>
+    (resets on day {{ billing.billing_cycle_start }} of each month)
+</p>
+
+<!-- ── Plan Selection ──────────────────────────────────────────── -->
+<form method="POST" action="{{ site_url('dashboard.admin_billing') }}">
+<h5 class="mb-3">Choose Plan</h5>
+<div class="row g-3 mb-4">
+    {% for plan_key, plan_def in plans.items() %}
+    <div class="col-md-3 col-sm-6">
+        <div class="card plan-card {% if billing.plan == plan_key %}active{% endif %}"
+             onclick="selectPlan('{{ plan_key }}')">
+            <div class="card-body text-center">
+                <h5 class="text-capitalize fw-bold mb-1">{{ plan_key }}</h5>
+                {% if plan_key == 'unlimited' %}
+                <div class="text-muted small">No limits</div>
+                <div class="mt-2 small">
+                    <div>AI: Unlimited</div>
+                    <div>Fetches: Unlimited</div>
+                    <div>Budget: No cap</div>
+                </div>
+                {% else %}
+                <div class="text-muted small">${{ "%.2f"|format(plan_def.monthly_budget) }}/mo</div>
+                <div class="mt-2 small">
+                    <div>AI: {{ plan_def.monthly_limit_ai }} calls</div>
+                    <div>Fetches: {{ plan_def.monthly_limit_fetch }} calls</div>
+                    <div>Budget: ${{ "%.2f"|format(plan_def.monthly_budget) }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- ── Settings Form ───────────────────────────────────────────── -->
+<input type="hidden" name="billing_plan" id="billingPlan" value="{{ billing.plan }}">
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <label class="form-label fw-semibold">Monthly AI Limit</label>
+        <input type="number" class="form-control" name="monthly_limit_ai"
+               id="limitAi" value="{{ billing.monthly_limit_ai }}" min="0">
+        <div class="form-text">0 = unlimited</div>
+    </div>
+    <div class="col-md-4">
+        <label class="form-label fw-semibold">Monthly Fetch Limit</label>
+        <input type="number" class="form-control" name="monthly_limit_fetch"
+               id="limitFetch" value="{{ billing.monthly_limit_fetch }}" min="0">
+        <div class="form-text">0 = unlimited</div>
+    </div>
+    <div class="col-md-4">
+        <label class="form-label fw-semibold">Monthly Budget ($)</label>
+        <input type="number" class="form-control" name="monthly_budget"
+               id="budget" value="{{ billing.monthly_budget }}" min="0" step="0.01">
+        <div class="form-text">0 = no cap</div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <label class="form-label fw-semibold">Billing Alert Email</label>
+        <input type="email" class="form-control" name="billing_email"
+               value="{{ billing.billing_email }}" placeholder="alerts@example.com">
+        <div class="form-text">Receives alerts at 80% and 100% of budget</div>
+    </div>
+    <div class="col-md-3">
+        <label class="form-label fw-semibold">Cycle Reset Day</label>
+        <input type="number" class="form-control" name="billing_cycle_start"
+               value="{{ billing.billing_cycle_start }}" min="1" max="28">
+        <div class="form-text">Day of month (1-28)</div>
+    </div>
+</div>
+
+<button type="submit" class="btn btn-primary px-4">
+    <i class="bi bi-check-circle me-1"></i> Save Billing Settings
+</button>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const planDefaults = {{ plans|tojson }};
+
+function selectPlan(plan) {
+    document.getElementById('billingPlan').value = plan;
+    // Highlight selected card
+    document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('active'));
+    event.currentTarget.closest('.plan-card').classList.add('active');
+    // Fill defaults
+    const def = planDefaults[plan] || {};
+    document.getElementById('limitAi').value = def.monthly_limit_ai || 0;
+    document.getElementById('limitFetch').value = def.monthly_limit_fetch || 0;
+    document.getElementById('budget').value = def.monthly_budget || 0;
+}
+</script>
+{% endblock %}

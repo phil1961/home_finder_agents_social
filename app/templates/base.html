@@ -1,0 +1,487 @@
+<!--
+  File: app/templates/base.html
+  App Version: 2026.03.14 | File Version: 2.0.0
+  Last Modified: 2026-03-14
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="HomeFinder">
+    <meta name="description" content="AI-powered home discovery with 18-factor deal scoring, social sharing, and community listings">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+    <title>{% block title %}HomeFinder{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.2/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
+    {% if current_user.is_authenticated and current_user.assigned_agent %}
+    {% set ab = current_user.assigned_agent %}
+    <style>
+        .navbar.bg-dark { background-color: {{ ab.brand_color or '#212529' }} !important; }
+    </style>
+    {% endif %}
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ site_url('dashboard.index') }}">
+                {% if current_user.is_authenticated and current_user.assigned_agent %}
+                {% set ab = current_user.assigned_agent %}
+                {% if ab.brand_icon %}
+                <span class="brand-emoji me-1" style="font-size:1.3rem;line-height:1;vertical-align:middle;">{{ ab.brand_icon }}</span>
+                {% elif ab.brand_logo_url %}
+                <img src="{{ ab.brand_logo_url }}" alt="{{ ab.full_name }}"
+                     style="height:28px; margin-right:6px; vertical-align:middle;">
+                {% else %}
+                <i class="bi bi-house-heart-fill me-1"></i>
+                {% endif %}
+                {{ ab.full_name }}
+                {% if ab.brand_tagline %}
+                {% set ts = ab.brand_tagline_style or 'plain' %}
+                {% if ts == 'italic' %}
+                <small class="fw-normal ms-2 fst-italic" style="font-size:0.75rem;opacity:0.85;">{{ ab.brand_tagline }}</small>
+                {% elif ts == 'bold' %}
+                <small class="fw-semibold ms-2" style="font-size:0.72rem;opacity:0.9;">{{ ab.brand_tagline }}</small>
+                {% elif ts == 'caps' %}
+                <small class="fw-normal ms-2 text-uppercase" style="font-size:0.6rem;letter-spacing:1.5px;opacity:0.8;">{{ ab.brand_tagline }}</small>
+                {% elif ts == 'badge' %}
+                <span class="ms-2" style="font-size:0.65rem;background:rgba(255,255,255,0.2);border-radius:20px;padding:1px 8px;font-weight:600;">{{ ab.brand_tagline }}</span>
+                {% elif ts == 'elegant' %}
+                <small class="fw-normal ms-2 fst-italic" style="font-size:0.8rem;font-family:Georgia,serif;letter-spacing:0.3px;opacity:0.85;">{{ ab.brand_tagline }}</small>
+                {% else %}
+                <small class="fw-normal ms-2" style="font-size:0.7rem;opacity:0.75;">{{ ab.brand_tagline }}</small>
+                {% endif %}
+                {% endif %}
+                {% else %}
+                <i class="bi bi-house-heart-fill me-1"></i>
+                {% if current_site %}{{ current_site.display_name }}{% else %}HomeFinder{% endif %}
+                {% endif %}
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navMain">
+                <!-- Left nav — browsing links visible to everyone -->
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ site_url('dashboard.index') }}">
+                            <i class="bi bi-grid" style="color:#7dd3fc;"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ site_url('dashboard.map_view') }}">
+                            <i class="bi bi-geo-alt" style="color:#86efac;"></i> Map
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ site_url('dashboard.digest') }}">
+                            <i class="bi bi-newspaper" style="color:#fcd34d;"></i> Digest
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ site_url('dashboard.index', flag='favorite') }}">
+                            <i class="bi bi-star" style="color:#fbbf24;"></i> Favorites
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ site_url('dashboard.watch_manage') }}">
+                            <i class="bi bi-eye" style="color:#c4b5fd;"></i> Watch
+                        </a>
+                    </li>
+                    <!-- Social dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button"
+                           data-bs-toggle="dropdown">
+                            <i class="bi bi-share" style="color:#f0abfc;"></i>
+                            <span>Social
+                            {% if current_user.is_authenticated and current_user.points_account and current_user.points_account.balance > 0 %}
+                            <span class="badge rounded-pill" style="background:#f093fb;font-size:0.6rem;vertical-align:top;">
+                                <i class="bi bi-gem" style="font-size:0.55rem;"></i> {{ current_user.points_account.balance }}
+                            </span>
+                            {% endif %}
+                            </span>
+                        </a>
+                        <ul class="dropdown-menu">
+                            {% if current_user.is_authenticated %}
+                            <li><a class="dropdown-item" href="{{ site_url('social.shared_with_me') }}">
+                                <i class="bi bi-inbox me-2"></i>Shared With Me</a></li>
+                            <li><a class="dropdown-item" href="{{ site_url('social.my_shares') }}">
+                                <i class="bi bi-send me-2"></i>My Shares</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ site_url('social.collections_list') }}">
+                                <i class="bi bi-collection me-2"></i>My Collections</a></li>
+                            <li><a class="dropdown-item" href="{{ site_url('social.friend_listings') }}">
+                                <i class="bi bi-house-add me-2"></i>Neighborhood Tips</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ site_url('social.points_history') }}">
+                                <i class="bi bi-gem me-2"></i>My Points</a></li>
+                            <li><a class="dropdown-item" href="{{ site_url('social.leaderboard') }}">
+                                <i class="bi bi-trophy me-2"></i>Leaderboard</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ site_url('social.referral_dashboard') }}">
+                                <i class="bi bi-people me-2"></i>Refer a Friend</a></li>
+                            {% if current_user.is_admin %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ site_url('social.social_analytics') }}">
+                                <i class="bi bi-graph-up me-2"></i>Social Analytics</a></li>
+                            {% endif %}
+                            {% else %}
+                            <li><a class="dropdown-item" href="{{ site_url('social.friend_listings') }}">
+                                <i class="bi bi-house-add me-2"></i>Neighborhood Tips</a></li>
+                            <li><span class="dropdown-item-text text-muted small">Sign in for more social features</span></li>
+                            {% endif %}
+                        </ul>
+                    </li>
+                    {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ site_url('dashboard.itinerary') }}">
+                            <i class="bi bi-map" style="color:#fdba74;"></i> Tour
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ site_url('dashboard.preferences') }}">
+                            <i class="bi bi-sliders" style="color:#a5b4fc;"></i> Preferences
+                        </a>
+                    </li>
+                    {% if current_user.is_authenticated and current_user.assigned_agent %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#contactAgentModal">
+                            <i class="bi bi-chat-dots" style="color:#67e8f9;"></i> Contact Agent
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button"
+                           data-bs-toggle="dropdown">
+                            <i class="bi bi-question-circle" style="color:#d9f99d;"></i> <span>Help</span>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ site_url('dashboard.help_page') }}">
+                                <i class="bi bi-book me-2"></i>Help &amp; Guide</a></li>
+                            {% if app_version %}
+                            <li><span class="dropdown-item-text text-muted" style="font-size:0.7rem; padding-top:0; padding-left:2.5rem;">
+                                v{{ app_version }}</span></li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ site_url('dashboard.why_user') }}">
+                                <i class="bi bi-person me-2"></i>Why HomeFinder? (Buyers)</a></li>
+                            <li><a class="dropdown-item" href="{{ site_url('dashboard.why_agent') }}">
+                                <i class="bi bi-briefcase me-2"></i>Why HomeFinder? (Agents)</a></li>
+                            {% if current_user.is_authenticated and current_user.is_owner %}
+                            <li><a class="dropdown-item" href="{{ site_url('dashboard.why_owner') }}">
+                                <i class="bi bi-shield-check me-2"></i>Owner Operations Guide</a></li>
+                            {% endif %}
+                        </ul>
+                    </li>
+                </ul>
+
+                <!-- Right nav — auth status -->
+                {% if current_user.is_authenticated %}
+                <ul class="navbar-nav">
+                    {% if current_user.is_owner %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ site_url('dashboard.admin_agents') }}">
+                            <i class="bi bi-shield-check" style="color:#94a3b8;"></i> Admin
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ site_url('dashboard.admin_users') }}">
+                            <i class="bi bi-people-fill" style="color:#94a3b8;"></i> Users
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ site_url('dashboard.admin_metrics') }}">
+                            <i class="bi bi-bar-chart-line" style="color:#94a3b8;"></i> Metrics
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ site_url('dashboard.admin_billing') }}">
+                            <i class="bi bi-credit-card" style="color:#94a3b8;"></i> Billing
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ site_url('dashboard.admin_prompts') }}">
+                            <i class="bi bi-pencil-square" style="color:#94a3b8;"></i> Prompts
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if current_user.is_master %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="/home_finder_agents_social/welcome?chooser=1">
+                            <i class="bi bi-globe2" style="color:#94a3b8;"></i> Sites
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('site_manager.sites_list') }}">
+                            <i class="bi bi-gear" style="color:#94a3b8;"></i> Manage
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if current_user.is_agent %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ site_url('dashboard.agent_dashboard') }}">
+                            <i class="bi bi-people" style="color:#94a3b8;"></i> My Clients
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ site_url('dashboard.agent_prompts') }}">
+                            <i class="bi bi-pencil-square" style="color:#94a3b8;"></i> Prompts
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if current_user.is_admin %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ site_url('docs.index') }}">
+                            <i class="bi bi-folder2-open" style="color:#94a3b8;"></i> Docs
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% if session.get('masquerade_original_id') %}
+                    <li class="nav-item">
+                        <a class="nav-link text-warning fw-semibold"
+                           href="{{ site_url('auth.end_masquerade') }}">
+                            <i class="bi bi-eye-slash"></i> End Preview
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button"
+                           data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle" style="color:#94a3b8;"></i> <span>{{ current_user.username }}</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><span class="dropdown-item-text text-muted small">{{ current_user.email }}</span></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="{{ site_url('auth.close_account') }}">
+                                    <i class="bi bi-x-circle"></i> Close Account
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ site_url('auth.logout') }}">
+                                    <i class="bi bi-box-arrow-right"></i> Sign Out
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+                {% else %}
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/home_finder_agents_social/welcome?chooser=1">
+                            <i class="bi bi-globe2"></i> Sites
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ site_url('auth.login') }}">
+                            <i class="bi bi-box-arrow-in-right"></i> Sign In
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-sm btn-outline-light ms-2 mt-1" href="{{ site_url('auth.register') }}">
+                            Create Free Account
+                        </a>
+                    </li>
+                </ul>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Welcome modal for first-time guests -->
+    {% if not current_user.is_authenticated %}
+    <div class="modal fade" id="welcomeModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-body text-center p-4">
+                    <div style="font-size:3rem; margin-bottom:8px;">
+                        <i class="bi bi-house-heart-fill text-primary"></i>
+                    </div>
+                    <h4 class="fw-bold">Welcome to HomeFinder</h4>
+                    <p class="text-muted">
+                        Browse listings, save favorites, view deal scores, explore the map,
+                        check the digest, and customize your scoring —
+                        <strong>all free, no account needed.</strong>
+                    </p>
+                    <hr>
+                    <p class="small text-muted mb-2">When you're ready for more, a free account unlocks:</p>
+                    <div class="row text-start g-2 mb-3" style="font-size:0.85rem;">
+                        <div class="col-6">
+                            <i class="bi bi-robot text-primary"></i> AI Deal Analysis
+                        </div>
+                        <div class="col-6">
+                            <i class="bi bi-shield-check text-primary"></i> Permanent Data Storage
+                        </div>
+                        <div class="col-6">
+                            <i class="bi bi-arrow-repeat text-primary"></i> Fetch Fresh Listings
+                        </div>
+                        <div class="col-6">
+                            <i class="bi bi-sliders text-primary"></i> Save Preferences Forever
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button class="btn btn-primary px-4" data-bs-dismiss="modal"
+                                onclick="document.cookie='hf_welcomed=1;path=/;max-age=31536000';">
+                            <i class="bi bi-search"></i> Start Browsing
+                        </button>
+                        <a href="{{ site_url('auth.register') }}" class="btn btn-outline-secondary px-4"
+                           onclick="document.cookie='hf_welcomed=1;path=/;max-age=31536000';">
+                            Create Free Account
+                        </a>
+                    </div>
+                    <p class="mt-3 mb-0 small text-muted">
+                        Already have an account?
+                        <a href="{{ site_url('auth.login') }}"
+                           onclick="document.cookie='hf_welcomed=1;path=/;max-age=31536000';">Sign in</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- "Join to unlock" modal (triggered by gated buttons) -->
+    {% if not current_user.is_authenticated %}
+    <div class="modal fade" id="joinModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-body text-center p-4">
+                    <i class="bi bi-lock text-primary" style="font-size:2rem;"></i>
+                    <h5 class="fw-bold mt-2" id="joinModalTitle">Free Account Required</h5>
+                    <p class="text-muted small" id="joinModalMsg">
+                        Create a free account to unlock this feature.
+                    </p>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <a href="{{ site_url('auth.register') }}" class="btn btn-primary btn-sm px-3">
+                            Sign Up Free
+                        </a>
+                        <a href="{{ site_url('auth.login') }}" class="btn btn-outline-secondary btn-sm px-3">
+                            Sign In
+                        </a>
+                        <button class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">
+                            Maybe Later
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Masquerade banner -->
+    {% if session.get('masquerade_original_id') %}
+    <div class="alert alert-warning alert-dismissible mb-0 rounded-0 text-center py-2" style="border:none; border-bottom: 2px solid #f59e0b;">
+        <i class="bi bi-eye me-1"></i>
+        <strong>Agent Preview Mode</strong> — You are viewing the site as
+        <strong>{{ current_user.username }}</strong>.
+        <a href="{{ site_url('auth.end_masquerade') }}" class="alert-link ms-2">
+            <i class="bi bi-arrow-left-circle"></i> End Preview &amp; Return to Your Account
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Contact Agent modal (clients and principals with assigned agent) -->
+    {% if current_user.is_authenticated and current_user.assigned_agent %}
+    {% set ab = current_user.assigned_agent %}
+    <div class="modal fade" id="contactAgentModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title">
+                        <i class="bi bi-chat-dots text-primary me-2"></i>
+                        Contact {{ ab.full_name }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="{{ site_url('dashboard.contact_agent') }}">
+                    <div class="modal-body pt-2">
+                        {% if ab.phone %}
+                        <p class="text-muted small mb-2">
+                            <i class="bi bi-telephone me-1"></i>{{ ab.phone }}
+                            {% if ab.brokerage %} &nbsp;·&nbsp; {{ ab.brokerage }}{% endif %}
+                        </p>
+                        {% endif %}
+                        <textarea class="form-control" name="message" rows="4"
+                                  placeholder="Type your message here..." required></textarea>
+                    </div>
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary btn-sm px-4">
+                            <i class="bi bi-send me-1"></i> Send Message
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Flash messages -->
+    <div class="container mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message|safe }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Content -->
+    <main class="container mt-3 mb-5">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    {% if not current_user.is_authenticated %}
+    <script>
+    // Show welcome modal on first visit (check cookie)
+    if (!document.cookie.includes('hf_welcomed=1')) {
+        new bootstrap.Modal(document.getElementById('welcomeModal')).show();
+    }
+
+    // Helper for gated buttons — shows join modal with custom message
+    function showJoinModal(feature) {
+        const msgs = {
+            'analyze': 'Create a free account to get AI-powered deal analysis with negotiation strategies and suggested offers.',
+            'preferences': 'Create a free account to save your scoring weights and search criteria permanently.',
+            'fetch': 'Create a free account to pull fresh listings from Zillow and Realtor.com.',
+        };
+        document.getElementById('joinModalMsg').textContent = msgs[feature] || 'Create a free account to unlock this feature.';
+        new bootstrap.Modal(document.getElementById('joinModal')).show();
+    }
+    </script>
+    {% endif %}
+    {% block scripts %}{% endblock %}
+    <script>
+    // Parse emoji in navbar brand and any .twemoji-parse elements into crisp SVGs
+    document.addEventListener('DOMContentLoaded', function() {
+        twemoji.parse(document.querySelector('.navbar-brand') || document.body, {
+            folder: 'svg', ext: '.svg', base: 'https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/'
+        });
+        document.querySelectorAll('.twemoji-parse').forEach(el => {
+            twemoji.parse(el, { folder: 'svg', ext: '.svg', base: 'https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/' });
+        });
+    });
+    // Register service worker for PWA
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/home_finder_agents_social/sw.js', {
+            scope: '/home_finder_agents_social/'
+        }).catch(() => {});
+    }
+    </script>
+</body>
+</html>

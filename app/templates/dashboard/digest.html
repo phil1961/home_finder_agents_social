@@ -1,0 +1,443 @@
+<!--
+  File: app/templates/dashboard/digest.html
+  App Version: 2026.03.12 | File Version: 1.2.0
+  Last Modified: 2026-03-13
+-->
+{% extends "base.html" %}
+{% block title %}Digest – HomeFinder{% endblock %}
+
+{% block head %}
+<style>
+    /* ── Table wrapper ─────────────────────────────────── */
+    .digest-wrap {
+        overflow-x: auto;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        background: #fff;
+    }
+    .digest-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 0.8rem;
+        white-space: nowrap;
+    }
+    .digest-table thead th {
+        position: sticky;
+        top: 0;
+        background: #1e293b;
+        color: #e2e8f0;
+        font-weight: 600;
+        font-size: 0.68rem;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        padding: 10px 10px;
+        border-bottom: 2px solid #334155;
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+    }
+    .digest-table thead th:hover { background: #334155; }
+    .digest-table thead th.sorted-asc::after  { content: ' ↑'; color: #60a5fa; }
+    .digest-table thead th.sorted-desc::after { content: ' ↓'; color: #60a5fa; }
+
+    /* Freeze thumbnail + address columns */
+    .digest-table th:nth-child(1),
+    .digest-table td:nth-child(1) { position: sticky; left: 0; z-index: 2; min-width: 56px; }
+    .digest-table th:nth-child(2),
+    .digest-table td:nth-child(2) { position: sticky; left: 56px; z-index: 2; min-width: 200px; max-width: 220px; }
+    .digest-table thead th:nth-child(1),
+    .digest-table thead th:nth-child(2) { z-index: 3; }
+    .digest-table tbody td:nth-child(1) { background: #fff; }
+    .digest-table tbody td:nth-child(2) { background: #fff; border-right: 2px solid #e2e8f0; }
+
+    .digest-table tbody tr { transition: background 0.1s; }
+    .digest-table tbody tr:hover td { background: #f0f7ff !important; }
+    .digest-table tbody tr:hover td:nth-child(2) { background: #f0f7ff !important; }
+
+    .digest-table td {
+        padding: 7px 10px;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+        color: #334155;
+    }
+
+    /* Thumbnail */
+    .thumb-cell { width: 56px; padding: 4px 6px !important; }
+    .listing-thumb {
+        width: 44px; height: 36px;
+        object-fit: cover;
+        border-radius: 4px;
+        display: block;
+        background: #e2e8f0;
+    }
+    .thumb-placeholder {
+        width: 44px; height: 36px;
+        border-radius: 4px;
+        background: #e2e8f0;
+        display: flex; align-items: center; justify-content: center;
+        color: #94a3b8; font-size: 1rem;
+    }
+
+    /* Address cell */
+    .addr-cell { max-width: 220px; }
+    .addr-link {
+        font-weight: 600;
+        color: #1e293b;
+        text-decoration: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+        max-width: 200px;
+    }
+    .addr-link:hover { color: #2563eb; }
+    .area-text { font-size: 0.72rem; color: #94a3b8; }
+
+    /* Score pill */
+    .score-pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.78rem;
+        min-width: 36px;
+        text-align: center;
+    }
+    .score-high   { background: #dcfce7; color: #166534; }
+    .score-mid    { background: #dbeafe; color: #1e40af; }
+    .score-low    { background: #fee2e2; color: #991b1b; }
+
+    /* Flag badges */
+    .flag-star    { color: #f59e0b; }
+    .flag-maybe   { color: #8b5cf6; }
+    .flag-hidden  { color: #94a3b8; }
+
+    /* Bool cells */
+    .bool-yes { color: #16a34a; font-weight: 700; }
+    .bool-no  { color: #d1d5db; }
+
+    /* Price change */
+    .pct-up   { color: #dc2626; font-size: 0.75rem; }
+    .pct-down { color: #16a34a; font-size: 0.75rem; }
+
+    /* Source badge */
+    .src-zillow  { background:#dbeafe; color:#1e40af; font-size:0.65rem; padding:1px 6px; border-radius:3px; }
+    .src-realtor { background:#fee2e2; color:#991b1b; font-size:0.65rem; padding:1px 6px; border-radius:3px; }
+
+    /* Summary strip */
+    .summary-strip {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-size: 0.82rem;
+        color: #64748b;
+    }
+    .summary-strip strong { color: #1e293b; }
+
+    /* Filter bar */
+    .filter-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .filter-bar .btn { font-size: 0.8rem; }
+
+    /* Column visibility toggles */
+    .col-toggle-group { display: flex; flex-wrap: wrap; gap: 4px; }
+    .col-toggle {
+        font-size: 0.7rem; padding: 2px 8px; border-radius: 4px;
+        border: 1px solid #e2e8f0; background: #fff; cursor: pointer;
+        color: #64748b; transition: all 0.15s;
+    }
+    .col-toggle.active { background: #1e293b; color: #fff; border-color: #1e293b; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Page header ──────────────────────────────────────── -->
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+    <div>
+        <h4 class="mb-0"><i class="bi bi-table me-2 text-primary"></i>Listing Data</h4>
+        <small class="text-muted">{{ listings|length }} listings &nbsp;·&nbsp;
+            sortable, filterable, exportable</small>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ request.path }}?{{ request.query_string.decode() }}&export=csv"
+           class="btn btn-sm btn-success">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export CSV
+        </a>
+    </div>
+</div>
+
+<!-- ── Summary strip ───────────────────────────────────── -->
+{% if new_listings or price_changes %}
+<div class="summary-strip mb-3 d-flex flex-wrap gap-4">
+    <span><i class="bi bi-stars text-warning me-1"></i>
+        <strong>{{ new_listings|length }}</strong> new in last
+        <a href="?days=1" class="text-decoration-none {% if days_back==1 %}fw-bold{% endif %}">1d</a> /
+        <a href="?days=3" class="text-decoration-none {% if days_back==3 %}fw-bold{% endif %}">3d</a> /
+        <a href="?days=7" class="text-decoration-none {% if days_back==7 %}fw-bold{% endif %}">7d</a>
+    </span>
+    <span><i class="bi bi-arrow-down-circle text-success me-1"></i>
+        <strong>{{ price_changes|length }}</strong> price changes this period
+    </span>
+    <span><i class="bi bi-list-check text-primary me-1"></i>
+        <strong>{{ listings|length }}</strong> shown
+    </span>
+</div>
+{% endif %}
+
+<!-- ── Filter bar ───────────────────────────────────────── -->
+<div class="filter-bar mb-3">
+    <!-- Flag filters -->
+    <div class="btn-group btn-group-sm" role="group">
+        {% for fv, fl, fi in [
+            ('all',      'All',       'bi-grid'),
+            ('new',      'New',       'bi-stars'),
+            ('favorite', 'Favorites', 'bi-star-fill'),
+            ('maybe',    'Maybes',    'bi-question-circle'),
+            ('hidden',   'Hidden',    'bi-eye-slash'),
+        ] %}
+        <a href="?flag={{ fv }}&days={{ days_back }}{% if area_filter %}&area={{ area_filter }}{% endif %}"
+           class="btn btn-{% if flag_filter == fv %}primary{% else %}outline-secondary{% endif %}">
+            <i class="bi {{ fi }} me-1"></i>{{ fl }}
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Area filter -->
+    {% if areas %}
+    <div class="btn-group btn-group-sm" role="group">
+        <a href="?flag={{ flag_filter }}&days={{ days_back }}"
+           class="btn btn-{% if not area_filter %}dark{% else %}outline-secondary{% endif %}">
+            All Areas
+        </a>
+        {% for area in areas %}
+        <a href="?flag={{ flag_filter }}&days={{ days_back }}&area={{ area|urlencode }}"
+           class="btn btn-{% if area_filter == area %}dark{% else %}outline-secondary{% endif %}">
+            {{ area }}
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Quick search -->
+    <input type="text" id="table-search" class="form-control form-control-sm"
+           placeholder="&#xF52A; Filter rows…" style="width:180px; font-family: inherit;"
+           oninput="filterRows(this.value)">
+</div>
+
+<!-- ── Main table ───────────────────────────────────────── -->
+{% if listings %}
+<div class="digest-wrap" style="max-height: calc(100vh - 280px);">
+<table class="digest-table" id="digest-table">
+    <thead>
+        <tr>
+            <th class="thumb-cell" title="Photo"></th>
+            <th data-col="address">Address</th>
+            <th data-col="price"        onclick="sortTable(this,2)">Price</th>
+            <th data-col="score"        onclick="sortTable(this,3)">Score</th>
+            <th data-col="beds"         onclick="sortTable(this,4)">Bd</th>
+            <th data-col="baths"        onclick="sortTable(this,5)">Ba</th>
+            <th data-col="sqft"         onclick="sortTable(this,6)">Sqft</th>
+            <th data-col="lot"          onclick="sortTable(this,7)">Lot sqft</th>
+            <th data-col="year"         onclick="sortTable(this,8)">Year</th>
+            <th data-col="dom"          onclick="sortTable(this,9)">DOM</th>
+            <th data-col="pct"          onclick="sortTable(this,10)">Price Chg</th>
+            <th data-col="hoa"          onclick="sortTable(this,11)">HOA/mo</th>
+            <th data-col="tax"          onclick="sortTable(this,12)">Tax/yr</th>
+            <th data-col="flood">Flood</th>
+            <th data-col="garage">Gar</th>
+            <th data-col="porch">Porch</th>
+            <th data-col="patio">Patio</th>
+            <th data-col="pool">Pool</th>
+            <th data-col="story">1-Flr</th>
+            <th data-col="source">Src</th>
+            <th data-col="seen"         onclick="sortTable(this,20)">First Seen</th>
+            <th data-col="flag">Flag</th>
+        </tr>
+    </thead>
+    <tbody id="digest-tbody">
+    {% for l in listings %}
+    {% set score = user_composites.get(l.id, 0) %}
+    {% set flag  = user_flags_map.get(l.id, '') %}
+    {% set pct   = l.price_change_pct %}
+    <tr data-search="{{ l.address|lower }} {{ (l.area_name or '')|lower }}">
+        <!-- Thumbnail -->
+        <td class="thumb-cell">
+            {% if l.primary_photo %}
+            <img src="{{ l.primary_photo }}" alt="" class="listing-thumb"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div class="thumb-placeholder" style="display:none;"><i class="bi bi-house"></i></div>
+            {% else %}
+            <div class="thumb-placeholder"><i class="bi bi-house"></i></div>
+            {% endif %}
+        </td>
+
+        <!-- Address (frozen) -->
+        <td class="addr-cell">
+            <a href="{{ site_url('dashboard.listing_detail', listing_id=l.id) }}"
+               class="addr-link" title="{{ l.address }}">{{ l.address }}</a>
+            <span class="area-text">{{ l.area_name or l.city }}</span>
+        </td>
+
+        <!-- Price -->
+        <td data-val="{{ l.price }}">${{ "{:,}".format(l.price) }}</td>
+
+        <!-- Score -->
+        <td data-val="{{ score }}">
+            <span class="score-pill {% if score >= 75 %}score-high{% elif score >= 50 %}score-mid{% else %}score-low{% endif %}">
+                {{ "%.0f"|format(score) }}
+            </span>
+        </td>
+
+        <!-- Beds / Baths / Sqft / Lot -->
+        <td data-val="{{ l.beds or 0 }}">{{ l.beds or '—' }}</td>
+        <td data-val="{{ l.baths or 0 }}">{{ l.baths or '—' }}</td>
+        <td data-val="{{ l.sqft or 0 }}">{{ "{:,}".format(l.sqft) if l.sqft else '—' }}</td>
+        <td data-val="{{ l.lot_sqft or 0 }}">{{ "{:,}".format(l.lot_sqft) if l.lot_sqft else '—' }}</td>
+
+        <!-- Year Built -->
+        <td data-val="{{ l.year_built or 0 }}">{{ l.year_built or '—' }}</td>
+
+        <!-- Days on Market -->
+        <td data-val="{{ l.days_on_market or 0 }}">
+            {% if l.days_on_market %}
+            <span class="{% if l.days_on_market > 60 %}text-success fw-semibold{% elif l.days_on_market > 30 %}text-warning{% endif %}">
+                {{ l.days_on_market }}d
+            </span>
+            {% else %}—{% endif %}
+        </td>
+
+        <!-- Price Change % -->
+        <td data-val="{{ pct or 0 }}">
+            {% if pct %}
+            <span class="{% if pct < 0 %}pct-down{% else %}pct-up{% endif %}">
+                {% if pct > 0 %}+{% endif %}{{ "%.1f"|format(pct) }}%
+            </span>
+            {% else %}—{% endif %}
+        </td>
+
+        <!-- HOA / Tax -->
+        <td data-val="{{ l.hoa_monthly or 0 }}">
+            {% if l.hoa_monthly %}${{ "{:,.0f}".format(l.hoa_monthly) }}{% else %}—{% endif %}
+        </td>
+        <td data-val="{{ l.property_tax_annual or 0 }}">
+            {% if l.property_tax_annual %}${{ "{:,.0f}".format(l.property_tax_annual) }}{% else %}—{% endif %}
+        </td>
+
+        <!-- Flood -->
+        <td>
+            {% if l.above_flood_plain %}
+            <span class="bool-yes" title="Above flood plain">✓</span>
+            {% elif l.flood_zone %}
+            <span class="text-danger" title="Flood zone: {{ l.flood_zone }}" style="font-size:0.75rem;">{{ l.flood_zone }}</span>
+            {% else %}—{% endif %}
+        </td>
+
+        <!-- Amenities -->
+        <td class="text-center">{% if l.has_garage %}<span class="bool-yes">✓</span>{% else %}<span class="bool-no">·</span>{% endif %}</td>
+        <td class="text-center">{% if l.has_porch  %}<span class="bool-yes">✓</span>{% else %}<span class="bool-no">·</span>{% endif %}</td>
+        <td class="text-center">{% if l.has_patio  %}<span class="bool-yes">✓</span>{% else %}<span class="bool-no">·</span>{% endif %}</td>
+        <td class="text-center">{% if l.has_community_pool %}<span class="bool-yes">✓</span>{% else %}<span class="bool-no">·</span>{% endif %}</td>
+        <td class="text-center">{% if l.is_single_story    %}<span class="bool-yes">✓</span>{% else %}<span class="bool-no">·</span>{% endif %}</td>
+
+        <!-- Source -->
+        <td><span class="src-{{ l.source }}">{{ l.source|capitalize }}</span></td>
+
+        <!-- First Seen -->
+        <td data-val="{{ l.first_seen.strftime('%Y%m%d') if l.first_seen else '0' }}"
+            style="font-size:0.75rem; color:#94a3b8;">
+            {{ l.first_seen.strftime('%b %d') if l.first_seen else '—' }}
+        </td>
+
+        <!-- Flag -->
+        <td>
+            {% if flag == 'favorite' %}<span class="flag-star" title="Favorite">⭐</span>
+            {% elif flag == 'maybe'  %}<span class="flag-maybe" title="Maybe">🤔</span>
+            {% elif flag == 'hidden' %}<span class="flag-hidden" title="Hidden">🙈</span>
+            {% else %}&nbsp;{% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+<div class="text-muted mt-2" style="font-size:0.75rem;">
+    <i class="bi bi-info-circle me-1"></i>
+    Click column headers to sort &nbsp;·&nbsp; Frozen: thumbnail and address &nbsp;·&nbsp;
+    <strong id="row-count">{{ listings|length }}</strong> rows shown
+</div>
+
+{% else %}
+<div class="card border-0 shadow-sm">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-funnel text-muted" style="font-size:3rem;"></i>
+        <p class="text-muted mt-3 mb-1">No listings match the current filter.</p>
+        <p class="text-muted small mb-3">Try broadening your price range or adjusting bedroom count to see more results.</p>
+        <a href="{{ site_url('dashboard.index') }}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-grid me-1"></i>Browse All Listings
+        </a>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Sort ──────────────────────────────────────────────────
+let sortColIdx = -1, sortDir = 1;
+
+function sortTable(th, colIdx) {
+    const tbody = document.getElementById('digest-tbody');
+    const rows  = Array.from(tbody.querySelectorAll('tr'));
+
+    if (sortColIdx === colIdx) { sortDir *= -1; }
+    else { sortDir = -1; sortColIdx = colIdx; }
+
+    rows.sort((a, b) => {
+        const av = parseFloat(a.cells[colIdx]?.dataset.val ?? a.cells[colIdx]?.textContent) || 0;
+        const bv = parseFloat(b.cells[colIdx]?.dataset.val ?? b.cells[colIdx]?.textContent) || 0;
+        return (av - bv) * sortDir;
+    });
+
+    rows.forEach(r => tbody.appendChild(r));
+
+    document.querySelectorAll('.digest-table thead th').forEach(h => {
+        h.classList.remove('sorted-asc','sorted-desc');
+    });
+    th.classList.add(sortDir === 1 ? 'sorted-asc' : 'sorted-desc');
+    updateCount();
+}
+
+// ── Filter rows ───────────────────────────────────────────
+function filterRows(q) {
+    const term = q.toLowerCase().trim();
+    const rows = document.querySelectorAll('#digest-tbody tr');
+    let visible = 0;
+    rows.forEach(r => {
+        const match = !term || r.dataset.search.includes(term);
+        r.style.display = match ? '' : 'none';
+        if (match) visible++;
+    });
+    updateCount(visible);
+}
+
+function updateCount(n) {
+    const el = document.getElementById('row-count');
+    if (!el) return;
+    if (n === undefined) {
+        n = document.querySelectorAll('#digest-tbody tr:not([style*="none"])').length;
+    }
+    el.textContent = n;
+}
+
+// ── CSV export passes current filters through URL ─────────
+document.querySelector('a[href*="export=csv"]')?.addEventListener('click', function(e) {
+    // Already handled server-side — just update href with current query
+    const url = new URL(window.location.href);
+    url.searchParams.set('export', 'csv');
+    this.href = url.toString();
+});
+</script>
+{% endblock %}

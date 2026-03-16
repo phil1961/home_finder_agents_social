@@ -1,0 +1,377 @@
+<!--
+  File: app/templates/dashboard/watch.html
+  App Version: 2026.03.12 | File Version: 1.9.0
+  Last Modified: 2026-03-13
+-->
+{% extends "base.html" %}
+{% block title %}Street Watch – HomeFinder{% endblock %}
+
+{% block head %}
+<style>
+    .watch-card { transition: opacity 0.3s; }
+    .watch-card.removing { opacity: 0.4; }
+    /* Street autocomplete dropdown */
+    .ac-wrap { position: relative; }
+    .ac-list {
+        position: absolute; top: 100%; left: 0; right: 0; z-index: 1050;
+        background: #fff; border: 1px solid #dee2e6; border-top: none;
+        border-radius: 0 0 6px 6px; max-height: 220px; overflow-y: auto;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: none;
+    }
+    .ac-list .ac-item {
+        padding: 8px 12px; cursor: pointer; font-size: 0.85rem;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .ac-list .ac-item:hover, .ac-list .ac-item.active {
+        background: #f3f0ff; /* light purple */
+    }
+    .ac-item .ac-zip {
+        font-size: 0.7rem; color: #6b7280;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ site_url('dashboard.index') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active">Street Watch</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0" style="color: #8b5cf6;">
+            <i class="bi bi-eye"></i> Street Watch
+        </h4>
+        <small class="text-muted">Monitor streets for new listings, price drops, and status changes</small>
+    </div>
+</div>
+
+<!-- Add a street watch -->
+{% if current_user.is_authenticated %}
+<div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid #8b5cf6 !important;">
+    <div class="card-body">
+        <h6 class="card-title mb-3"><i class="bi bi-plus-circle"></i> Add a Street</h6>
+        <form id="add-watch-form" onsubmit="return addWatch(event)" autocomplete="off">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small mb-0">Zip Code</label>
+                    <select id="aw-zip" class="form-select form-select-sm" required>
+                        {% if site_zips|length == 1 %}
+                        <option value="{{ site_zips[0] }}" selected>{{ site_zips[0] }}</option>
+                        {% else %}
+                        <option value="">Select zip...</option>
+                        {% for z in site_zips %}
+                        <option value="{{ z }}">{{ z }}</option>
+                        {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label small mb-0">Street Name</label>
+                    <div class="ac-wrap">
+                        <input type="text" id="aw-street" class="form-control form-control-sm"
+                               placeholder="Start typing a street name..."
+                               required autocomplete="off">
+                        <input type="hidden" id="aw-street-norm" value="">
+                        <div class="ac-list" id="ac-list"></div>
+                    </div>
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-sm w-100" id="aw-btn"
+                            style="background: #8b5cf6; color: #fff; border: none;">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="aw-feedback" class="small mt-2" style="display:none;"></div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<!-- Active watches -->
+{% if watches %}
+<div class="row g-3">
+    {% for w in watches %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm watch-card" id="watch-{{ w.id }}">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="mb-1" style="color: #8b5cf6;">
+                            <i class="bi bi-signpost-2"></i> {{ w.label }}
+                        </h6>
+                        <span class="badge bg-light text-dark border mb-2">{{ w.zip_code }}</span>
+                        {% if alert_counts.get(w.id, 0) > 0 %}
+                        <span class="badge rounded-pill bg-warning text-dark">
+                            {{ alert_counts[w.id] }} alert{{ 's' if alert_counts[w.id] != 1 else '' }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <form method="POST" action="{{ site_url('dashboard.watch_remove', watch_id=w.id) }}"
+                          onsubmit="return confirmRemove(event, {{ w.id }})">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary" title="Remove watch">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </form>
+                </div>
+                <div class="text-muted" style="font-size: 0.72rem;">
+                    <i class="bi bi-clock"></i> Watching since {{ w.created_at.strftime('%b %d, %Y') if w.created_at else '—' }}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-eye" style="font-size: 3rem; color: #8b5cf6;"></i>
+    <h6 class="mt-3 mb-2" style="color: #6d28d9;">Be the first to know when new listings hit your street</h6>
+    <p class="text-muted small mb-1">
+        Street Watch monitors specific streets for new listings, price drops, and status changes
+        — something the big portals don't offer.
+    </p>
+    <p class="text-muted small mb-3">
+        Add a street above, or use the <strong>"Watch This Street"</strong> button on any listing detail page.
+    </p>
+    <a href="{{ site_url('dashboard.index') }}" class="btn btn-sm btn-outline-primary">
+        <i class="bi bi-grid me-1"></i>Browse Listings to Find Streets
+    </a>
+</div>
+{% endif %}
+
+{% if not current_user.is_authenticated %}
+<!-- Guest modal — auto-shown on page load -->
+<div class="modal fade" id="guestWatchModal" tabindex="-1" aria-labelledby="guestWatchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: #fff;">
+                <h5 class="modal-title" id="guestWatchModalLabel">
+                    <i class="bi bi-eye me-2"></i>Street Watch Requires an Account
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <i class="bi bi-envelope-check" style="font-size: 2.5rem; color: #8b5cf6;"></i>
+                <p class="mt-3 mb-2">
+                    To watch streets for new listings, price drops, and status changes,
+                    you'll need a <strong>free HomeFinder account</strong>.
+                </p>
+                <p class="text-muted small mb-0">
+                    We'll send a quick verification email to confirm your address &mdash;
+                    then you're all set to start watching.
+                </p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center pb-4">
+                <a href="{{ site_url('auth.register') }}" class="btn px-4"
+                   style="background: #8b5cf6; color: #fff; border: none;">
+                    <i class="bi bi-person-plus me-1"></i> Create Free Account
+                </a>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    Just Browsing
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    new bootstrap.Modal(document.getElementById('guestWatchModal')).show();
+});
+</script>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Auto-focus street input when only one zip ───────────────────────
+{% if site_zips|length == 1 %}
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('aw-street').focus();
+});
+{% endif %}
+
+// ── Street autocomplete (direct Geoapify call from browser) ──────────
+(function() {
+    const input   = document.getElementById('aw-street');
+    const normInp = document.getElementById('aw-street-norm');
+    const list    = document.getElementById('ac-list');
+    const zipSel  = document.getElementById('aw-zip');
+    const API_KEY = '{{ geoapify_key }}';
+    const SITE_ZIPS = new Set({{ site_zips | tojson }});
+    const MAP_LAT = {{ map_center_lat or 0 }};
+    const MAP_LON = {{ map_center_lon or 0 }};
+    let debounce  = null;
+    let activeIdx = -1;
+    let results   = [];
+
+    function renderList() {
+        list.innerHTML = '';
+        if (!results.length) { list.style.display = 'none'; return; }
+        results.forEach((r, i) => {
+            const div = document.createElement('div');
+            div.className = 'ac-item' + (i === activeIdx ? ' active' : '');
+            const city = r.city ? ` · ${r.city}` : '';
+            div.innerHTML = `<span><i class="bi bi-signpost-2 me-1 text-muted"></i>${r.street}</span>
+                             <span class="ac-zip">${r.zip_code}${city}</span>`;
+            div.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                pick(i);
+            });
+            list.appendChild(div);
+        });
+        list.style.display = 'block';
+    }
+
+    function pick(idx) {
+        const r = results[idx];
+        if (!r) return;
+        input.value    = r.street;
+        normInp.value  = r.street;
+        zipSel.value   = r.zip_code;
+        list.style.display = 'none';
+        results = [];
+        activeIdx = -1;
+    }
+
+    function fetchStreets() {
+        const q   = input.value.trim();
+        const zip = zipSel.value;
+        if (q.length < 2) { list.style.display = 'none'; results = []; return; }
+
+        if (!API_KEY) {
+            // Fallback to server-side search
+            const params = new URLSearchParams({q: q});
+            if (zip) params.append('zip', zip);
+            fetch("{{ site_url('dashboard.watch_street_search') }}?" + params.toString())
+                .then(r => r.json())
+                .then(data => { results = data; activeIdx = -1; renderList(); })
+                .catch(() => { list.style.display = 'none'; });
+            return;
+        }
+
+        // Call Geoapify directly from browser — no server round-trip
+        // Circle filter: 25 km radius around site map center for fast, relevant results
+        const searchText = zip ? `${q} ${zip}` : q;
+        let filterParam = 'countrycode:us';
+        if (MAP_LAT && MAP_LON) {
+            filterParam = `circle:${MAP_LON},${MAP_LAT},25000`;
+        }
+        const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(searchText)}&type=street&filter=${filterParam}&format=json&limit=10&apiKey=${API_KEY}`;
+
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                const seen = new Set();
+                results = [];
+                (data.results || []).forEach(f => {
+                    const street = f.street || f.name || '';
+                    const postcode = f.postcode || '';
+                    const city = f.city || '';
+                    if (!street) return;
+                    // Only show streets in this site's zip codes
+                    if (SITE_ZIPS.size && !SITE_ZIPS.has(postcode)) return;
+                    const key = street.toUpperCase() + '|' + postcode;
+                    if (seen.has(key)) return;
+                    seen.add(key);
+                    results.push({ street, zip_code: postcode, city });
+                });
+                activeIdx = -1;
+                renderList();
+            })
+            .catch(() => { list.style.display = 'none'; });
+    }
+
+    input.addEventListener('input', function() {
+        normInp.value = '';
+        clearTimeout(debounce);
+        debounce = setTimeout(fetchStreets, 250);
+    });
+
+    zipSel.addEventListener('change', function() {
+        if (input.value.trim().length >= 2) {
+            clearTimeout(debounce);
+            fetchStreets();
+        }
+    });
+
+    // Keyboard navigation
+    input.addEventListener('keydown', function(e) {
+        if (!results.length) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            activeIdx = Math.min(activeIdx + 1, results.length - 1);
+            renderList();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeIdx = Math.max(activeIdx - 1, 0);
+            renderList();
+        } else if (e.key === 'Enter' && activeIdx >= 0) {
+            e.preventDefault();
+            pick(activeIdx);
+        } else if (e.key === 'Escape') {
+            list.style.display = 'none';
+        }
+    });
+
+    input.addEventListener('blur', function() {
+        setTimeout(() => { list.style.display = 'none'; }, 150);
+    });
+    input.addEventListener('focus', function() {
+        if (results.length) renderList();
+    });
+})();
+
+// ── Add watch ────────────────────────────────────────────────────────
+function addWatch(e) {
+    e.preventDefault();
+    const btn = document.getElementById('aw-btn');
+    const fb = document.getElementById('aw-feedback');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    fb.style.display = 'none';
+
+    // Use the normalised value if set (from autocomplete), else raw input
+    const normVal = document.getElementById('aw-street-norm').value;
+    const rawVal  = document.getElementById('aw-street').value;
+
+    const body = new FormData();
+    body.append('street_name', normVal || rawVal);
+    body.append('zip_code', document.getElementById('aw-zip').value);
+
+    fetch("{{ site_url('dashboard.watch_quick_add') }}", { method: 'POST', body: body })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-plus-lg"></i>';
+            if (data.ok) {
+                fb.className = 'small mt-2 text-success';
+                fb.textContent = data.created ? 'Watch added! Reloading...' : data.message;
+                fb.style.display = 'block';
+                if (data.created) setTimeout(() => location.reload(), 800);
+            } else {
+                fb.className = 'small mt-2 text-danger';
+                fb.textContent = data.error || 'Failed to add watch.';
+                fb.style.display = 'block';
+            }
+        })
+        .catch(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-plus-lg"></i>';
+            fb.className = 'small mt-2 text-danger';
+            fb.textContent = 'Network error.';
+            fb.style.display = 'block';
+        });
+    return false;
+}
+
+function confirmRemove(e, watchId) {
+    const card = document.getElementById('watch-' + watchId);
+    if (card) card.classList.add('removing');
+    return true;
+}
+</script>
+{% endblock %}

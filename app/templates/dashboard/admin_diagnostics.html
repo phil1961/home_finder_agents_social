@@ -1,0 +1,173 @@
+<!--
+  File: app/templates/dashboard/admin_diagnostics.html
+  App Version: 2026.03.11 | File Version: 1.0.0
+  Last Modified: 2026-03-11
+-->
+{% extends "base.html" %}
+{% block title %}API Diagnostics — HomeFinder{% endblock %}
+
+{% block head %}
+<style>
+    .diag-card { border-radius: 10px; }
+    .diag-stat { text-align: center; padding: 16px 8px; }
+    .diag-stat .val { font-size: 1.6rem; font-weight: 700; line-height: 1.1; }
+    .diag-stat .lbl { font-size: 0.68rem; text-transform: uppercase;
+                      letter-spacing: 0.8px; color: #9ca3af; margin-top: 2px; }
+    .call-type-badge {
+        font-size: 0.68rem; padding: 2px 7px; border-radius: 20px; white-space: nowrap;
+    }
+    .ct-zillow  { background: #dbeafe; color: #1e40af; }
+    .ct-realtor { background: #fee2e2; color: #991b1b; }
+    .ms-fast   { color: #16a34a; }
+    .ms-mid    { color: #d97706; }
+    .ms-slow   { color: #dc2626; font-weight: 600; }
+    .status-ok  { color: #16a34a; }
+    .status-err { color: #dc2626; font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0"><i class="bi bi-activity me-2 text-info"></i>API Diagnostics</h4>
+        <small class="text-muted">Per-call response times, HTTP status, quota — last 200 scraper calls</small>
+    </div>
+    <a href="{{ site_url('dashboard.admin_metrics') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-bar-chart-line me-1"></i>Metrics
+    </a>
+</div>
+
+{# ── Summary cards (last 24h) ─────────────────────────────────── #}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-2">
+        <div class="card border-0 shadow-sm diag-card">
+            <div class="diag-stat">
+                <div class="val text-primary">{{ summary.total_calls }}</div>
+                <div class="lbl">Calls (24h)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="card border-0 shadow-sm diag-card">
+            <div class="diag-stat">
+                <div class="val {% if summary.avg_response_ms > 5000 %}ms-slow{% elif summary.avg_response_ms > 2000 %}ms-mid{% else %}ms-fast{% endif %}">
+                    {{ summary.avg_response_ms }}ms
+                </div>
+                <div class="lbl">Avg Response</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="card border-0 shadow-sm diag-card">
+            <div class="diag-stat">
+                <div class="val {% if summary.error_rate > 10 %}text-danger{% elif summary.error_rate > 0 %}text-warning{% else %}text-success{% endif %}">
+                    {{ summary.error_rate }}%
+                </div>
+                <div class="lbl">Error Rate</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="card border-0 shadow-sm diag-card">
+            <div class="diag-stat">
+                <div class="val" style="color:#006AFF;">{{ summary.zillow_calls }}</div>
+                <div class="lbl">Zillow (24h)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="card border-0 shadow-sm diag-card">
+            <div class="diag-stat">
+                <div class="val" style="color:#D92228;">{{ summary.realtor_calls }}</div>
+                <div class="lbl">Realtor (24h)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="card border-0 shadow-sm diag-card">
+            <div class="diag-stat">
+                <div class="val {% if summary.min_quota is not none and summary.min_quota < 50 %}text-danger{% elif summary.min_quota is not none and summary.min_quota < 200 %}text-warning{% else %}text-success{% endif %}">
+                    {{ summary.min_quota if summary.min_quota is not none else '—' }}
+                </div>
+                <div class="lbl">Min Quota Left</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Call log table ────────────────────────────────────────────── #}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent border-0">
+        <strong><i class="bi bi-list-ul me-1"></i> API Call Log</strong>
+        <small class="text-muted ms-2">(last 200 scraper calls)</small>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0" style="font-size:0.78rem;">
+            <thead class="table-light">
+                <tr>
+                    <th>When</th>
+                    <th>Source</th>
+                    <th>Zip</th>
+                    <th>Page</th>
+                    <th class="text-end">Response</th>
+                    <th class="text-center">HTTP</th>
+                    <th class="text-end">Results</th>
+                    <th class="text-end">Quota Left</th>
+                    <th>Trigger</th>
+                    <th class="text-center">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for c in calls %}
+            <tr class="{% if not c.success %}table-danger{% endif %}">
+                <td class="text-muted" style="white-space:nowrap;">
+                    {{ c.called_at.strftime('%b %d %H:%M:%S') if c.called_at else '—' }}
+                </td>
+                <td><span class="call-type-badge ct-{{ c.call_type }}">{{ c.call_type }}</span></td>
+                <td>{{ c.zip_code or '—' }}</td>
+                <td class="text-center">{{ c.page_number or '—' }}</td>
+                <td class="text-end">
+                    {% if c.response_time_ms is not none %}
+                    <span class="{% if c.response_time_ms > 5000 %}ms-slow{% elif c.response_time_ms > 2000 %}ms-mid{% else %}ms-fast{% endif %}">
+                        {{ c.response_time_ms }}ms
+                    </span>
+                    {% else %}—{% endif %}
+                </td>
+                <td class="text-center">
+                    {% if c.http_status %}
+                    <span class="{% if c.http_status == 200 %}status-ok{% else %}status-err{% endif %}">
+                        {{ c.http_status }}
+                    </span>
+                    {% else %}—{% endif %}
+                </td>
+                <td class="text-end">{{ c.results_count if c.results_count is not none else '—' }}</td>
+                <td class="text-end">
+                    {% if c.quota_remaining is not none %}
+                    <span class="{% if c.quota_remaining < 50 %}text-danger fw-bold{% elif c.quota_remaining < 200 %}text-warning{% else %}text-muted{% endif %}">
+                        {{ c.quota_remaining }}
+                    </span>
+                    {% else %}—{% endif %}
+                </td>
+                <td>
+                    {% if c.trigger == 'scheduled' %}
+                    <span class="badge bg-secondary" style="font-size:0.6rem;">sched</span>
+                    {% else %}
+                    <span class="badge bg-info text-dark" style="font-size:0.6rem;">manual</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    {% if c.success %}
+                    <i class="bi bi-check-circle-fill text-success"></i>
+                    {% else %}
+                    <i class="bi bi-x-circle-fill text-danger"></i>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

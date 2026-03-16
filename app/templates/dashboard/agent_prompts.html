@@ -1,0 +1,208 @@
+<!--
+  File: app/templates/dashboard/agent_prompts.html
+  App Version: 2026.03.14 | File Version: 1.3.0
+  Last Modified: 2026-03-14
+-->
+{% extends "base.html" %}
+{% block title %}Prompt Overrides — HomeFinder{% endblock %}
+
+{% block head %}
+<style>
+    .prompt-card { border-left: 4px solid #2563eb; }
+    .prompt-card.portfolio { border-left-color: #7c3aed; }
+    .prompt-card.preferences { border-left-color: #059669; }
+    .prompt-textarea { font-family: monospace; font-size: 0.8rem; line-height: 1.5; min-height: 260px; }
+    .label-agent    { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+    .label-global   { background: #f3e8ff; color: #6b21a8; border-color: #d8b4fe; }
+    .label-default  { background: #f1f5f9; color: #64748b; border-color: #cbd5e1; }
+    .char-count { font-size: 0.72rem; color: #94a3b8; }
+    .effective-panel { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; }
+    .validate-result { font-size: 0.78rem; margin-top: 10px; }
+    .validate-result .issue { padding: 4px 0; }
+    .validate-result .issue i { margin-right: 4px; }
+    .preview-result { margin-top: 12px; }
+    .preview-result pre { font-size: 0.75rem; max-height: 300px; overflow-y: auto; white-space: pre-wrap; }
+    .preview-context { font-size: 0.72rem; color: #64748b; margin-top: 8px; }
+    .toolbar-btn { font-size: 0.75rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <h4 class="mb-0"><i class="bi bi-pencil-square me-2 text-primary"></i>My Prompt Overrides</h4>
+        <small class="text-muted">{{ profile.full_name }} — overrides apply to your clients only.</small>
+    </div>
+    <a href="{{ site_url('dashboard.agent_dashboard') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+    </a>
+</div>
+
+<div class="alert alert-info small py-2 mb-4">
+    <i class="bi bi-info-circle me-1"></i>
+    <strong>Resolution order:</strong> <strong>Your override (this page)</strong> → Global override (owner) → Built-in default.
+    Leave a field blank to fall through to the next level.
+</div>
+
+<form method="POST" id="promptForm">
+
+    {% set prompt_meta = [
+        ('deal',        'Deal Analyst',       'bi-house-check',  'primary', 'Analyzes a single listing — strengths, concerns, negotiation, verdict.'),
+        ('portfolio',   'Portfolio Analyst',  'bi-collection',   'purple',  'Big-picture analysis of a buyer\'s favorites list.'),
+        ('preferences', 'Preferences Coach',  'bi-sliders',      'success', 'Reviews a buyer\'s scoring weight configuration.'),
+    ] %}
+
+    {% for ptype, title, icon, color, desc in prompt_meta %}
+    {% set current = overrides.get(ptype, '') %}
+    {% set eff = effective.get(ptype, '') %}
+    {% set is_mine = current|length > 0 %}
+
+    <div class="card border-0 shadow-sm mb-4 prompt-card {{ ptype }}">
+        <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-2">
+            <div>
+                <i class="bi {{ icon }} me-2 text-{{ color }}"></i>
+                <strong>{{ title }}</strong>
+                {% if is_mine %}
+                <span class="badge ms-2 small label-agent">Your override active</span>
+                {% elif eff != defaults.get(ptype, '') %}
+                <span class="badge ms-2 small label-global">Using global override</span>
+                {% else %}
+                <span class="badge ms-2 small label-default">Using built-in default</span>
+                {% endif %}
+            </div>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary toolbar-btn"
+                        onclick="copyEffective('{{ ptype }}')"
+                        title="Copy the currently effective prompt into the editor">
+                    <i class="bi bi-clipboard-plus me-1"></i> Copy Effective to Editor
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary toolbar-btn"
+                        onclick="copyDefault('{{ ptype }}')"
+                        title="Copy the built-in default into the editor">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Copy Default to Editor
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-2">{{ desc }}</p>
+            <textarea class="form-control prompt-textarea"
+                      id="ta_{{ ptype }}"
+                      name="prompt_{{ ptype }}"
+                      oninput="updateCount('{{ ptype }}'); clearResults('{{ ptype }}')"
+                      placeholder="Leave blank to fall through to global override or built-in default...">{{ current }}</textarea>
+            <div class="d-flex justify-content-between mt-1">
+                <span class="char-count" id="count_{{ ptype }}">{{ current|length }} chars</span>
+                <button type="button" class="btn btn-sm btn-link text-danger p-0"
+                        onclick="clearPrompt('{{ ptype }}')" style="font-size:0.75rem;">
+                    <i class="bi bi-x-circle me-1"></i>Clear (fall through)
+                </button>
+            </div>
+
+            <!-- Toolbar: Validate + Preview -->
+            <div class="d-flex gap-2 mt-3">
+                <button type="button" class="btn btn-sm btn-outline-warning toolbar-btn"
+                        onclick="validatePrompt('{{ ptype }}')" id="validateBtn_{{ ptype }}">
+                    <i class="bi bi-check2-square me-1"></i> Validate Syntax
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-info toolbar-btn"
+                        onclick="openPreviewModal('{{ ptype }}')" id="previewBtn_{{ ptype }}">
+                    <i class="bi bi-play-circle me-1"></i> Test with Sample Data
+                </button>
+            </div>
+
+            <!-- Validation results -->
+            <div id="validate_{{ ptype }}" class="validate-result" style="display:none;"></div>
+
+            <!-- Preview results -->
+            <div id="preview_{{ ptype }}" class="preview-result" style="display:none;"></div>
+
+            <!-- What clients actually see -->
+            <div class="mt-3 effective-panel p-2">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="small fw-semibold text-muted">
+                        <i class="bi bi-eye me-1"></i>What your clients currently see
+                    </span>
+                    <button type="button" class="btn btn-sm btn-link text-muted p-0"
+                            data-bs-toggle="collapse" data-bs-target="#eff_{{ ptype }}"
+                            style="font-size:0.75rem;">Show / Hide</button>
+                </div>
+                <div class="collapse" id="eff_{{ ptype }}">
+                    <pre class="mb-0 small" style="white-space:pre-wrap; font-size:0.75rem; max-height:180px; overflow-y:auto;">{{ eff }}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Hidden data for JS -->
+    <div id="js-defaults" style="display:none;"
+         data-deal="{{ defaults.get('deal', '')|e }}"
+         data-portfolio="{{ defaults.get('portfolio', '')|e }}"
+         data-preferences="{{ defaults.get('preferences', '')|e }}">
+    </div>
+    <div id="js-effective" style="display:none;"
+         data-deal="{{ effective.get('deal', '')|e }}"
+         data-portfolio="{{ effective.get('portfolio', '')|e }}"
+         data-preferences="{{ effective.get('preferences', '')|e }}">
+    </div>
+
+    <div class="d-flex gap-2 justify-content-end">
+        <button type="submit" class="btn btn-primary px-4" id="saveBtn">
+            <i class="bi bi-check-lg me-1"></i> Save My Overrides
+        </button>
+    </div>
+</form>
+
+<!-- Preview Modal (shared with admin_prompts.html structure) -->
+{% include "dashboard/_prompt_preview_modal.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const defaultsEl  = document.getElementById('js-defaults');
+const effectiveEl = document.getElementById('js-effective');
+const defaultMap = { deal: defaultsEl.dataset.deal, portfolio: defaultsEl.dataset.portfolio, preferences: defaultsEl.dataset.preferences };
+const effectiveMap = { deal: effectiveEl.dataset.deal, portfolio: effectiveEl.dataset.portfolio, preferences: effectiveEl.dataset.preferences };
+// Alias for shared modal JS
+const defaults = defaultMap;
+
+function updateCount(ptype) { document.getElementById(`count_${ptype}`).textContent = `${document.getElementById('ta_'+ptype).value.length} chars`; }
+function copyDefault(ptype) {
+    const ta=document.getElementById(`ta_${ptype}`);
+    if(ta.value.trim()&&!confirm('Replace with built-in default?'))return;
+    ta.value=defaultMap[ptype]; updateCount(ptype); clearResults(ptype); ta.focus();
+}
+function copyEffective(ptype) {
+    const ta=document.getElementById(`ta_${ptype}`);
+    if(ta.value.trim()&&!confirm('Replace with effective prompt?'))return;
+    ta.value=effectiveMap[ptype]; updateCount(ptype); clearResults(ptype); ta.focus();
+}
+function clearPrompt(ptype) {
+    if(!confirm('Clear your override?'))return;
+    document.getElementById(`ta_${ptype}`).value=''; updateCount(ptype); clearResults(ptype);
+}
+function clearResults(ptype) {
+    document.getElementById(`validate_${ptype}`).style.display='none';
+}
+function escapeHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+function validatePrompt(ptype) {
+    const ta=document.getElementById(`ta_${ptype}`); const btn=document.getElementById(`validateBtn_${ptype}`);
+    const rd=document.getElementById(`validate_${ptype}`);
+    if(!ta.value.trim()){rd.innerHTML='<div class="alert alert-secondary small py-2 mb-0"><i class="bi bi-info-circle me-1"></i>No override — fall-through active.</div>';rd.style.display='block';return;}
+    btn.disabled=true;btn.innerHTML='<span class="spinner-border spinner-border-sm"></span> Checking...';
+    const fd=new FormData();fd.append('ptype',ptype);fd.append('prompt_text',ta.value);
+    fetch('{{ site_url("dashboard.prompt_validate") }}',{method:'POST',body:fd}).then(r=>r.json()).then(data=>{
+        let h='';
+        if(data.valid){h='<div class="alert alert-success small py-2 mb-0"><i class="bi bi-check-circle-fill me-1"></i><strong>Valid.</strong> Keys: '+data.keys_found.join(', ')+'</div>';}
+        else{h='<div class="alert alert-warning small py-2 mb-2"><i class="bi bi-exclamation-triangle-fill me-1"></i><strong>'+data.issues.length+' issue(s)</strong></div>';
+            data.issues.forEach(i=>{h+='<div class="issue"><i class="bi bi-dot text-warning"></i>'+i+'</div>';});
+            if(data.keys_missing.length)h+='<div class="text-danger small mt-1">Missing: '+data.keys_missing.join(', ')+'</div>';
+        }rd.innerHTML=h;rd.style.display='block';
+    }).catch(()=>{rd.innerHTML='<div class="alert alert-danger small py-2 mb-0">Network error.</div>';rd.style.display='block';
+    }).finally(()=>{btn.disabled=false;btn.innerHTML='<i class="bi bi-check2-square me-1"></i> Validate Syntax';});
+}
+
+{% include "dashboard/_prompt_preview_js.html" %}
+</script>
+{% endblock %}

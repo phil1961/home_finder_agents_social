@@ -1,0 +1,79 @@
+{# v20260313-1 #}
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 0;">
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #1e3a5f, #2563eb); padding: 40px 30px; border-radius: 12px 12px 0 0; text-align: center;">
+        <div style="font-size: 40px; margin-bottom: 8px;">🏡</div>
+        <h1 style="color: #fff; margin: 0; font-size: 26px;">Welcome to HomeFinder</h1>
+        <p style="color: #93c5fd; margin: 8px 0 0 0; font-size: 14px;">Your personal {{ site_name or 'HomeFinder' }} home search, powered by AI</p>
+    </div>
+
+    <!-- Body -->
+    <div style="background: #fff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
+        <p style="font-size: 16px; color: #111;">Hi {{ user.username }},</p>
+
+        <p style="color: #374151; line-height: 1.6;">
+            Your account is verified and ready to go. HomeFinder searches Zillow and
+            Realtor.com every 6 hours for homes matching your criteria in the
+            {{ site_name or 'your' }} area, then scores each one across 17 factors tailored to your priorities.
+        </p>
+
+        <h3 style="color: #1e3a5f; font-size: 16px; margin: 24px 0 12px;">Here's how to get started:</h3>
+
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; vertical-align: top; width: 32px;">
+                    <span style="background: #2563eb; color: #fff; width: 24px; height: 24px; border-radius: 50%; display: inline-block; text-align: center; line-height: 24px; font-size: 12px; font-weight: 700;">1</span>
+                </td>
+                <td style="padding: 12px 0 12px 12px; border-bottom: 1px solid #f3f4f6; color: #374151;">
+                    <strong>Set your preferences</strong> — Price range, must-have features, and how much each factor matters to you.
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; vertical-align: top;">
+                    <span style="background: #2563eb; color: #fff; width: 24px; height: 24px; border-radius: 50%; display: inline-block; text-align: center; line-height: 24px; font-size: 12px; font-weight: 700;">2</span>
+                </td>
+                <td style="padding: 12px 0 12px 12px; border-bottom: 1px solid #f3f4f6; color: #374151;">
+                    <strong>Browse the dashboard</strong> — Listings ranked by your personalized deal score, with photos and quick stats.
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; vertical-align: top;">
+                    <span style="background: #2563eb; color: #fff; width: 24px; height: 24px; border-radius: 50%; display: inline-block; text-align: center; line-height: 24px; font-size: 12px; font-weight: 700;">3</span>
+                </td>
+                <td style="padding: 12px 0 12px 12px; border-bottom: 1px solid #f3f4f6; color: #374151;">
+                    <strong>Use the AI Deal Analyst</strong> — Click "Analyze This Deal" on any listing for a buyer-focused brief with a suggested opening offer.
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 12px 0; vertical-align: top;">
+                    <span style="background: #2563eb; color: #fff; width: 24px; height: 24px; border-radius: 50%; display: inline-block; text-align: center; line-height: 24px; font-size: 12px; font-weight: 700;">4</span>
+                </td>
+                <td style="padding: 12px 0 12px 12px; color: #374151;">
+                    <strong>Star your favorites</strong> — Flag listings as ⭐ Favorite, 🤔 Maybe, or 🙈 Hidden to organize your search.
+                </td>
+            </tr>
+        </table>
+
+        <div style="text-align: center; margin: 28px 0;">
+            <a href="{{ dashboard_url }}"
+               style="background: #2563eb; color: #fff; padding: 14px 32px; border-radius: 8px;
+                      text-decoration: none; display: inline-block; font-weight: 600; font-size: 15px;">
+                Go to My Dashboard →
+            </a>
+        </div>
+
+        <p style="color: #6b7280; font-size: 13px; line-height: 1.5;">
+            <strong>Pro tip:</strong> HomeFinder works exclusively for buyers — unlike Zillow and Realtor
+            who serve sellers too. Our AI analyst will tell you things listing sites never would:
+            negotiation leverage, fair offer prices, and red flags to watch for.
+        </p>
+    </div>
+
+    <!-- Footer -->
+    <div style="background: #f9fafb; padding: 20px 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; text-align: center;">
+        <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+            HomeFinder — {{ site_name or 'Home Search' }}<br>
+            This is an automated message. Please don't reply to this email.
+        </p>
+    </div>
+</div>

@@ -1,0 +1,154 @@
+<!--
+  File: app/templates/dashboard/admin_prompts.html
+  App Version: 2026.03.14 | File Version: 1.3.0
+  Last Modified: 2026-03-14
+-->
+{% extends "base.html" %}
+{% block title %}Prompt Editor — HomeFinder{% endblock %}
+
+{% block head %}
+<style>
+    .prompt-card { border-left: 4px solid #2563eb; }
+    .prompt-card.portfolio { border-left-color: #7c3aed; }
+    .prompt-card.preferences { border-left-color: #059669; }
+    .prompt-textarea { font-family: monospace; font-size: 0.8rem; line-height: 1.5; min-height: 260px; }
+    .label-active  { background: #dcfce7; color: #166534; border-color: #86efac; }
+    .label-default { background: #f1f5f9; color: #64748b; border-color: #cbd5e1; }
+    .char-count { font-size: 0.72rem; color: #94a3b8; }
+    .validate-result { font-size: 0.78rem; margin-top: 10px; }
+    .validate-result .issue { padding: 4px 0; }
+    .validate-result .issue i { margin-right: 4px; }
+    .toolbar-btn { font-size: 0.75rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <h4 class="mb-0"><i class="bi bi-pencil-square me-2 text-primary"></i>Global Prompt Editor</h4>
+        <small class="text-muted">These prompts apply to all users unless an agent has set their own override.</small>
+    </div>
+    <a href="{{ site_url('dashboard.admin_agents') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to Agents
+    </a>
+</div>
+
+<div class="alert alert-info small py-2 mb-4">
+    <i class="bi bi-info-circle me-1"></i>
+    <strong>Resolution order:</strong> Agent override → <strong>Global override (this page)</strong> → Built-in default.
+    Leave a field blank to revert to the built-in default for that analysis type.
+</div>
+
+<form method="POST" id="promptForm">
+    {% set prompt_meta = [
+        ('deal',        'Deal Analyst',       'bi-house-check',   'primary',   'Analyzes a single listing. Produces strengths, concerns, negotiation strategy, and a verdict.'),
+        ('portfolio',   'Portfolio Analyst',  'bi-collection',    'purple',    'Analyzes a buyer\'s full favorites/maybe list. Produces ranking, patterns, and strategy.'),
+        ('preferences', 'Preferences Coach',  'bi-sliders',       'success',   'Reviews a buyer\'s scoring weights and gives tuning advice.'),
+    ] %}
+
+    {% for ptype, title, icon, color, desc in prompt_meta %}
+    {% set current = overrides.get(ptype, '') %}
+    {% set is_active = current|length > 0 %}
+    <div class="card border-0 shadow-sm mb-4 prompt-card {{ ptype }}">
+        <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-2">
+            <div>
+                <i class="bi {{ icon }} me-2 text-{{ color }}"></i>
+                <strong>{{ title }}</strong>
+                <span class="badge ms-2 small {{ 'label-active' if is_active else 'label-default' }}">
+                    {{ 'Custom override active' if is_active else 'Using built-in default' }}
+                </span>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary toolbar-btn"
+                    onclick="copyDefault('{{ ptype }}')"
+                    title="Copy the built-in default into the editor so you can start editing">
+                <i class="bi bi-clipboard-plus me-1"></i> Copy Default to Editor
+            </button>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-2">{{ desc }}</p>
+            <textarea class="form-control prompt-textarea"
+                      id="ta_{{ ptype }}" name="prompt_{{ ptype }}"
+                      oninput="updateCount('{{ ptype }}'); clearResults('{{ ptype }}')"
+                      placeholder="Leave blank to use the built-in default...">{{ current }}</textarea>
+            <div class="d-flex justify-content-between mt-1">
+                <span class="char-count" id="count_{{ ptype }}">{{ current|length }} chars</span>
+                <button type="button" class="btn btn-sm btn-link text-danger p-0"
+                        onclick="clearPrompt('{{ ptype }}')" style="font-size:0.75rem;">
+                    <i class="bi bi-x-circle me-1"></i>Clear (revert to default)
+                </button>
+            </div>
+            <div class="d-flex gap-2 mt-3">
+                <button type="button" class="btn btn-sm btn-outline-warning toolbar-btn"
+                        onclick="validatePrompt('{{ ptype }}')" id="validateBtn_{{ ptype }}">
+                    <i class="bi bi-check2-square me-1"></i> Validate Syntax
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-info toolbar-btn"
+                        onclick="openPreviewModal('{{ ptype }}')" id="previewBtn_{{ ptype }}">
+                    <i class="bi bi-play-circle me-1"></i> Test with Sample Data
+                </button>
+            </div>
+            <div id="validate_{{ ptype }}" class="validate-result" style="display:none;"></div>
+            <div class="mt-3">
+                <button type="button" class="btn btn-sm btn-link text-muted p-0"
+                        data-bs-toggle="collapse" data-bs-target="#default_{{ ptype }}" style="font-size:0.75rem;">
+                    <i class="bi bi-eye me-1"></i>View built-in default
+                </button>
+                <div class="collapse mt-2" id="default_{{ ptype }}">
+                    <pre class="bg-light p-2 rounded small" style="white-space:pre-wrap; font-size:0.75rem; max-height:200px; overflow-y:auto;">{{ defaults.get(ptype, '') }}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <div id="js-defaults" style="display:none;"
+         data-deal="{{ defaults.get('deal', '')|e }}"
+         data-portfolio="{{ defaults.get('portfolio', '')|e }}"
+         data-preferences="{{ defaults.get('preferences', '')|e }}">
+    </div>
+
+    <div class="d-flex gap-2 justify-content-end">
+        <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-lg me-1"></i> Save Global Prompts</button>
+    </div>
+</form>
+
+{% include "dashboard/_prompt_preview_modal.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const defaults = {
+    deal:        document.getElementById('js-defaults').dataset.deal,
+    portfolio:   document.getElementById('js-defaults').dataset.portfolio,
+    preferences: document.getElementById('js-defaults').dataset.preferences,
+};
+
+function updateCount(ptype) { document.getElementById(`count_${ptype}`).textContent = `${document.getElementById('ta_'+ptype).value.length} chars`; }
+function copyDefault(ptype) {
+    const ta=document.getElementById(`ta_${ptype}`);
+    if(ta.value.trim()&&!confirm('Replace with the built-in default?'))return;
+    ta.value=defaults[ptype]; updateCount(ptype); clearResults(ptype); ta.focus();
+}
+function clearPrompt(ptype) { if(!confirm('Clear this override?'))return; document.getElementById(`ta_${ptype}`).value=''; updateCount(ptype); clearResults(ptype); }
+function clearResults(ptype) { document.getElementById(`validate_${ptype}`).style.display='none'; }
+function escapeHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+function validatePrompt(ptype) {
+    const ta=document.getElementById(`ta_${ptype}`),btn=document.getElementById(`validateBtn_${ptype}`),rd=document.getElementById(`validate_${ptype}`);
+    if(!ta.value.trim()){rd.innerHTML='<div class="alert alert-secondary small py-2 mb-0"><i class="bi bi-info-circle me-1"></i>Empty — built-in default will be used.</div>';rd.style.display='block';return;}
+    btn.disabled=true;btn.innerHTML='<span class="spinner-border spinner-border-sm"></span> Checking...';
+    const fd=new FormData();fd.append('ptype',ptype);fd.append('prompt_text',ta.value);
+    fetch('{{ site_url("dashboard.prompt_validate") }}',{method:'POST',body:fd}).then(r=>r.json()).then(data=>{
+        let h='';
+        if(data.valid){h='<div class="alert alert-success small py-2 mb-0"><i class="bi bi-check-circle-fill me-1"></i><strong>Valid.</strong> Keys: '+data.keys_found.join(', ')+'</div>';}
+        else{h='<div class="alert alert-warning small py-2 mb-2"><i class="bi bi-exclamation-triangle-fill me-1"></i><strong>'+data.issues.length+' issue(s)</strong></div>';
+            data.issues.forEach(i=>{h+='<div class="issue"><i class="bi bi-dot text-warning"></i>'+i+'</div>';});
+            if(data.keys_missing.length)h+='<div class="text-danger small mt-1">Missing: '+data.keys_missing.join(', ')+'</div>';
+        }rd.innerHTML=h;rd.style.display='block';
+    }).catch(()=>{rd.innerHTML='<div class="alert alert-danger small py-2 mb-0">Network error.</div>';rd.style.display='block';
+    }).finally(()=>{btn.disabled=false;btn.innerHTML='<i class="bi bi-check2-square me-1"></i> Validate Syntax';});
+}
+
+{% include "dashboard/_prompt_preview_js.html" %}
+</script>
+{% endblock %}

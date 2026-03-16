@@ -1,0 +1,89 @@
+<!--
+  File: app/templates/social/friend_listings.html
+  App Version: 2026.03.14 | File Version: 1.0.0
+  Last Modified: 2026-03-14
+-->
+{% extends "base.html" %}
+{% block title %}Neighborhood Tips — HomeFinder{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bi bi-house-add me-2 text-success"></i>Neighborhood Tips</h4>
+    {% if current_user.is_authenticated %}
+    <a href="{{ site_url('social.add_home') }}" class="btn btn-sm btn-success">
+        <i class="bi bi-plus-lg me-1"></i>Add a Home
+    </a>
+    {% endif %}
+</div>
+
+{% if friend_listings %}
+<div class="row">
+    {% for fl in friend_listings %}
+    <div class="col-lg-6 mb-3">
+        <div class="card h-100 border-0 shadow-sm" style="border-left: 4px solid #22c55e !important;">
+            <div class="d-flex">
+                <!-- Photo -->
+                <div class="flex-shrink-0" style="width: 140px; min-height: 140px;">
+                    {% if fl.primary_photo %}
+                    <img src="{{ url_for('static', filename='uploads/' + fl.primary_photo) }}" alt="{{ fl.address }}"
+                         style="width: 140px; height: 100%; object-fit: cover; border-radius: 10px 0 0 10px;"
+                         loading="lazy">
+                    {% else %}
+                    <div class="d-flex align-items-center justify-content-center h-100 bg-light"
+                         style="border-radius: 10px 0 0 10px;">
+                        <i class="bi bi-house text-muted" style="font-size: 2rem;"></i>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="card-body pb-2">
+                    <div class="d-flex align-items-start justify-content-between mb-1">
+                        <div>
+                            <h6 class="mb-0">{{ fl.address }}</h6>
+                            <small class="text-muted">{{ fl.city or '' }}{% if fl.zip_code %}, {{ fl.zip_code }}{% endif %}</small>
+                        </div>
+                        <span class="badge rounded-pill" style="background: #dcfce7; color: #166534; font-size: 0.7rem;">
+                            <i class="bi bi-megaphone me-1"></i>Neighborhood Tip
+                        </span>
+                    </div>
+
+                    {% if fl.price %}
+                    <h5 class="text-primary mb-1">${{ "{:,}".format(fl.price) }}</h5>
+                    {% endif %}
+
+                    <div class="d-flex gap-3 mb-2 small">
+                        {% if fl.bedrooms %}<span><strong>{{ fl.bedrooms }}</strong> bd</span>{% endif %}
+                        {% if fl.bathrooms %}<span><strong>{{ fl.bathrooms }}</strong> ba</span>{% endif %}
+                        {% if fl.sqft %}<span><strong>{{ "{:,}".format(fl.sqft) }}</strong> sqft</span>{% endif %}
+                    </div>
+
+                    {% if fl.description %}
+                    <p class="text-muted small mb-1" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+                        {{ fl.description }}
+                    </p>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted" style="font-size: 0.72rem;">
+                            <i class="bi bi-clock me-1"></i>{{ fl.created_at.strftime('%b %d, %Y') }}
+                            · {{ fl.relationship|replace('_', ' ')|title }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center text-muted py-5">
+    <i class="bi bi-house-add" style="font-size: 3rem; opacity: 0.3;"></i>
+    <p class="mt-3">No neighborhood tips yet.</p>
+    {% if current_user.is_authenticated %}
+    <a href="{{ site_url('social.add_home') }}" class="btn btn-success btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Be the first to add one!
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

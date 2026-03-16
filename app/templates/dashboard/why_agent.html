@@ -1,0 +1,263 @@
+<!--
+  File: app/templates/dashboard/why_agent.html
+  App Version: 2026.03.12 | File Version: 1.1.0
+  Last Modified: 2026-03-12
+-->
+{% extends "base.html" %}
+{% block title %}Why HomeFinder — For Agents{% endblock %}
+
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+    --navy: #0f2044;
+    --blue: #2563eb;
+    --sky:  #dbeafe;
+    --lt:   #f8faff;
+    --muted:#64748b;
+    --rule: #e2e8f0;
+}
+body { background: var(--lt); font-family: 'DM Sans', sans-serif; color: var(--navy); }
+
+.hero {
+    background: linear-gradient(135deg, var(--navy) 0%, #1e3a6e 100%);
+    color: #fff; padding: 80px 0 64px; position: relative; overflow: hidden;
+}
+.hero::after {
+    content:''; position:absolute; right:-80px; top:-80px;
+    width:500px; height:500px; border-radius:50%;
+    background:rgba(37,99,235,0.15); pointer-events:none;
+}
+.hero-pill {
+    display:inline-block; background:rgba(37,99,235,0.3);
+    border:1px solid rgba(37,99,235,0.5); color:#93c5fd;
+    font-size:0.7rem; letter-spacing:2px; text-transform:uppercase;
+    padding:5px 14px; border-radius:20px; margin-bottom:20px; font-weight:500;
+}
+.hero h1 {
+    font-family:'DM Serif Display', serif;
+    font-size:clamp(2rem,4.5vw,3.4rem); line-height:1.15; margin-bottom:20px;
+}
+.hero h1 span { color:#60a5fa; }
+.hero .sub {
+    font-size:1.1rem; font-weight:300; color:rgba(255,255,255,0.75);
+    max-width:560px; line-height:1.7; margin-bottom:36px;
+}
+.hero-stats { display:flex; gap:40px; flex-wrap:wrap; }
+.hero-stat .n {
+    font-family:'DM Serif Display', serif; font-size:2.2rem; color:#60a5fa; line-height:1;
+}
+.hero-stat .l { font-size:0.8rem; color:rgba(255,255,255,0.6); margin-top:4px; }
+
+.section { padding:64px 0; }
+.tag { font-size:0.65rem; letter-spacing:2.5px; text-transform:uppercase;
+       color:var(--blue); font-weight:600; margin-bottom:8px; }
+h2 { font-family:'DM Serif Display', serif; font-size:clamp(1.6rem,3vw,2.3rem);
+     margin-bottom:16px; line-height:1.2; }
+.body-text { color:var(--muted); line-height:1.75; font-size:1rem; }
+
+.vp-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:20px; }
+.vp-card {
+    background:#fff; border:1px solid var(--rule); border-radius:10px; padding:28px 24px;
+}
+.vp-card .icon {
+    width:44px; height:44px; border-radius:10px; display:flex;
+    align-items:center; justify-content:center; font-size:1.3rem;
+    margin-bottom:14px;
+}
+.vp-card h5 { font-weight:600; margin-bottom:8px; font-size:1rem; }
+.vp-card p  { font-size:0.88rem; color:var(--muted); margin:0; line-height:1.6; }
+
+.workflow {
+    display:flex; flex-direction:column; gap:0;
+    border-left:3px solid var(--blue); padding-left:24px; margin-left:12px;
+}
+.wf-step { position:relative; padding-bottom:28px; }
+.wf-step:last-child { padding-bottom:0; }
+.wf-dot {
+    position:absolute; left:-33px; top:4px;
+    width:18px; height:18px; border-radius:50%;
+    background:var(--blue); border:3px solid #fff;
+    box-shadow:0 0 0 2px var(--blue);
+}
+.wf-step h6 { font-weight:600; margin-bottom:4px; }
+.wf-step p  { font-size:0.88rem; color:var(--muted); margin:0; }
+
+.compare-table { width:100%; border-collapse:separate; border-spacing:0;
+                 font-size:0.88rem; }
+.compare-table th { background:var(--navy); color:#fff; padding:12px 16px; }
+.compare-table th:first-child { border-radius:8px 0 0 0; }
+.compare-table th:last-child  { border-radius:0 8px 0 0; }
+.compare-table td { padding:11px 16px; border-bottom:1px solid var(--rule); }
+.compare-table tr:last-child td:first-child { border-radius:0 0 0 8px; }
+.compare-table tr:last-child td:last-child  { border-radius:0 0 8px 0; }
+.compare-table td:nth-child(2) { background:#fef2f2; color:#991b1b; }
+.compare-table td:nth-child(3) { background:#f0fdf4; color:#166534; font-weight:500; }
+.check { color:#16a34a; font-weight:700; margin-right:6px; }
+.cross { color:#dc2626; font-weight:700; margin-right:6px; }
+
+.cta-band { background:var(--navy); color:#fff; padding:56px 0; text-align:center; }
+.cta-band h3 { font-family:'DM Serif Display', serif; font-size:2rem; margin-bottom:12px; }
+.cta-band p  { color:rgba(255,255,255,0.7); font-size:1.05rem; margin-bottom:28px; }
+.btn-blue { background:var(--blue); color:#fff; border:none;
+            padding:14px 36px; font-size:1rem; font-weight:600;
+            border-radius:6px; text-decoration:none; display:inline-block;
+            transition:opacity 0.2s; }
+.btn-blue:hover { opacity:0.85; color:#fff; }
+.btn-ghost { background:rgba(255,255,255,0.12); color:#fff; border:1px solid rgba(255,255,255,0.3);
+             padding:14px 36px; font-size:1rem; font-weight:600;
+             border-radius:6px; text-decoration:none; display:inline-block;
+             transition:opacity 0.2s; }
+.btn-ghost:hover { opacity:0.8; color:#fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ── Hero ────────────────────────────────────────── -->
+<div class="hero">
+    <div class="container">
+        <div class="hero-pill">HomeFinder &mdash; For Agents</div>
+        <h1>Give your clients<br>the tool that works<br><span>only for them.</span></h1>
+        <p class="sub">
+            Most agents hand clients a Zillow link. HomeFinder gives you something different:
+            a buyer-only intelligence platform you can brand as your own, that actively
+            helps clients find deals — and trust you more for providing it.
+        </p>
+        <div class="hero-stats">
+            <div class="hero-stat"><div class="n">17</div><div class="l">Scoring factors<br>per listing</div></div>
+            <div class="hero-stat"><div class="n">3</div><div class="l">AI analysis<br>modes</div></div>
+            <div class="hero-stat"><div class="n">2</div><div class="l">Data sources<br>aggregated</div></div>
+        </div>
+    </div>
+</div>
+
+<!-- ── The pitch ───────────────────────────────────── -->
+<div class="section" style="background:#fff;">
+    <div class="container">
+        <div class="tag">The Opportunity</div>
+        <h2>Your clients are doing their<br>own research anyway.</h2>
+        <p class="body-text" style="max-width:620px;">
+            Today's buyers spend hours on Zillow before their first agent call.
+            They arrive with opinions, screenshots, and questions you didn't prompt.
+            HomeFinder doesn't fight that — it channels it. Give them a tool built
+            for buyers, branded by you, that they'll use every day of their search.
+            Every session deepens their relationship with you, not with Zillow.
+        </p>
+    </div>
+</div>
+
+<!-- ── HomeFinder vs Zillow ────────────────────────── -->
+<div class="section">
+    <div class="container">
+        <div class="tag">Comparison</div>
+        <h2>What your clients get<br>that Zillow never offers.</h2>
+        <div class="mt-4" style="overflow-x:auto;">
+        <table class="compare-table">
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>Zillow / Realtor.com</th>
+                    <th>HomeFinder</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Negotiation advice</td>
+                    <td><span class="cross">✗</span>Never — conflicts with seller fees</td>
+                    <td><span class="check">✓</span>AI gives leverage points + opening offer</td></tr>
+                <tr><td>Pricing analysis</td>
+                    <td><span class="cross">✗</span>Zestimate only — notoriously inaccurate</td>
+                    <td><span class="check">✓</span>Scored against buyer's own budget and priorities</td></tr>
+                <tr><td>Days on market signal</td>
+                    <td><span class="cross">✗</span>Hidden or de-emphasized</td>
+                    <td><span class="check">✓</span>Prominently scored — 90+ days = motivated seller</td></tr>
+                <tr><td>Flood zone data</td>
+                    <td><span class="cross">✗</span>Buried, no scoring impact</td>
+                    <td><span class="check">✓</span>FEMA-checked, heavily weighted in score</td></tr>
+                <tr><td>Personalized ranking</td>
+                    <td><span class="cross">✗</span>Sorted by "Relevance" = revenue optimization</td>
+                    <td><span class="check">✓</span>17 factors weighted by the buyer</td></tr>
+                <tr><td>Your branding</td>
+                    <td><span class="cross">✗</span>Zillow's brand, Zillow's Premier Agent ads</td>
+                    <td><span class="check">✓</span>Your name, color, and logo in the navbar</td></tr>
+                <tr><td>Portfolio comparison</td>
+                    <td><span class="cross">✗</span>No cross-listing AI analysis</td>
+                    <td><span class="check">✓</span>AI ranks favorites, finds patterns, dark horse pick</td></tr>
+                <tr><td>Tour planning</td>
+                    <td><span class="cross">✗</span>Manual Google Maps links</td>
+                    <td><span class="check">✓</span>One-tap multi-stop Google Maps route</td></tr>
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+
+<!-- ── Value props ─────────────────────────────────── -->
+<div class="section" style="background:#fff;">
+    <div class="container">
+        <div class="tag">What You Get</div>
+        <h2>Four reasons agents<br>use HomeFinder.</h2>
+        <div class="vp-grid mt-4">
+            <div class="vp-card">
+                <div class="icon" style="background:#dbeafe; color:#1e40af;"><i class="bi bi-palette2"></i></div>
+                <h5>Your Brand, Not Zillow's</h5>
+                <p>Set your brand color, choose an icon from 56 Twemoji options, and add your tagline. Every client session shows your name in the navbar, reinforcing your relationship — not a portal's.</p>
+            </div>
+            <div class="vp-card">
+                <div class="icon" style="background:#f0fdf4; color:#166534;"><i class="bi bi-people"></i></div>
+                <h5>Differentiated Value Proposition</h5>
+                <p>When a client asks "why should I use an agent?", you have a concrete answer: a proprietary search tool that gives them AI-powered buyer analysis Zillow is structurally prevented from offering.</p>
+            </div>
+            <div class="vp-card">
+                <div class="icon" style="background:#fef3c7; color:#b45309;"><i class="bi bi-bar-chart-line"></i></div>
+                <h5>Clients Come Prepared</h5>
+                <p>When a client runs "Analyze This Deal" before calling you, they arrive with a scored shortlist and AI-flagged concerns. Your meetings are more productive. Fewer "we just want to look around" tours.</p>
+            </div>
+            <div class="vp-card">
+                <div class="icon" style="background:#fce7f3; color:#be185d;"><i class="bi bi-shield-check"></i></div>
+                <h5>Approved Operator Model</h5>
+                <p>You apply once, get approved by the platform owner, and your clients are linked to your profile. Your branding follows them throughout their entire search experience.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── How it works ────────────────────────────────── -->
+<div class="section">
+    <div class="container">
+        <div class="tag">Getting Started</div>
+        <h2>Up and running<br>in four steps.</h2>
+        <div class="mt-4 workflow">
+            <div class="wf-step">
+                <div class="wf-dot"></div>
+                <h6>1 — Apply as an Agent</h6>
+                <p>Go to Agent Sign Up, enter your license number, brokerage, and contact info. Your account is created immediately but needs owner approval.</p>
+            </div>
+            <div class="wf-step">
+                <div class="wf-dot"></div>
+                <h6>2 — Verify &amp; Get Approved</h6>
+                <p>Verify your email, then the platform owner reviews and approves your application. Typically same day.</p>
+            </div>
+            <div class="wf-step">
+                <div class="wf-dot"></div>
+                <h6>3 — Set Your Brand</h6>
+                <p>Log in to your Agent Dashboard. Choose your brand color, pick an icon, add a tagline. Preview updates live in the navbar.</p>
+            </div>
+            <div class="wf-step">
+                <div class="wf-dot"></div>
+                <h6>4 — Send the Link to Clients</h6>
+                <p>Share the HomeFinder URL. When clients register and are linked to your account, they see your branding and you see their activity.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── CTA ─────────────────────────────────────────── -->
+<div class="cta-band">
+    <div class="container">
+        <h3>Ready to offer something Zillow can't?</h3>
+        <p>Agent signup takes two minutes. Approval is typically same-day.</p>
+        <a href="{{ site_url('auth.agent_signup') }}" class="btn-blue me-3">Apply as an Agent</a>
+        <a href="{{ site_url('dashboard.index') }}" class="btn-ghost">Browse the Platform</a>
+    </div>
+</div>
+{% endblock %}

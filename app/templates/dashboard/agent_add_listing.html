@@ -1,0 +1,140 @@
+<!--
+  File: app/templates/dashboard/agent_add_listing.html
+  App Version: 2026.03.14 | File Version: 1.0.0
+  Last Modified: 2026-03-14
+-->
+{% extends "base.html" %}
+{% block title %}Add Listing — HomeFinder{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ site_url('dashboard.agent_dashboard') }}">Agent Dashboard</a></li>
+        <li class="breadcrumb-item active">Add Listing</li>
+    </ol>
+</nav>
+
+<h4 class="mb-2"><i class="bi bi-plus-circle me-2 text-primary"></i>Add a Listing</h4>
+<p class="text-muted small mb-4">Create a listing directly. It will appear in the main grid and be scored immediately.</p>
+
+<form method="POST" enctype="multipart/form-data">
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <!-- Property Details -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white"><strong>Property Details</strong></div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Address <span class="text-danger">*</span></label>
+                            <input type="text" name="address" class="form-control" required placeholder="123 Main St">
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label">City</label>
+                            <input type="text" name="city" class="form-control" placeholder="Charleston">
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label">Zip Code <span class="text-danger">*</span></label>
+                            <input type="text" name="zip_code" class="form-control" required placeholder="29401" maxlength="10">
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label">Price</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" name="price" class="form-control" placeholder="350000">
+                            </div>
+                        </div>
+                        <div class="col-sm-3">
+                            <label class="form-label">Beds</label>
+                            <input type="number" name="bedrooms" class="form-control" min="0" max="20">
+                        </div>
+                        <div class="col-sm-3">
+                            <label class="form-label">Baths</label>
+                            <input type="number" name="bathrooms" class="form-control" step="0.5" min="0" max="20">
+                        </div>
+                        <div class="col-sm-3">
+                            <label class="form-label">Sqft</label>
+                            <input type="number" name="sqft" class="form-control" min="0">
+                        </div>
+                        <div class="col-sm-3">
+                            <label class="form-label">Lot Sqft</label>
+                            <input type="number" name="lot_sqft" class="form-control" min="0">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Description</label>
+                            <textarea name="description" class="form-control" rows="3" placeholder="Describe the property..."></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Photos (up to 5)</label>
+                            <input type="file" name="photos" class="form-control" multiple accept=".jpg,.jpeg,.png,.webp">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Extended Details -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white"><strong>Extended Details</strong>
+                    <span class="text-muted small ms-2">More details = better deal score</span>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-sm-4">
+                            <label class="form-label">Year Built</label>
+                            <input type="number" name="year_built" class="form-control" min="1800" max="2030">
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label">Stories</label>
+                            <input type="number" name="stories" class="form-control" min="1" max="5">
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label">HOA Monthly</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" name="hoa_monthly" class="form-control" step="0.01">
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label">Property Tax (Annual)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" name="property_tax_annual" class="form-control" step="0.01">
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label">Latitude</label>
+                            <input type="number" name="latitude" class="form-control" step="0.000001">
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label">Longitude</label>
+                            <input type="number" name="longitude" class="form-control" step="0.000001">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Features</label>
+                            <div class="d-flex flex-wrap gap-3">
+                                {% for field, label in [
+                                    ('has_garage', 'Garage'),
+                                    ('has_porch', 'Porch'),
+                                    ('has_patio', 'Patio'),
+                                    ('is_single_story', 'Single Story'),
+                                    ('has_community_pool', 'Community Pool'),
+                                ] %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="{{ field }}" id="chk_{{ field }}">
+                                    <label class="form-check-label" for="chk_{{ field }}">{{ label }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary px-4">
+                <i class="bi bi-plus-circle me-1"></i>Create Listing
+            </button>
+            <a href="{{ site_url('dashboard.agent_dashboard') }}" class="btn btn-outline-secondary ms-2">Cancel</a>
+        </div>
+    </div>
+</form>
+{% endblock %}

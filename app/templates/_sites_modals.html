@@ -1,0 +1,163 @@
+<!--
+  File: app/templates/_sites_modals.html
+  App Version: 1.0.0 | File Version: 1.0.0
+  Last Modified: 2026-03-15
+-->
+<!-- ── Map Picker Modal ───────────────────────────────────────────── -->
+<div class="modal fade" id="mapPickerModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title mb-0">
+                    <i class="bi bi-map me-2 text-primary"></i>
+                    Pick Map Center &amp; Bounding Box
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="px-3 pt-2 pb-2 bg-light border-bottom">
+                    <div class="input-group input-group-sm mb-2">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" id="mp-search-input" class="form-control"
+                               placeholder="Search for a city or place…"
+                               onkeydown="if(event.key==='Enter'){event.preventDefault();mpSearch();}">
+                        <button class="btn btn-outline-secondary" type="button" onclick="mpSearch()">Go</button>
+                    </div>
+                    <ul id="mp-search-results" class="list-group mb-1" style="display:none; max-height:160px; overflow-y:auto; position:absolute; z-index:9999; width:calc(100% - 3rem);"></ul>
+                    <div class="small text-muted">
+                        <strong>1.</strong> Click map to set <span class="text-primary fw-semibold">center</span> (blue pin). &nbsp;
+                        <strong>2.</strong> <kbd>Shift</kbd>+drag to draw <span class="text-success fw-semibold">bounding box</span>. &nbsp;
+                        <strong>3.</strong> Click <em>Apply to Form</em>.
+                    </div>
+                </div>
+                <div id="map-picker-leaflet" style="height:480px; width:100%;"></div>
+                <div class="px-3 py-2 bg-light border-top d-flex gap-4 small">
+                    <span><strong>Center:</strong> <span id="mp-center-display" class="text-primary font-monospace">— click map —</span></span>
+                    <span><strong>Bounds:</strong> <span id="mp-bounds-display" class="text-success font-monospace">— drag rectangle —</span></span>
+                    <span><strong>Zoom:</strong> <span id="mp-zoom-display" class="font-monospace">10</span></span>
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="applyMapPicker()">
+                    <i class="bi bi-check-lg me-1"></i>Apply to Form
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Location Picker Modal ─────────────────────────────────────── -->
+<div class="modal fade" id="locationPickerModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:520px;">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title mb-0">
+                    <i class="bi bi-geo-alt-fill me-2 text-primary"></i>Location Picker
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3">
+                    Start typing a city or market area. Results appear as you type.
+                    Selecting a result will auto-fill
+                    <strong>site key, display name, map center, bounds,</strong> and
+                    <strong>first zip code</strong>. You can edit any field before creating.
+                </p>
+                <div class="position-relative mb-2">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" id="lp-search-input" class="form-control"
+                               placeholder="Start typing a city name..."
+                               autocomplete="off"
+                               oninput="lpTypeahead()"
+                               onkeydown="lpKeydown(event)">
+                        <span class="input-group-text" id="lp-spinner" style="display:none;">
+                            <span class="spinner-border spinner-border-sm text-muted"></span>
+                        </span>
+                    </div>
+                    <ul id="lp-search-results" class="list-group position-absolute w-100 shadow-sm"
+                        style="display:none; max-height:300px; overflow-y:auto; z-index:999;"></ul>
+                </div>
+                <div id="lp-status" class="small text-muted mt-2"></div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── ZIP Picker Modal ───────────────────────────────────────────── -->
+<div class="modal fade" id="zipPickerModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title mb-0">
+                    <i class="bi bi-map me-2 text-primary"></i>
+                    Pick Target Zip Codes
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="px-3 pt-2 pb-2 bg-light border-bottom">
+                    <div class="input-group input-group-sm mb-2">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" id="zp-search-input" class="form-control"
+                               placeholder="Search for a city or region to zoom there…"
+                               onkeydown="if(event.key==='Enter'){event.preventDefault();zpSearch();}">
+                        <button class="btn btn-outline-secondary" type="button" onclick="zpSearch()">Go</button>
+                    </div>
+                    <!-- Inline results — not absolute-positioned so they never bleed outside modal -->
+                    <ul id="zp-search-results" class="list-group mb-2"
+                        style="display:none; max-height:140px; overflow-y:auto;"></ul>
+                    <div class="small text-muted">
+                        <strong>1.</strong> Search for a city to load that state's zip boundaries. &nbsp;
+                        <strong>2.</strong> Click zip polygons to select/deselect. &nbsp;
+                        <strong>3.</strong> Click <em>Apply to Form</em>.
+                    </div>
+                    <div id="zp-status" class="small text-muted mt-1">Search for a city to begin.</div>
+                </div>
+                <div id="zip-picker-leaflet" style="height:420px; width:100%;"></div>
+                <div class="px-3 py-2 bg-light border-top">
+                    <div id="zp-chips" class="d-flex flex-wrap gap-1 align-items-center">
+                        <span class="text-muted small">No zip codes selected yet — click the map.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="applyZipPicker()">
+                    <i class="bi bi-check-lg me-1"></i>Apply to Form
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── nginx snippet modal ────────────────────────────────────────── -->
+<div class="modal fade" id="nginxModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-server me-2"></i>nginx Config — <span id="nginx-site-name"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">
+                    Add this block inside your nginx <code>server { }</code> section. The
+                    <code>X-HomeFinder-Site</code> header tells the Flask app which database to use.
+                </p>
+                <pre class="nginx-pre" id="nginx-snippet">Loading…</pre>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-sm btn-outline-secondary" onclick="copyNginx()">
+                    <i class="bi bi-clipboard me-1"></i>Copy
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>

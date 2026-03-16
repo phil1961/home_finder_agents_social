@@ -1,0 +1,136 @@
+<!--
+  File: app/templates/dashboard/_prefs_target_areas.html
+  App Version: 2026.03.14 | File Version: 1.0.0
+  Last Modified: 2026-03-15
+-->
+<!-- ══════════════════════════════════════════════════════════════
+     SECTION 3: TARGET AREAS (zip code map)
+     ══════════════════════════════════════════════════════════════ -->
+<div style="border: 2px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 24px; background: #fefefe;">
+<div class="d-flex align-items-center gap-2 mb-3">
+    <i class="bi bi-map text-success" style="font-size:1.1rem;"></i>
+    <h6 class="mb-0">Target Areas</h6>
+</div>
+<form method="POST" id="areasForm" onsubmit="return saveFormAjax(event, this, 'areas-save-status')">
+<input type="hidden" name="_section" value="areas">
+<div class="card pref-section shadow-sm mb-3" id="area-map-section">
+    <div class="card-header">
+        <i class="bi bi-map"></i> Target Areas
+        {% if current_user.is_authenticated and current_user.is_owner %}
+        <small class="text-muted fw-normal ms-2">
+            {% if current_user.is_master %}
+            Click zip codes to build search areas. You can add or remove zips within the map boundary.
+            {% else %}
+            Organize zip codes into named areas. Click a zip to assign or unassign it.
+            {% endif %}
+        </small>
+        {% else %}
+        <small class="text-muted fw-normal ms-2">Areas and zip codes configured for this site</small>
+        {% endif %}
+    </div>
+    <div class="card-body">
+
+        {% if current_user.is_authenticated and current_user.is_owner %}
+        <!-- Active area controls (owner + master) -->
+        <div class="row g-2 align-items-center mb-3">
+            <div class="col-auto">
+                <div class="active-area-indicator" id="active-color-dot" style="background:#e5e7eb;"></div>
+            </div>
+            <div class="col-md-4">
+                <input type="text" class="form-control form-control-sm" id="active-area-input"
+                       placeholder="Type an area name, then click zips on the map…"
+                       oninput="onActiveAreaInput(this.value)">
+            </div>
+            <div class="col-auto">
+                <span class="text-muted small" id="map-instruction">
+                    Type a name above to start assigning zip codes.
+                </span>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row g-3">
+            <!-- Map -->
+            <div class="col-lg-8">
+                <div style="position:relative;">
+                    <div id="area-map"></div>
+                    <div class="map-region-badge">
+                        <i class="bi bi-geo-fill me-1"></i>{{ current_site.display_name if current_site else 'Region' }} Only
+                    </div>
+                    <div class="map-bounds-toast" id="map-bounds-toast">
+                        <i class="bi bi-slash-circle me-1"></i>Outside {{ current_site.display_name if current_site else 'region' }}
+                    </div>
+                </div>
+                {% if current_user.is_authenticated and current_user.is_owner %}
+                <div class="form-text mt-1">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Click a zip to assign it to the active area. Click it again to remove it.
+                    {% if current_user.is_master %}
+                    As master, you can also click unregistered zips to add them to the site.
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Area list panel -->
+            <div class="col-lg-4">
+                <div class="fw-semibold small mb-2">
+                    <i class="bi bi-list-ul me-1 text-primary"></i> Defined Areas
+                </div>
+                <div id="area-list">
+                    <p class="text-muted small">No target areas defined yet.</p>
+                </div>
+
+                <hr>
+                <label class="form-label small fw-semibold">
+                    <i class="bi bi-slash-circle me-1 text-danger"></i> Avoid Areas
+                    <span class="text-muted fw-normal">(excluded from dashboard)</span>
+                </label>
+
+                <!-- Selected avoid tags display -->
+                <div id="avoid-tags" class="d-flex flex-wrap gap-1 mb-2 p-2 border rounded"
+                     style="min-height:38px; background:#fff; cursor:text;"
+                     onclick="document.getElementById('avoid-search').focus()">
+                </div>
+
+                <!-- Search / add input -->
+                <div class="input-group input-group-sm mb-1">
+                    <input type="text" class="form-control form-control-sm" id="avoid-search"
+                           placeholder="Search place names…" autocomplete="off"
+                           oninput="filterPlaceSuggestions(this.value)"
+                           onkeydown="avoidSearchKeydown(event)">
+                    <button class="btn btn-outline-secondary" type="button"
+                            onclick="document.getElementById('avoid-dropdown').classList.toggle('d-none')">
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                </div>
+
+                <!-- Dropdown suggestions -->
+                <div id="avoid-dropdown" class="border rounded d-none"
+                     style="max-height:200px; overflow-y:auto; background:#fff; z-index:100; position:relative;">
+                    <div id="avoid-suggestion-list" class="list-group list-group-flush small"></div>
+                </div>
+
+                <!-- Hidden input submitted with form — comma-separated -->
+                <input type="hidden" name="avoid_areas" id="avoid-areas-hidden"
+                       value="{{ prefs.avoid_areas|join(', ') }}">
+
+                <div class="form-text">
+                    Listings in these Census-defined places will be hidden from your dashboard.
+                    <span id="avoid-shapefile-note" class="text-muted"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if current_user.is_authenticated and current_user.is_owner %}
+<div class="d-flex justify-content-end align-items-center gap-2 mt-2">
+    <span id="areas-save-status" class="small"></span>
+    <button type="submit" class="btn btn-success px-4">
+        <i class="bi bi-check-lg me-1"></i>Save Target Areas
+    </button>
+</div>
+{% endif %}
+</form>
+</div>

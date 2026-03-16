@@ -1,0 +1,600 @@
+<!--
+  File: app/templates/dashboard/preferences.html
+  App Version: 2026.03.14 | File Version: 2.0.0
+  Last Modified: 2026-03-15
+-->
+{% extends "base.html" %}
+{% block title %}Preferences – HomeFinder{% endblock %}
+
+{% block head %}
+<style>
+    .pref-section { border: none; border-radius: 10px; }
+    .pref-section .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; font-weight: 600; }
+    .imp-row { padding: 6px 0; border-bottom: 1px solid #f3f4f6; }
+    .imp-row:last-child { border-bottom: none; }
+    .imp-val { width: 32px; text-align: center; font-weight: 700; font-size: 0.85rem; }
+    .imp-val.high { color: #059669; }
+    .imp-val.mid { color: #2563eb; }
+    .imp-val.low { color: #9ca3af; }
+    .imp-val.off { color: #d1d5db; }
+    .price-display { font-size: 1.3rem; font-weight: 700; color: #2563eb; }
+    .range-track { position: relative; height: 36px; }
+    .range-track input[type="range"] {
+        position: absolute; width: 100%; pointer-events: none;
+        -webkit-appearance: none; appearance: none;
+        height: 6px; background: transparent; top: 14px; z-index: 3;
+    }
+    .range-track input[type="range"]#minPriceSlider { z-index: 4; }
+    .range-track input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none; height: 22px; width: 22px;
+        border-radius: 50%; background: #2563eb; border: 3px solid #fff;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.3); pointer-events: all; cursor: pointer;
+    }
+    .range-track input[type="range"]::-moz-range-thumb {
+        height: 22px; width: 22px; border-radius: 50%;
+        background: #2563eb; border: 3px solid #fff;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.3); pointer-events: all; cursor: pointer;
+    }
+    .range-bar {
+        position: absolute; height: 6px; background: #2563eb; top: 14px;
+        border-radius: 3px; pointer-events: none;
+    }
+    .range-bg {
+        position: absolute; height: 6px; width: 100%; background: #e5e7eb; top: 14px;
+        border-radius: 3px;
+    }
+    .area-row { background: #f9fafb; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+    .category-label {
+        font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px;
+        color: #9ca3af; font-weight: 600; margin-bottom: 4px;
+    }
+    /* ── Map area selector ── */
+    #area-map { height: 420px; border-radius: 8px; z-index: 0; }
+    .area-pill { font-size: 0.72rem; padding: 2px 8px; border-radius: 20px; color: #fff; display: inline-block; margin: 2px; }
+    .active-area-indicator { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; border: 2px solid rgba(0,0,0,.15); }
+    .area-list-item { padding: 8px 10px; background: #f9fafb; border-radius: 8px; }
+    #map-instruction { font-size: 0.82rem; }
+    .map-region-badge {
+        position: absolute; bottom: 8px; left: 8px; z-index: 1000;
+        background: rgba(30,58,95,0.82); color: #fff;
+        font-size: 0.68rem; font-weight: 600; letter-spacing: 0.4px;
+        padding: 3px 8px; border-radius: 20px; pointer-events: none;
+        backdrop-filter: blur(2px);
+    }
+    .map-bounds-toast {
+        position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+        z-index: 1000; background: rgba(220,38,38,0.88); color: #fff;
+        font-size: 0.75rem; font-weight: 600; padding: 5px 14px;
+        border-radius: 20px; pointer-events: none; white-space: nowrap;
+        backdrop-filter: blur(2px);
+        opacity: 0; transition: opacity 0.2s ease;
+    }
+    .map-bounds-toast.visible { opacity: 1; }
+</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0"><i class="bi bi-sliders"></i> Preferences</h4>
+        <small class="text-muted">Search criteria, scoring importance, and display settings</small>
+    </div>
+</div>
+
+{% include "dashboard/_prefs_scoring.html" %}
+{% include "dashboard/_prefs_landmarks_admin.html" %}
+{% include "dashboard/_prefs_target_areas.html" %}
+
+<div class="text-center mb-4">
+    <a href="{{ site_url('dashboard.index') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+    </a>
+</div>
+
+{% include "dashboard/_prefs_ai_coach.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── Global config for JS modules ──────────────────────────────
+{% set user_lms = prefs.get('user_landmarks', []) %}
+const PREFS_CONFIG = {
+    siteLat: {{ current_site.map_center_lat if current_site else 39.5 }},
+    siteLon: {{ current_site.map_center_lon if current_site else -98.35 }},
+    siteZoom: {{ current_site.map_zoom if current_site else 10 }},
+    siteDisplayName: '{{ (current_site.display_name if current_site else "")|e }}',
+    mapReadonly: {{ 'false' if current_user.is_authenticated and current_user.is_owner else 'true' }},
+    canAddZips: {{ 'true' if current_user.is_authenticated and current_user.is_master else 'false' }},
+    isAuth: {{ 'true' if current_user.is_authenticated else 'false' }},
+    isMaster: {{ 'true' if current_user.is_authenticated and current_user.is_master else 'false' }},
+    isOwner: {{ 'true' if current_user.is_authenticated and current_user.is_owner else 'false' }},
+    defaults: {{ prefs_defaults|tojson }},
+    siteZipCodes: {{ current_site.zip_codes_json|default('[]')|safe if current_site else '[]' }},
+    {% if current_user.is_authenticated %}
+    analyzePreferencesUrl: '{{ site_url("dashboard.analyze_preferences") }}',
+    userLandmarksUrl: '{{ site_url("dashboard.user_landmarks") }}',
+    userLandmarks: {{ user_lms|tojson }},
+    {% endif %}
+    {% if current_user.is_authenticated and current_user.is_owner %}
+    adminLandmarksUrl: '{{ site_url("dashboard.admin_landmarks") }}',
+    ownerLandmarks: {{ landmarks|tojson }},
+    {% endif %}
+};
+const MAP_READONLY = PREFS_CONFIG.mapReadonly;
+</script>
+<script src="{{ url_for('static', filename='js/preferences.js') }}"></script>
+<script src="{{ url_for('static', filename='js/landmarks.js') }}"></script>
+<script>
+// ── Target Areas Map (kept inline — heavily Jinja-templated) ──
+
+const AREA_COLORS = ['#2563eb','#059669','#d97706','#dc2626','#7c3aed','#0891b2','#be185d','#b45309'];
+
+// State
+const areas    = {};
+const zipToArea = {};
+const zipLayers = {};
+let activeAreaName = '';
+
+const _siteLat  = PREFS_CONFIG.siteLat;
+const _siteLon  = PREFS_CONFIG.siteLon;
+const _siteZoom = PREFS_CONFIG.siteZoom;
+
+// Zip codes for this site
+const SITE_ZIPS = new Set({{ (current_site.zip_codes_json | from_json) | tojson if current_site and current_site.zip_codes_json else '[]' }});
+
+// Load saved areas from prefs
+(function initFromSaved() {
+    const saved = {{ prefs.target_areas | tojson }};
+    let ci = 0;
+    for (const [name, zips] of Object.entries(saved)) {
+        areas[name] = { zips: [...zips], color: AREA_COLORS[ci++ % AREA_COLORS.length] };
+        for (const z of zips) zipToArea[z] = name;
+    }
+})();
+
+// Site map bounds
+{% if current_site and current_site.map_bounds_json %}
+{% set bounds = current_site.map_bounds_json | from_json %}
+const SITE_BOUNDS = L.latLngBounds(
+    L.latLng({{ bounds[0][0] }}, {{ bounds[0][1] }}),
+    L.latLng({{ bounds[1][0] }}, {{ bounds[1][1] }})
+);
+{% else %}
+const SITE_BOUNDS = null;
+{% endif %}
+
+// Guard against Leaflet double-init
+let map;
+{ const _el = document.getElementById('area-map');
+  if (_el && _el._leaflet_id) { L.map(_el).remove(); }
+  map = L.map('area-map', {
+    zoomControl: true,
+    minZoom: 9,
+    maxZoom: 14,
+    maxBounds: SITE_BOUNDS || undefined,
+    maxBoundsViscosity: SITE_BOUNDS ? 1.0 : 0
+}).setView([_siteLat, _siteLon], _siteZoom); }
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+}).addTo(map);
+
+// Bounds toast
+let boundsToastTimer = null;
+map.on('drag', function() {
+    if (SITE_BOUNDS && !SITE_BOUNDS.contains(map.getCenter())) {
+        const toast = document.getElementById('map-bounds-toast');
+        toast.classList.add('visible');
+        clearTimeout(boundsToastTimer);
+        boundsToastTimer = setTimeout(() => toast.classList.remove('visible'), 1500);
+    }
+});
+
+function zipStyle(zip) {
+    const areaName = zipToArea[zip];
+    if (areaName && areas[areaName]) {
+        return { fillColor: areas[areaName].color, fillOpacity: 0.55,
+                 color: '#fff', weight: 2 };
+    }
+    return { fillColor: '#cbd5e1', fillOpacity: 0.35, color: '#94a3b8', weight: 1 };
+}
+
+function getZip(feature) {
+    const p = feature.properties;
+    return (p.ZCTA5CE10 || p.ZCTA5 || p.ZIP_CODE || p.zip || p.GEOID10 || '').toString().trim();
+}
+
+// State GeoJSON
+{%- set _dn = current_site.display_name if current_site else '' %}
+{%- set _state_abbr = _dn.split(',')[-1].strip()[:2] | upper if ',' in _dn else 'SC' %}
+const ZP_STATE_FILES = {
+    AL:'al_alabama',AK:'ak_alaska',AZ:'az_arizona',AR:'ar_arkansas',
+    CA:'ca_california',CO:'co_colorado',CT:'ct_connecticut',DE:'de_delaware',
+    FL:'fl_florida',GA:'ga_georgia',HI:'hi_hawaii',ID:'id_idaho',
+    IL:'il_illinois',IN:'in_indiana',IA:'ia_iowa',KS:'ks_kansas',
+    KY:'ky_kentucky',LA:'la_louisiana',ME:'me_maine',MD:'md_maryland',
+    MA:'ma_massachusetts',MI:'mi_michigan',MN:'mn_minnesota',MS:'ms_mississippi',
+    MO:'mo_missouri',MT:'mt_montana',NE:'ne_nebraska',NV:'nv_nevada',
+    NH:'nh_new_hampshire',NJ:'nj_new_jersey',NM:'nm_new_mexico',NY:'ny_new_york',
+    NC:'nc_north_carolina',ND:'nd_north_dakota',OH:'oh_ohio',OK:'ok_oklahoma',
+    OR:'or_oregon',PA:'pa_pennsylvania',RI:'ri_rhode_island',SC:'sc_south_carolina',
+    SD:'sd_south_dakota',TN:'tn_tennessee',TX:'tx_texas',UT:'ut_utah',
+    VT:'vt_vermont',VA:'va_virginia',WA:'wa_washington',WV:'wv_west_virginia',
+    WI:'wi_wisconsin',WY:'wy_wyoming',DC:'dc_district_of_columbia'
+};
+
+async function _detectStateAndLoadMap() {
+    const stateAbbr = '{{ _state_abbr }}';
+    console.log('[preferences] stateAbbr=', stateAbbr, ' → slug=', ZP_STATE_FILES[stateAbbr]);
+    const slug = ZP_STATE_FILES[stateAbbr];
+    if (!slug) {
+        console.warn('No GeoJSON available for state:', stateAbbr);
+        try { map.remove(); } catch(e) {}
+        showManualFallback();
+        return;
+    }
+    const ZIP_GEOJSON_URL = `https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/${slug}_zip_codes_geo.min.json`;
+    fetch(ZIP_GEOJSON_URL)
+        .then(r => {
+            if (!r.ok) throw new Error('GeoJSON load failed');
+            return r.json();
+        })
+        .then(data => {
+            // Master sees all zips (can add new ones); owner sees only site zips
+            const CAN_ADD_ZIPS = PREFS_CONFIG.canAddZips;
+            const filtered = {
+                type: 'FeatureCollection',
+                features: data.features.filter(f => {
+                    if (CAN_ADD_ZIPS) return true;  // Master sees everything
+                    return SITE_ZIPS.size === 0 || SITE_ZIPS.has(getZip(f));
+                })
+            };
+
+            L.geoJSON(filtered, {
+                style: f => zipStyle(getZip(f)),
+                onEachFeature: (feature, layer) => {
+                    const zip = getZip(feature);
+                    zipLayers[zip] = layer;
+                    layer.bindTooltip(zip, { permanent: false, direction: 'center', className: 'fw-bold' });
+                    if (!MAP_READONLY) layer.on('click', () => handleZipClick(zip));
+                    layer.on('mouseover', () => {
+                        if (zip !== undefined) layer.openTooltip();
+                        layer.setStyle({ weight: 3, color: '#1e40af', fillOpacity: 0.5 });
+                        layer.bringToFront();
+                    });
+                    layer.on('mouseout', () => {
+                        layer.setStyle(zipStyle(zip));
+                    });
+                }
+            }).addTo(map);
+
+            refreshMap();
+            refreshList();
+        })
+        .catch(err => {
+            console.error('[preferences] GeoJSON fetch failed:', err, 'URL was:', ZIP_GEOJSON_URL);
+            try { map.remove(); } catch(e) {}
+            document.getElementById('area-map').innerHTML =
+                '<div class="d-flex align-items-center justify-content-center h-100 text-muted">' +
+                '<div class="text-center"><i class="bi bi-wifi-off" style="font-size:2rem;"></i>' +
+                '<p class="mt-2 small">Map unavailable — enter zip codes manually below.</p></div></div>';
+            showManualFallback();
+        });
+}
+
+_detectStateAndLoadMap();
+
+function handleZipClick(zip) {
+    if (!activeAreaName.trim()) {
+        setInstruction('Type an area name first, then click zips to assign them.', 'warning');
+        return;
+    }
+
+    // Owner can only use zips already in the site's zip list
+    // Master can add any zip (it gets added to SITE_ZIPS on save)
+    if (!PREFS_CONFIG.canAddZips && !SITE_ZIPS.has(zip)) {
+        setInstruction('This zip code is not in the site. Only the master can add new zip codes.', 'warning');
+        return;
+    }
+
+    // If master clicks a zip not in SITE_ZIPS, add it
+    if (PREFS_CONFIG.canAddZips && !SITE_ZIPS.has(zip)) {
+        SITE_ZIPS.add(zip);
+    }
+
+    const existing = zipToArea[zip];
+
+    if (existing === activeAreaName) {
+        areas[activeAreaName].zips = areas[activeAreaName].zips.filter(z => z !== zip);
+        delete zipToArea[zip];
+        if (areas[activeAreaName].zips.length === 0) delete areas[activeAreaName];
+    } else if (existing && existing !== activeAreaName) {
+        if (confirm(`${zip} is already in "${existing}".\nMove it to "${activeAreaName}" instead?`)) {
+            areas[existing].zips = areas[existing].zips.filter(z => z !== zip);
+            if (areas[existing].zips.length === 0) delete areas[existing];
+            assignZip(zip);
+        }
+    } else {
+        assignZip(zip);
+    }
+
+    refreshAll();
+}
+
+function assignZip(zip) {
+    if (!areas[activeAreaName]) {
+        const usedColors = Object.values(areas).map(a => a.color);
+        const color = AREA_COLORS.find(c => !usedColors.includes(c)) || AREA_COLORS[Object.keys(areas).length % AREA_COLORS.length];
+        areas[activeAreaName] = { zips: [], color };
+    }
+    areas[activeAreaName].zips.push(zip);
+    zipToArea[zip] = activeAreaName;
+}
+
+function onActiveAreaInput(val) {
+    activeAreaName = val.trim();
+    const dot = document.getElementById('active-color-dot');
+    if (activeAreaName && areas[activeAreaName]) {
+        dot.style.background = areas[activeAreaName].color;
+        setInstruction(`Clicking zips will add to <strong>${activeAreaName}</strong>.`, 'info');
+    } else if (activeAreaName) {
+        const usedColors = Object.values(areas).map(a => a.color);
+        const next = AREA_COLORS.find(c => !usedColors.includes(c)) || AREA_COLORS[0];
+        dot.style.background = next;
+        setInstruction(`Clicking zips will create <strong>${activeAreaName}</strong>.`, 'info');
+    } else {
+        dot.style.background = '#e5e7eb';
+        setInstruction('Type a name above to start assigning zip codes.', 'muted');
+    }
+}
+
+function setInstruction(html, type) {
+    const el = document.getElementById('map-instruction');
+    el.innerHTML = html;
+    el.className = type === 'warning' ? 'small text-warning fw-semibold' :
+                   type === 'info'    ? 'small text-primary' : 'small text-muted';
+}
+
+function refreshAll() {
+    refreshMap();
+    refreshList();
+    refreshHiddenInputs();
+    refreshSummary();
+}
+
+function refreshMap() {
+    for (const [zip, layer] of Object.entries(zipLayers)) {
+        layer.setStyle(zipStyle(zip));
+    }
+}
+
+function refreshList() {
+    const list = document.getElementById('area-list');
+    if (Object.keys(areas).length === 0) {
+        list.innerHTML = MAP_READONLY
+            ? '<p class="text-muted small mb-0">No target areas configured for this site.</p>'
+            : '<p class="text-muted small mb-0">No target areas defined yet. Type a name and click zips on the map.</p>';
+        return;
+    }
+    list.innerHTML = '';
+    for (const [name, data] of Object.entries(areas)) {
+        const div = document.createElement('div');
+        div.className = 'area-list-item d-flex align-items-start gap-2 mb-2';
+        div.innerHTML = `
+            <div class="active-area-indicator mt-1" style="background:${data.color};"></div>
+            <div class="flex-grow-1">
+                <div class="fw-semibold small">${name}</div>
+                <div class="mt-1">
+                    ${data.zips.map(z =>
+                        `<span class="area-pill" style="background:${data.color};">${z}</span>`
+                    ).join('')}
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 mt-1"
+                    style="font-size:0.7rem;${MAP_READONLY ? 'display:none;' : ''}"
+                    onclick="removeArea('${name}')">
+                <i class="bi bi-trash"></i>
+            </button>
+        `;
+        if (!MAP_READONLY) {
+            div.querySelector('.fw-semibold').style.cursor = 'pointer';
+            div.querySelector('.fw-semibold').title = 'Click to set as active area';
+            div.querySelector('.fw-semibold').onclick = () => {
+                document.getElementById('active-area-input').value = name;
+                onActiveAreaInput(name);
+            };
+        }
+        list.appendChild(div);
+    }
+}
+
+function refreshHiddenInputs() {
+    document.querySelectorAll('.area-hidden-input').forEach(el => el.remove());
+    const form = document.querySelector('input[name="_section"][value="areas"]').closest('form');
+    for (const [name, data] of Object.entries(areas)) {
+        const ni = document.createElement('input');
+        ni.type = 'hidden'; ni.name = 'area_name';
+        ni.value = name; ni.className = 'area-hidden-input';
+        form.appendChild(ni);
+
+        const zi = document.createElement('input');
+        zi.type = 'hidden'; zi.name = 'area_zips';
+        zi.value = data.zips.join(', '); zi.className = 'area-hidden-input';
+        form.appendChild(zi);
+    }
+}
+
+function refreshSummary() {
+    const s = document.getElementById('areas-summary');
+    if (!s) return;
+    if (Object.keys(areas).length === 0) {
+        s.innerHTML = '<span class="text-muted small">No target areas set.</span>';
+        return;
+    }
+    s.innerHTML = Object.entries(areas).map(([name, data]) =>
+        `<div class="small mb-1">
+            <span class="fw-semibold">${name}</span>
+            <span class="text-muted ms-1">${data.zips.join(', ')}</span>
+        </div>`
+    ).join('');
+}
+
+function removeArea(name) {
+    if (!areas[name]) return;
+    for (const zip of areas[name].zips) delete zipToArea[zip];
+    delete areas[name];
+    if (document.getElementById('active-area-input').value === name) {
+        document.getElementById('active-area-input').value = '';
+        onActiveAreaInput('');
+    }
+    refreshAll();
+}
+
+function showManualFallback() {
+    const list = document.getElementById('area-list');
+    if (MAP_READONLY) {
+        list.innerHTML = `<p class="text-muted small mb-2">Map unavailable.</p><div id="manual-areas-container"></div>`;
+    } else {
+        list.innerHTML = `
+            <p class="text-muted small mb-2">Map unavailable. Add areas manually:</p>
+            <div id="manual-areas-container"></div>
+            <button type="button" class="btn btn-sm btn-outline-primary mt-1" onclick="addManualArea()">
+                <i class="bi bi-plus"></i> Add Area
+            </button>`;
+    }
+    for (const [name, data] of Object.entries(areas)) {
+        addManualAreaRow(name, data.zips.join(', '));
+    }
+}
+
+function addManualArea() { addManualAreaRow('', ''); }
+function addManualAreaRow(name, zips) {
+    const c = document.getElementById('manual-areas-container');
+    if (!c) return;
+    const row = document.createElement('div');
+    row.className = 'd-flex gap-1 mb-1 align-items-center';
+    row.innerHTML = `
+        <input type="text" class="form-control form-control-sm" name="area_name"
+               value="${name}" placeholder="Area name" style="width:120px;" ${MAP_READONLY ? 'readonly' : ''}>
+        <input type="text" class="form-control form-control-sm" name="area_zips"
+               value="${zips}" placeholder="Zip codes" ${MAP_READONLY ? 'readonly' : ''}>
+        <button type="button" class="btn btn-sm btn-outline-danger"
+                style="${MAP_READONLY ? 'display:none;' : ''}"
+                onclick="this.closest('div').remove()">
+            <i class="bi bi-trash"></i>
+        </button>`;
+    c.appendChild(row);
+}
+
+// Init list on page load
+refreshList();
+refreshHiddenInputs();
+
+// ── Avoid Areas Tag Picker ──────────────────────────────────────
+let allPlaces = [];
+let avoidedSet = new Set(
+    '{{ prefs.avoid_areas|join(",") }}'.split(',').map(s => s.trim()).filter(Boolean)
+);
+
+fetch('{{ site_url("dashboard.api_places") }}')
+    .then(r => r.json())
+    .then(data => {
+        allPlaces = data.places || [];
+        const note = document.getElementById('avoid-shapefile-note');
+        if (note && data.source === 'shapefile') {
+            note.textContent = ' (Census TIGER/Line shapefile)';
+        } else if (note) {
+            note.textContent = ' (Install shapefile for full list)';
+        }
+        renderAvoidTags();
+        renderSuggestions(allPlaces);
+    })
+    .catch(() => {
+        renderAvoidTags();
+    });
+
+function renderAvoidTags() {
+    const container = document.getElementById('avoid-tags');
+    container.innerHTML = '';
+    if (avoidedSet.size === 0) {
+        container.innerHTML = '<span class="text-muted small ps-1" id="avoid-placeholder">No areas avoided — click below to add</span>';
+    }
+    avoidedSet.forEach(name => {
+        const tag = document.createElement('span');
+        tag.className = 'badge bg-danger d-flex align-items-center gap-1';
+        tag.style.cssText = 'font-size:0.75rem; font-weight:500; cursor:default;';
+        tag.innerHTML = `${name} <button type="button" class="btn-close btn-close-white"
+            style="font-size:0.55rem;" aria-label="Remove" onclick="removeAvoid('${name.replace(/'/g, "\\'")}')"></button>`;
+        container.appendChild(tag);
+    });
+    syncHidden();
+}
+
+function addAvoid(name) {
+    if (!name || avoidedSet.has(name)) return;
+    avoidedSet.add(name);
+    renderAvoidTags();
+    renderSuggestions(filterList(document.getElementById('avoid-search').value));
+}
+
+function removeAvoid(name) {
+    avoidedSet.delete(name);
+    renderAvoidTags();
+    renderSuggestions(filterList(document.getElementById('avoid-search').value));
+}
+
+function syncHidden() {
+    document.getElementById('avoid-areas-hidden').value = Array.from(avoidedSet).join(', ');
+}
+
+function filterList(query) {
+    if (!query.trim()) return allPlaces;
+    const q = query.toLowerCase();
+    return allPlaces.filter(p => p.toLowerCase().includes(q));
+}
+
+function filterPlaceSuggestions(query) {
+    const dropdown = document.getElementById('avoid-dropdown');
+    dropdown.classList.remove('d-none');
+    renderSuggestions(filterList(query));
+}
+
+function renderSuggestions(places) {
+    const list = document.getElementById('avoid-suggestion-list');
+    list.innerHTML = '';
+    if (!places.length) {
+        list.innerHTML = '<div class="list-group-item text-muted small py-1 px-2">No matches</div>';
+        return;
+    }
+    places.slice(0, 30).forEach(name => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'list-group-item list-group-item-action py-1 px-2 small d-flex align-items-center justify-content-between';
+        const isAvoided = avoidedSet.has(name);
+        item.innerHTML = `<span>${name}</span>${isAvoided ? '<i class="bi bi-check-circle-fill text-danger"></i>' : ''}`;
+        if (isAvoided) item.classList.add('list-group-item-danger');
+        item.onclick = () => {
+            if (isAvoided) removeAvoid(name);
+            else addAvoid(name);
+        };
+        list.appendChild(item);
+    });
+}
+
+function avoidSearchKeydown(e) {
+    if (e.key === 'Escape') {
+        document.getElementById('avoid-dropdown').classList.add('d-none');
+        document.getElementById('avoid-search').value = '';
+        renderSuggestions(allPlaces);
+    }
+}
+
+document.addEventListener('click', e => {
+    const wrapper = document.getElementById('avoid-search')?.closest('.col-lg-4');
+    if (wrapper && !wrapper.contains(e.target)) {
+        document.getElementById('avoid-dropdown')?.classList.add('d-none');
+    }
+});
+</script>
+{% endblock %}

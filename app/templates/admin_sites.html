@@ -1,0 +1,51 @@
+<!--
+  File: app/templates/admin_sites.html
+  App Version: 1.0.0 | File Version: 2.0.0
+  Last Modified: 2026-03-15
+-->
+{% extends "base.html" %}
+{% block title %}Site Management — HomeFinder{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+    .site-card { border-radius: 10px; transition: box-shadow .15s; }
+    .site-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); }
+    .site-key-badge { font-family: monospace; font-size: .78rem;
+                      background: #f1f5f9; color: #334155;
+                      padding: 2px 8px; border-radius: 4px; }
+    .stat-pill { font-size: .72rem; padding: 3px 10px; border-radius: 20px; }
+    .nginx-pre { background: #0f172a; color: #94a3b8; font-size: .78rem;
+                 border-radius: 8px; padding: 16px; white-space: pre; overflow-x: auto; }
+    .form-section { background: #f8fafc; border-radius: 8px; padding: 16px; }
+    .collapse-header { cursor: pointer; user-select: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0"><i class="bi bi-globe2 me-2 text-primary"></i>Site Management</h4>
+        <small class="text-muted">Create and manage HomeFinder instances for different markets</small>
+    </div>
+    <span class="badge bg-secondary">{{ sites|length }} site{{ 's' if sites|length != 1 }}</span>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+{% endwith %}
+
+{% include "_sites_cards.html" %}
+{% include "_sites_create_form.html" %}
+{% include "_sites_modals.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{{ url_for('static', filename='js/site-manager.js') }}"></script>
+{% endblock %}

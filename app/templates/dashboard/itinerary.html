@@ -1,0 +1,235 @@
+<!--
+  File: app/templates/dashboard/itinerary.html
+  App Version: 2026.03.12 | File Version: 1.2.0
+  Last Modified: 2026-03-13
+-->
+{% extends "base.html" %}
+{% block title %}Tour Itinerary — HomeFinder{% endblock %}
+
+{% block head %}
+<style>
+    .listing-row { border-radius: 10px; transition: box-shadow 0.15s; }
+    .listing-row:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.1); }
+    .visit-badge { font-size: 0.7rem; padding: 3px 8px; }
+    .note-preview { font-size: 0.8rem; color: #6b7280; white-space: pre-wrap;
+                    max-height: 60px; overflow: hidden; position: relative; }
+    .note-preview::after { content: ''; position: absolute; bottom: 0; left: 0;
+                           right: 0; height: 20px;
+                           background: linear-gradient(transparent, white); }
+    .addr-link { font-size: 0.85rem; color: #6b7280; text-decoration: none; }
+    .addr-link:hover { color: #2563eb; text-decoration: underline; }
+    .check-include { width: 20px; height: 20px; cursor: pointer; flex-shrink: 0; }
+    .section-header { font-size: 0.7rem; text-transform: uppercase;
+                      letter-spacing: 1px; color: #9ca3af; font-weight: 600; }
+    #gmaps-btn { font-size: 1.1rem; padding: 14px 24px; }
+    @media (max-width: 576px) {
+        #gmaps-btn { width: 100%; font-size: 1rem; }
+        .listing-row { margin-left: 0; margin-right: 0; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0"><i class="bi bi-map me-2 text-primary"></i>Tour Itinerary</h4>
+        <small class="text-muted">Plan your visits — check houses to include, then open the route</small>
+    </div>
+    <a href="{{ site_url('dashboard.index') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Dashboard
+    </a>
+</div>
+
+{% set all_pairs = favorites + maybes %}
+{% if not all_pairs %}
+<div class="card border-0 shadow-sm">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-map text-muted" style="font-size:3rem;"></i>
+        <p class="text-muted mt-3 mb-2">No favorited listings yet.</p>
+        {% if current_user.is_authenticated and current_user.assigned_agent %}
+        {% set ab = current_user.assigned_agent %}
+        <div class="card border-0 shadow-sm mx-auto mt-3" style="max-width: 480px; border-left: 4px solid {{ ab.brand_color or '#2563eb' }} !important;">
+            <div class="card-body text-start">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    {% if ab.brand_icon %}
+                    <span style="font-size: 1.4rem;">{{ ab.brand_icon }}</span>
+                    {% endif %}
+                    <strong style="color: {{ ab.brand_color or '#2563eb' }};">{{ ab.full_name }}</strong>
+                    <span class="text-muted small">— your agent</span>
+                </div>
+                <p class="mb-2 small">
+                    Star some listings on the <a href="{{ site_url('dashboard.index') }}">Dashboard</a>
+                    and they'll show up here so we can plan a tour together.
+                    I can see your favorites and help you prioritize.
+                </p>
+                <a href="#" class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#contactAgentModal"
+                   style="background: {{ ab.brand_color or '#2563eb' }}; color: #fff; border: none;">
+                    <i class="bi bi-chat-dots me-1"></i>Message {{ ab.full_name.split(' ')[0] }}
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <a href="{{ site_url('dashboard.index') }}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-star me-1"></i> Go Add Some Favorites
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% else %}
+
+<!-- ── Route Builder ────────────────────────────────────────── -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-6">
+                <label class="form-label small fw-semibold">
+                    <i class="bi bi-geo-alt me-1 text-danger"></i>Starting Address
+                </label>
+                <input type="text" class="form-control" id="start-address"
+                       placeholder="Your home address or hotel…"
+                       value="">
+                <div class="form-text">Leave blank to start from the first selected listing.</div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">
+                    <i class="bi bi-check2-square me-1 text-primary"></i>Selected
+                </label>
+                <div class="fw-semibold text-primary" style="font-size:1.2rem;" id="selected-count">
+                    0 houses
+                </div>
+            </div>
+            <div class="col-md-3 d-grid">
+                <button class="btn btn-success btn-lg" id="gmaps-btn"
+                        onclick="openGoogleMaps()" disabled>
+                    <i class="bi bi-map-fill me-2"></i>Open Route in Google Maps
+                </button>
+            </div>
+        </div>
+        <div class="mt-2">
+            <button class="btn btn-sm btn-link p-0 text-muted" onclick="selectAll(true)">Select All</button>
+            <span class="text-muted mx-1">·</span>
+            <button class="btn btn-sm btn-link p-0 text-muted" onclick="selectAll(false)">Deselect All</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Favorites ────────────────────────────────────────────── -->
+{% if favorites %}
+<div class="section-header mb-2">
+    <i class="bi bi-star-fill text-warning me-1"></i>Favorites ({{ favorites|length }})
+</div>
+{% for listing, note in favorites %}
+{{ render_listing_row(listing, note, 'favorite') }}
+{% endfor %}
+{% endif %}
+
+<!-- ── Maybes ───────────────────────────────────────────────── -->
+{% if maybes %}
+<div class="section-header mb-2 mt-4">
+    <i class="bi bi-question-circle me-1"></i>Maybes ({{ maybes|length }})
+</div>
+{% for listing, note in maybes %}
+{{ render_listing_row(listing, note, 'maybe') }}
+{% endfor %}
+{% endif %}
+
+{% endif %}{# end all_pairs check #}
+{% endblock %}
+
+{# ── Macro for a listing row ────────────────────────────────── #}
+{% macro render_listing_row(listing, note, flag_type) %}
+{% if note %} {% set vs = note.visit_status %} {% else %} {% set vs = none %} {% endif %}
+<div class="card listing-row border-0 shadow-sm mb-2"
+     data-listing-id="{{ listing.id }}"
+     data-address="{{ listing.address }}, {{ listing.city }}, SC {{ listing.zip_code }}">
+    <div class="card-body py-2 px-3">
+        <div class="d-flex align-items-start gap-3">
+
+            <!-- Checkbox to include in route -->
+            <input type="checkbox" class="form-check-input check-include mt-1"
+                   data-address="{{ listing.address }}, {{ listing.city }}, SC {{ listing.zip_code }}"
+                   onchange="updateRoute()"
+                   {% if vs and vs[0] in ['Visit Scheduled'] %}checked{% endif %}>
+
+            <!-- Main info -->
+            <div class="flex-grow-1" style="min-width:0;">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <a href="{{ site_url('dashboard.listing_detail', listing_id=listing.id) }}"
+                       class="fw-semibold text-dark text-decoration-none" style="font-size:0.95rem;">
+                        {{ listing.address }}
+                    </a>
+                    {% if vs %}
+                    <span class="badge visit-badge bg-{{ vs[1] }}">{{ vs[0] }}</span>
+                    {% endif %}
+                </div>
+                <a class="addr-link"
+                   href="https://maps.apple.com/?q={{ (listing.address + ', ' + listing.city + ', SC')|urlencode }}"
+                   target="_blank">
+                    {{ listing.city }}, SC {{ listing.zip_code }}
+                    <i class="bi bi-box-arrow-up-right" style="font-size:0.7rem;"></i>
+                </a>
+                {% if note and note.note_text %}
+                <div class="note-preview mt-1">{{ note.note_text }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Price + score -->
+            <div class="text-end flex-shrink-0">
+                <div class="fw-bold text-primary">${{ "{:,}".format(listing.price) }}</div>
+                <div class="text-muted small">{{ listing.beds }}bd / {{ listing.baths }}ba</div>
+                {% if listing.deal_score %}
+                <span class="badge {% if listing.deal_score.composite_score >= 75 %}bg-success{% elif listing.deal_score.composite_score >= 50 %}bg-primary{% else %}bg-secondary{% endif %} visit-badge mt-1">
+                    {{ "%.0f"|format(listing.deal_score.composite_score) }}
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% block scripts %}
+<script>
+const addresses = [];  // filled by checked boxes
+
+function updateRoute() {
+    const checked = document.querySelectorAll('.check-include:checked');
+    const count = checked.length;
+    document.getElementById('selected-count').textContent =
+        count + ' house' + (count !== 1 ? 's' : '');
+    document.getElementById('gmaps-btn').disabled = count === 0;
+}
+
+function selectAll(state) {
+    document.querySelectorAll('.check-include').forEach(cb => cb.checked = state);
+    updateRoute();
+}
+
+function openGoogleMaps() {
+    const checked = Array.from(document.querySelectorAll('.check-include:checked'));
+    if (checked.length === 0) return;
+
+    const waypoints = checked.map(cb => encodeURIComponent(cb.dataset.address));
+    const start = document.getElementById('start-address').value.trim();
+
+    // Google Maps directions URL:
+    // /maps/dir/origin/waypoint1/waypoint2/.../destination
+    // Using the last waypoint as destination, rest as waypoints
+    let url;
+    if (waypoints.length === 1) {
+        const origin = start ? encodeURIComponent(start) : waypoints[0];
+        url = `https://www.google.com/maps/dir/${origin}/${waypoints[0]}`;
+    } else {
+        const origin = start ? encodeURIComponent(start) : waypoints[0];
+        const dest   = waypoints[waypoints.length - 1];
+        const mids   = waypoints.slice(start ? 0 : 1, -1).join('/');
+        url = `https://www.google.com/maps/dir/${origin}/${mids ? mids + '/' : ''}${dest}`;
+    }
+
+    window.open(url, '_blank');
+}
+
+// Init count on load
+updateRoute();
+</script>
+{% endblock %}

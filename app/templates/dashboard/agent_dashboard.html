@@ -1,0 +1,670 @@
+<!--
+  File: app/templates/dashboard/agent_dashboard.html
+  App Version: 2026.03.14 | File Version: 1.4.0
+  Last Modified: 2026-03-14
+-->
+{% extends "base.html" %}
+{% block title %}Agent Dashboard — HomeFinder{% endblock %}
+
+{% block head %}
+<style>
+    .client-row:hover { background: #f8fafc; }
+    .color-swatch { width: 28px; height: 28px; border-radius: 6px; border: 1px solid rgba(0,0,0,.15); display: inline-block; vertical-align: middle; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0"><i class="bi bi-people me-2 text-primary"></i>Agent Dashboard</h4>
+        <small class="text-muted">{{ profile.full_name }}{% if profile.brokerage %} · {{ profile.brokerage }}{% endif %}</small>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <a href="{{ site_url('dashboard.agent_add_listing') }}" class="btn btn-sm btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Add Listing
+        </a>
+        <span class="badge bg-secondary">{{ clients|length }} client{{ 's' if clients|length != 1 }}</span>
+    </div>
+</div>
+
+<div class="row g-4">
+
+    <!-- ── Left column: clients ─────────────────────────────── -->
+    <div class="col-lg-8">
+
+        <!-- Add client card -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-2">
+                <strong><i class="bi bi-person-plus me-1 text-primary"></i> Add a Client</strong>
+                <button class="btn btn-sm btn-outline-secondary"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#addClientForm">
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+            </div>
+            <div class="collapse" id="addClientForm">
+                <div class="card-body">
+                    <form method="POST" action="{{ site_url('dashboard.agent_create_client') }}">
+                        <div class="row g-2 mb-2">
+                            <div class="col-sm-5">
+                                <label class="form-label small">Client Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" name="client_name"
+                                       placeholder="Jane Smith" required>
+                            </div>
+                            <div class="col-sm-7">
+                                <label class="form-label small">Client Email <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control form-control-sm" name="client_email"
+                                       placeholder="jane@example.com" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small">Intro Message <span class="text-muted">(optional — included in welcome email)</span></label>
+                            <textarea class="form-control form-control-sm" name="intro_message" rows="2"
+                                      placeholder="Hi Jane, I've set up your HomeFinder account with listings matching what we discussed..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm px-4">
+                            <i class="bi bi-envelope me-1"></i> Create Account &amp; Send Welcome Email
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Friend Listings -->
+        {% if pending_friend_listings %}
+        <div class="card border-0 shadow-sm mb-3" style="border-left: 4px solid #22c55e !important;">
+            <div class="card-header bg-white border-bottom py-2 d-flex justify-content-between align-items-center">
+                <div>
+                    <strong><i class="bi bi-house-add me-1 text-success"></i> Pending Neighborhood Tips</strong>
+                    <span class="badge bg-success ms-1">{{ pending_friend_listings|length }}</span>
+                </div>
+                <span class="text-muted small">From your clients — review and approve to add to the main grid</span>
+            </div>
+            <div class="list-group list-group-flush">
+                {% for fl in pending_friend_listings %}
+                <div class="list-group-item px-3 py-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-semibold">{{ fl.address }}</div>
+                            <div class="text-muted small">
+                                {% if fl.price %}${{ "{:,}".format(fl.price) }} · {% endif %}
+                                {% if fl.bedrooms %}{{ fl.bedrooms }}bd {% endif %}
+                                {% if fl.bathrooms %}{{ fl.bathrooms }}ba {% endif %}
+                                {% if fl.sqft %}· {{ "{:,}".format(fl.sqft) }}sqft {% endif %}
+                                · {{ fl.relationship|replace('_', ' ')|title }}
+                                · by {{ fl.submitter.username if fl.submitter else fl.submitter_email }}
+                            </div>
+                            <div class="text-muted" style="font-size:0.7rem;">
+                                Submitted {{ fl.created_at.strftime('%b %d, %Y') }}
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a href="{{ site_url('dashboard.agent_review_friend_listing', fl_id=fl.id) }}"
+                               class="btn btn-sm btn-outline-success">
+                                <i class="bi bi-clipboard-check me-1"></i>Review
+                            </a>
+                            <form method="POST" action="{{ site_url('dashboard.agent_reject_friend_listing', fl_id=fl.id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                        onclick="return confirm('Reject this listing?')">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Client list -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom py-2">
+                <strong><i class="bi bi-people me-1 text-primary"></i> Your Clients</strong>
+            </div>
+            {% if clients %}
+            <div class="list-group list-group-flush">
+                {% for client in clients %}
+                {% set cn = client_notes.get(client.id) %}
+                <div class="list-group-item client-row px-3 py-2">
+                    <!-- Top row: name + activity + actions -->
+                    <div class="row align-items-center g-2 mb-2">
+                        <div class="col-md-4">
+                            <div class="fw-semibold">{{ client.username }}</div>
+                            <div class="text-muted small">{{ client.email }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="badge bg-light text-dark border">
+                                ⭐ {{ favorite_counts.get(client.id, 0) }} favorite{{ 's' if favorite_counts.get(client.id, 0) != 1 }}
+                            </span>
+                            {% if client.last_login %}
+                            <div class="text-muted" style="font-size:0.7rem; margin-top:2px;">
+                                Last login {{ client.last_login.strftime('%b %d') }}
+                            </div>
+                            {% else %}
+                            <div class="text-muted" style="font-size:0.7rem; margin-top:2px;">Never logged in</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-5 d-flex gap-2 justify-content-md-end">
+                            <a href="{{ site_url('dashboard.agent_client_prefs', client_id=client.id) }}"
+                               class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-sliders"></i> Prefs
+                            </a>
+                            {% set ln_count = client_listing_notes.get(client.id, [])|length %}
+                            {% if ln_count %}
+                            <button class="btn btn-outline-info btn-sm"
+                                    type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#ln-{{ client.id }}">
+                                <i class="bi bi-journal-text"></i> Notes
+                                <span class="badge bg-info text-dark ms-1">{{ ln_count }}</span>
+                            </button>
+                            {% endif %}
+                            <button type="button"
+                                    class="btn btn-outline-success btn-sm"
+                                    title="Resend welcome email"
+                                    onclick="resendWelcome({{ client.id }}, this)">
+                                <i class="bi bi-envelope-arrow-up"></i> Resend
+                            </button>
+                            <form method="POST"
+                                  action="{{ site_url('auth.masquerade', user_id=client.id) }}">
+                                <button type="submit" class="btn btn-outline-primary btn-sm"
+                                        title="Preview as this client">
+                                    <i class="bi bi-eye"></i> Preview
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    <!-- Checkboxes + notes (auto-save) -->
+                    <div class="client-notes-form border-top pt-2" data-client-id="{{ client.id }}">
+                        <div class="d-flex flex-wrap gap-3 mb-2">
+                            {% set boxes = [
+                                ('active_searching',  'Active / Searching'),
+                                ('pre_approved',      'Pre-Approved'),
+                                ('signed_agreement',  'Buyer Agreement'),
+                                ('tour_scheduled',    'Tour Scheduled'),
+                                ('offer_submitted',   'Offer Submitted'),
+                            ] %}
+                            {% for field, label in boxes %}
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input client-checkbox"
+                                       type="checkbox" id="chk_{{ field }}_{{ client.id }}"
+                                       name="{{ field }}"
+                                       {% if cn and cn|attr(field) %}checked{% endif %}>
+                                <label class="form-check-label small text-muted"
+                                       for="chk_{{ field }}_{{ client.id }}">{{ label }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <textarea class="form-control form-control-sm client-notes-text"
+                                      rows="1" placeholder="Agent notes…"
+                                      style="resize:none; font-size:0.8rem;">{{ cn.notes if cn and cn.notes else '' }}</textarea>
+                            <span class="save-indicator text-muted" style="min-width:52px; font-size:0.72rem;"></span>
+                        </div>
+                    </div>
+
+                    <!-- Listing notes (read-only) -->
+                    {% set lns = client_listing_notes.get(client.id, []) %}
+                    {% if lns %}
+                    <div class="collapse mt-2" id="ln-{{ client.id }}">
+                        <div class="border rounded p-2 bg-light">
+                            <div class="small fw-semibold text-muted mb-2">
+                                <i class="bi bi-journal-text me-1"></i>Listing Notes ({{ lns|length }})
+                            </div>
+                            {% for ln in lns %}
+                            {% set prop = ln._listing %}
+                            <div class="mb-2 pb-2 {% if not loop.last %}border-bottom{% endif %}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="small fw-semibold">
+                                        {% if prop %}
+                                        <a href="{{ site_url('dashboard.listing_detail', listing_id=prop.id) }}"
+                                           class="text-decoration-none" target="_blank">
+                                            {{ prop.address }}
+                                        </a>
+                                        {% if prop.price %}<span class="text-muted ms-1">${{ "{:,}".format(prop.price) }}</span>{% endif %}
+                                        {% else %}
+                                        <span class="text-muted">Listing #{{ ln.listing_id }}</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if ln.updated_at %}
+                                    <span class="text-muted" style="font-size:0.7rem; white-space:nowrap;">
+                                        {{ ln.updated_at.strftime('%b %d') }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <!-- Checkboxes -->
+                                <div class="d-flex flex-wrap gap-2 mt-1">
+                                    {% if ln.visited %}
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle small">
+                                        <i class="bi bi-house-check me-1"></i>Visited
+                                    </span>
+                                    {% endif %}
+                                    {% if ln.scheduled_visit %}
+                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle small">
+                                        <i class="bi bi-calendar-check me-1"></i>Tour Scheduled
+                                    </span>
+                                    {% endif %}
+                                    {% if ln.made_offer %}
+                                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning-subtle small">
+                                        <i class="bi bi-pen me-1"></i>Made Offer
+                                    </span>
+                                    {% endif %}
+                                    {% if ln.not_interested %}
+                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle small">
+                                        <i class="bi bi-x-circle me-1"></i>Not Interested
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <!-- Note text -->
+                                {% if ln.note_text %}
+                                <div class="text-muted mt-1" style="font-size:0.78rem; white-space:pre-wrap;">{{ ln.note_text }}</div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="card-body text-center text-muted py-5">
+                <i class="bi bi-people" style="font-size:2rem;"></i>
+                <p class="mt-2 mb-1">No clients yet.</p>
+                <p class="small mb-0">Add a client above — they'll get a welcome email with login credentials and see your branding throughout their experience.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ── Right column: branding ────────────────────────────── -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom py-2">
+                <strong><i class="bi bi-palette me-1 text-primary"></i> Your Branding</strong>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Your clients see your name, color, and tagline in the navbar instead of "HomeFinder".
+                </p>
+
+                <!-- Live preview -->
+                <div class="rounded mb-3 p-2 d-flex align-items-center gap-2"
+                     id="brand-preview"
+                     style="background: {{ profile.brand_color or '#2563eb' }};">
+                    {% if profile.brand_logo_url %}
+                    <img id="preview-logo" src="{{ profile.brand_logo_url }}"
+                         style="height:24px;" alt="logo">
+                    {% else %}
+                    <i class="bi bi-house-heart-fill text-white"></i>
+                    {% endif %}
+                    <span class="text-white fw-semibold" id="preview-name">{{ profile.full_name }}</span>
+                    <span id="preview-tagline" class="text-white ms-1"
+                          style="font-size:0.7rem;opacity:0.75;">{{ profile.brand_tagline or '' }}</span>
+                </div>
+
+                <form method="POST" action="{{ site_url('dashboard.agent_branding') }}">
+                    <div class="mb-3">
+                        <label class="form-label small">Brand Color</label>
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="color" class="form-control form-control-color"
+                                   name="brand_color" id="brand_color"
+                                   value="{{ profile.brand_color or '#2563eb' }}"
+                                   style="width:48px; height:38px; padding:2px;"
+                                   oninput="document.getElementById('brand_color_text').value=this.value; document.getElementById('brand-preview').style.background=this.value;">
+                            <input type="text" class="form-control form-control-sm font-monospace"
+                                   id="brand_color_text"
+                                   value="{{ profile.brand_color or '#2563eb' }}"
+                                   maxlength="7"
+                                   oninput="document.getElementById('brand_color').value=this.value; document.getElementById('brand-preview').style.background=this.value;">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Logo Icon <span class="text-muted">(pick one, or use a custom URL below)</span></label>
+
+                        <div class="border rounded p-2 mb-2" style="background:#f8fafc; max-height:300px; overflow-y:auto;">
+                            {% set current_icon = profile.brand_icon or '' %}
+                            {% set emoji_groups = [
+                                ('🏠 Real Estate & Home', [
+                                    ('🏠','House'),('🏡','Home Garden'),('🏘','Neighborhood'),
+                                    ('🏗','Construction'),('🏢','Office'),('🏛','Landmark'),
+                                    ('🔑','Key'),('🗝','Old Key'),('🚪','Door'),
+                                    ('🛋','Interior'),('🪴','Plant'),('🛁','Bath'),
+                                    ('🪟','Window'),('🧱','Brick'),('⛺','Retreat'),
+                                ]),
+                                ('📍 Location & Maps', [
+                                    ('🗺','Map'),('📍','Pin'),('📌','Pushpin'),
+                                    ('🧭','Compass'),('🌎','Globe Americas'),('🌍','Globe Europe'),
+                                    ('🌏','Globe Asia'),('🗼','Tower'),('🌉','Bridge'),
+                                    ('🏙','Skyline'),('🏞','Park'),('⛲','Fountain'),
+                                ]),
+                                ('🌴 Nature & Lifestyle', [
+                                    ('🌴','Palm Tree'),('🌳','Tree'),('🌲','Evergreen'),
+                                    ('🌊','Ocean'),('🏖','Beach'),('🏝','Island'),
+                                    ('☀️','Sun'),('🌅','Sunrise'),('🌄','Mountains'),
+                                    ('🌿','Leaf'),('🌺','Flower'),('🍃','Leaves'),
+                                    ('🦢','Swan'),('🐚','Shell'),('⛵','Sailboat'),
+                                ]),
+                                ('⭐ Quality & Professional', [
+                                    ('⭐','Star'),('🌟','Glowing Star'),('✨','Sparkles'),
+                                    ('💫','Dizzy'),('🏆','Trophy'),('🥇','Gold Medal'),
+                                    ('🎖','Military Medal'),('💎','Diamond'),('👑','Crown'),
+                                    ('🤝','Handshake'),('💼','Briefcase'),('📈','Chart Up'),
+                                    ('🎯','Target'),('🔮','Crystal Ball'),('🌈','Rainbow'),
+                                ]),
+                            ] %}
+
+                            {% for group_name, emojis in emoji_groups %}
+                            <div class="text-uppercase text-muted mb-1 {% if not loop.first %}mt-3{% endif %}"
+                                 style="font-size:0.6rem;letter-spacing:1px;">{{ group_name }}</div>
+                            <div class="d-flex flex-wrap gap-1 mb-1">
+                                {% for char, label in emojis %}
+                                <button type="button"
+                                        class="btn btn-sm icon-btn twemoji-parse"
+                                        style="width:40px;height:40px;font-size:1.4rem;line-height:1;padding:2px;
+                                               {% if current_icon == char %}background:#dbeafe;border-color:#2563eb;{% else %}background:#fff;border-color:#dee2e6;{% endif %}"
+                                        title="{{ label }}"
+                                        data-emoji="{{ char }}"
+                                        onclick="selectIcon('{{ char }}', this)">{{ char }}</button>
+                                {% endfor %}
+                            </div>
+                            {% endfor %}
+
+                            <div class="mt-2 pt-2 border-top">
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        onclick="selectIcon('', null)">
+                                    <i class="bi bi-x-circle me-1"></i> Clear Icon
+                                </button>
+                            </div>
+                        </div>
+
+                        <input type="hidden" name="brand_icon" id="brand_icon_input"
+                               value="{{ profile.brand_icon or '' }}">
+                    </div>
+
+                    <div class="mb-3" id="logo-url-section">
+                        <label class="form-label small">
+                            Custom Logo URL
+                            <span class="text-muted">(used only if no icon selected above)</span>
+                        </label>
+                        <input type="url" class="form-control form-control-sm" name="brand_logo_url"
+                               id="brand_logo_url_input"
+                               value="{{ profile.brand_logo_url or '' }}"
+                               placeholder="https://yourdomain.com/logo.png">
+                        <div class="form-text">PNG or SVG, ~28px tall.</div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small">Tagline <span class="text-muted">(optional)</span></label>
+                        <input type="text" class="form-control form-control-sm" name="brand_tagline"
+                               id="tagline-input"
+                               value="{{ profile.brand_tagline or '' }}"
+                               maxlength="200"
+                               placeholder="Charleston Real Estate Expert"
+                               oninput="updateTaglinePreview()">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small">Tagline Style</label>
+                        <div class="d-flex flex-column gap-1" id="style-picker">
+                            {% set current_style = profile.brand_tagline_style or 'plain' %}
+                            {% set styles = [
+                                ('plain',   'Plain',        'Small, subtle text'),
+                                ('italic',  'Italic',       'Soft and friendly'),
+                                ('bold',    'Bold',         'Strong and confident'),
+                                ('caps',    'Spaced Caps',  'Professional, formal'),
+                                ('badge',   'Pill Badge',   'Modern, stands out'),
+                                ('elegant', 'Elegant',      'Serif italic, refined'),
+                            ] %}
+                            {% for key, label, desc in styles %}
+                            <label class="style-option d-flex align-items-center gap-2 px-2 py-2 rounded border cursor-pointer
+                                          {% if current_style == key %}border-primary bg-light{% else %}border-light{% endif %}"
+                                   style="cursor:pointer;"
+                                   onclick="selectStyle('{{ key }}', this)">
+                                <input type="radio" name="brand_tagline_style" value="{{ key }}"
+                                       class="d-none"
+                                       {% if current_style == key %}checked{% endif %}>
+                                <span class="flex-grow-1">
+                                    <span class="small fw-semibold">{{ label }}</span>
+                                    <span class="text-muted ms-1" style="font-size:0.7rem;">— {{ desc }}</span>
+                                </span>
+                                <!-- Inline preview of each style -->
+                                <span class="style-sample rounded px-2 py-1"
+                                      style="background:#2563eb; font-size:0.75rem; white-space:nowrap;"
+                                      id="sample-{{ key }}">
+                                    {% if key == 'plain' %}
+                                    <span style="color:rgba(255,255,255,0.75);font-size:0.7rem;">tagline</span>
+                                    {% elif key == 'italic' %}
+                                    <span style="color:rgba(255,255,255,0.85);font-size:0.75rem;font-style:italic;">tagline</span>
+                                    {% elif key == 'bold' %}
+                                    <span style="color:rgba(255,255,255,0.9);font-size:0.72rem;font-weight:600;">tagline</span>
+                                    {% elif key == 'caps' %}
+                                    <span style="color:rgba(255,255,255,0.8);font-size:0.6rem;letter-spacing:1.5px;text-transform:uppercase;">tagline</span>
+                                    {% elif key == 'badge' %}
+                                    <span style="color:#fff;font-size:0.65rem;background:rgba(255,255,255,0.2);border-radius:20px;padding:1px 8px;font-weight:600;">tagline</span>
+                                    {% elif key == 'elegant' %}
+                                    <span style="color:rgba(255,255,255,0.85);font-size:0.8rem;font-family:Georgia,serif;font-style:italic;letter-spacing:0.3px;">tagline</span>
+                                    {% endif %}
+                                </span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                        <i class="bi bi-check-lg me-1"></i> Save Branding
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Agent info summary -->
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-body py-3">
+                <div class="small text-muted mb-1"><i class="bi bi-card-text me-1"></i> License</div>
+                <div class="small mb-2">{{ profile.license_number or '—' }}</div>
+                <div class="small text-muted mb-1"><i class="bi bi-telephone me-1"></i> Phone</div>
+                <div class="small mb-2">{{ profile.phone or '—' }}</div>
+                <div class="small text-muted mb-1"><i class="bi bi-geo-alt me-1"></i> Service Areas</div>
+                <div class="small">{{ profile.service_areas or '—' }}</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Icon gallery ─────────────────────────────────────────────
+let activeIcon = '{{ profile.brand_icon or "" }}';
+
+function selectIcon(char, btn) {
+    activeIcon = char;
+    document.getElementById('brand_icon_input').value = char;
+
+    // Update button highlights
+    document.querySelectorAll('.icon-btn').forEach(b => {
+        b.style.background = '#fff';
+        b.style.borderColor = '#dee2e6';
+    });
+    if (btn) {
+        btn.style.background = '#dbeafe';
+        btn.style.borderColor = '#2563eb';
+    }
+
+    // Grey out URL field when icon is active
+    const urlSection = document.getElementById('logo-url-section');
+    urlSection.style.opacity = char ? '0.4' : '1';
+    document.getElementById('brand_logo_url_input').disabled = !!char;
+
+    updateLogoPreview();
+}
+
+function updateLogoPreview() {
+    const preview = document.getElementById('brand-preview');
+    const old = document.getElementById('preview-icon-or-logo');
+    if (old) old.remove();
+
+    const nameEl = document.getElementById('preview-name');
+    const el = document.createElement('span');
+    el.id = 'preview-icon-or-logo';
+
+    if (activeIcon) {
+        el.className = 'me-1';
+        el.style.cssText = 'font-size:1.4rem;line-height:1;vertical-align:middle;display:inline-block;';
+        el.textContent = activeIcon;
+        preview.insertBefore(el, nameEl);
+        // Parse this specific element with Twemoji for crisp SVG
+        twemoji.parse(el, {
+            folder: 'svg', ext: '.svg',
+            base: 'https://twemoji.maxcdn.com/v/latest/',
+            callback: (icon, options) => `${options.base}${options.size}/${icon}${options.ext}`,
+        });
+        // Size the twemoji img
+        const img = el.querySelector('img');
+        if (img) { img.style.width = '24px'; img.style.height = '24px'; img.style.verticalAlign = 'middle'; }
+    } else {
+        const url = document.getElementById('brand_logo_url_input').value.trim();
+        if (url) {
+            el.innerHTML = `<img src="${url}" style="height:24px;margin-right:6px;vertical-align:middle;" alt="logo">`;
+        } else {
+            el.innerHTML = `<i class="bi bi-house-heart-fill text-white me-1"></i>`;
+        }
+        preview.insertBefore(el, nameEl);
+    }
+}
+
+// ── Color + tagline style (unchanged from before) ────────────
+const STYLE_DEFS = {
+    plain:   el => { el.style.cssText = 'font-size:0.7rem;opacity:0.75;font-style:normal;font-weight:normal;font-family:inherit;letter-spacing:normal;text-transform:none;background:none;border-radius:0;padding:0;'; },
+    italic:  el => { el.style.cssText = 'font-size:0.75rem;opacity:0.85;font-style:italic;font-weight:normal;font-family:inherit;letter-spacing:normal;text-transform:none;background:none;border-radius:0;padding:0;'; },
+    bold:    el => { el.style.cssText = 'font-size:0.72rem;opacity:0.9;font-style:normal;font-weight:600;font-family:inherit;letter-spacing:normal;text-transform:none;background:none;border-radius:0;padding:0;'; },
+    caps:    el => { el.style.cssText = 'font-size:0.6rem;opacity:0.8;font-style:normal;font-weight:normal;font-family:inherit;letter-spacing:1.5px;text-transform:uppercase;background:none;border-radius:0;padding:0;'; },
+    badge:   el => { el.style.cssText = 'font-size:0.65rem;opacity:1;font-style:normal;font-weight:600;font-family:inherit;letter-spacing:normal;text-transform:none;background:rgba(255,255,255,0.2);border-radius:20px;padding:1px 8px;'; },
+    elegant: el => { el.style.cssText = 'font-size:0.8rem;opacity:0.85;font-style:italic;font-weight:normal;font-family:Georgia,serif;letter-spacing:0.3px;text-transform:none;background:none;border-radius:0;padding:0;'; },
+};
+
+let activeStyle = '{{ profile.brand_tagline_style or "plain" }}';
+
+function selectStyle(key, labelEl) {
+    activeStyle = key;
+    document.querySelectorAll('.style-option').forEach(el => {
+        el.classList.remove('border-primary', 'bg-light');
+        el.classList.add('border-light');
+    });
+    labelEl.classList.add('border-primary', 'bg-light');
+    labelEl.classList.remove('border-light');
+    labelEl.querySelector('input[type=radio]').checked = true;
+    updateTaglinePreview();
+}
+
+function updateTaglinePreview() {
+    const text = document.getElementById('tagline-input').value;
+    const el = document.getElementById('preview-tagline');
+    el.textContent = text;
+    el.className = 'text-white ms-1';
+    if (STYLE_DEFS[activeStyle]) STYLE_DEFS[activeStyle](el);
+    const color = document.getElementById('brand_color').value;
+    document.querySelectorAll('.style-sample').forEach(s => s.style.background = color);
+}
+
+document.getElementById('brand_color').addEventListener('input', function() {
+    document.getElementById('brand_color_text').value = this.value;
+    document.getElementById('brand-preview').style.background = this.value;
+    document.querySelectorAll('.style-sample').forEach(s => s.style.background = this.value);
+});
+
+document.getElementById('brand_logo_url_input').addEventListener('input', updateLogoPreview);
+
+// ── Client notes auto-save ──────────────────────────────────
+function saveClientNotes(clientId) {
+    const form = document.querySelector(`.client-notes-form[data-client-id="${clientId}"]`);
+    const ind  = form.querySelector('.save-indicator');
+    const fd   = new FormData();
+
+    form.querySelectorAll('.client-checkbox').forEach(cb => {
+        if (cb.checked) fd.append(cb.name, 'on');
+    });
+    fd.append('notes', form.querySelector('.client-notes-text').value);
+
+    ind.textContent = 'Saving…';
+    const notesUrl = `{{ site_url('dashboard.agent_client_notes', client_id=0) }}`.replace('/0/', `/${clientId}/`);
+    fetch(notesUrl, { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            ind.textContent = data.ok ? '✓ Saved' : '✗ Error';
+            setTimeout(() => ind.textContent = '', 2000);
+        })
+        .catch(() => { ind.textContent = '✗ Error'; });
+}
+
+document.querySelectorAll('.client-notes-form').forEach(form => {
+    const clientId = form.dataset.clientId;
+
+    form.querySelectorAll('.client-checkbox').forEach(cb => {
+        cb.addEventListener('change', () => saveClientNotes(clientId));
+    });
+
+    let notesTimer;
+    form.querySelector('.client-notes-text').addEventListener('input', () => {
+        clearTimeout(notesTimer);
+        notesTimer = setTimeout(() => saveClientNotes(clientId), 1000);
+    });
+    form.querySelector('.client-notes-text').addEventListener('blur', () => {
+        clearTimeout(notesTimer);
+        saveClientNotes(clientId);
+    });
+});
+
+// Init on load
+updateTaglinePreview();
+updateLogoPreview();
+if (activeIcon) {
+    document.getElementById('logo-url-section').style.opacity = '0.4';
+    document.getElementById('brand_logo_url_input').disabled = true;
+}
+// Twemoji-parse the gallery buttons so they render as SVGs
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.icon-btn').forEach(btn => {
+        twemoji.parse(btn, {
+            folder: 'svg', ext: '.svg',
+            base: 'https://twemoji.maxcdn.com/v/latest/'
+        });
+        const img = btn.querySelector('img.emoji');
+        if (img) { img.style.width = '22px'; img.style.height = '22px'; img.style.verticalAlign = 'middle'; }
+    });
+    // Also parse the current icon in the preview
+    updateLogoPreview();
+});
+
+function resendWelcome(clientId, btn) {
+    if (!confirm('Resend the welcome email with a new temporary password?')) return;
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    fetch("{{ site_url('dashboard.agent_resend_welcome') }}", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({client_id: clientId})
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        if (data.ok) {
+            btn.innerHTML = '<i class="bi bi-check-lg"></i> Sent';
+            btn.classList.remove('btn-outline-success');
+            btn.classList.add('btn-success');
+            setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('btn-success'); btn.classList.add('btn-outline-success'); }, 3000);
+        } else {
+            btn.innerHTML = orig;
+            alert(data.error || 'Failed to resend.');
+        }
+    })
+    .catch(() => { btn.disabled = false; btn.innerHTML = orig; alert('Network error.'); });
+}
+</script>
+{% endblock %}

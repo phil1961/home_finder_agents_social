@@ -1,0 +1,250 @@
+<!--
+  File: app/templates/dashboard/admin_agents.html
+  App Version: 2026.03.12 | File Version: 1.2.0
+  Last Modified: 2026-03-13
+-->
+{% extends "base.html" %}
+{% block title %}Agent Management — HomeFinder{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0"><i class="bi bi-shield-check me-2 text-primary"></i>Agent Management</h4>
+        <small class="text-muted">Review applications and manage agent access</small>
+    </div>
+    <span class="badge bg-secondary">{{ agents|length }} agent{{ 's' if agents|length != 1 }}</span>
+</div>
+
+{% set pending  = agents | selectattr('status', 'eq', 'pending')   | list %}
+{% set approved = agents | selectattr('status', 'eq', 'approved')  | list %}
+{% set suspended= agents | selectattr('status', 'eq', 'suspended') | list %}
+
+<!-- ── Pending Applications ───────────────────────────────────── -->
+<h6 class="text-uppercase text-muted fw-semibold mb-2 mt-3">
+    <i class="bi bi-hourglass-split me-1"></i> Pending
+    {% if pending %}<span class="badge bg-warning text-dark ms-1">{{ pending|length }}</span>{% endif %}
+</h6>
+
+{% if pending %}
+<div class="card shadow-sm mb-4">
+    <div class="list-group list-group-flush">
+        {% for profile in pending %}
+        <div class="list-group-item">
+            <div class="row align-items-start g-2">
+                <div class="col-md-5">
+                    <div class="fw-semibold">{{ profile.full_name }}</div>
+                    <div class="text-muted small">{{ profile.user.email }}</div>
+                    <div class="text-muted small">@{{ profile.user.username }}</div>
+                </div>
+                <div class="col-md-4">
+                    {% if profile.brokerage %}
+                    <div class="small"><i class="bi bi-building me-1 text-muted"></i>{{ profile.brokerage }}</div>
+                    {% endif %}
+                    {% if profile.license_number %}
+                    <div class="small"><i class="bi bi-card-text me-1 text-muted"></i>License: {{ profile.license_number }}</div>
+                    {% endif %}
+                    {% if profile.phone %}
+                    <div class="small"><i class="bi bi-telephone me-1 text-muted"></i>{{ profile.phone }}</div>
+                    {% endif %}
+                    {% if profile.service_areas %}
+                    <div class="small"><i class="bi bi-geo-alt me-1 text-muted"></i>{{ profile.service_areas }}</div>
+                    {% endif %}
+                    <div class="small text-muted mt-1">Applied {{ profile.created_at.strftime('%b %d, %Y') }}</div>
+                </div>
+                <div class="col-md-3 d-flex flex-column gap-2">
+                    <form method="POST"
+                          action="{{ site_url('dashboard.admin_agent_action', agent_profile_id=profile.id) }}">
+                        <input type="hidden" name="action" value="approve">
+                        <button type="submit" class="btn btn-success btn-sm w-100">
+                            <i class="bi bi-check-lg me-1"></i> Approve
+                        </button>
+                    </form>
+                    <form method="POST"
+                          action="{{ site_url('dashboard.admin_agent_action', agent_profile_id=profile.id) }}">
+                        <input type="hidden" name="action" value="suspend">
+                        <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                            <i class="bi bi-x-lg me-1"></i> Reject
+                        </button>
+                    </form>
+                    {% if profile.bio %}
+                    <button class="btn btn-outline-secondary btn-sm w-100"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#bio-{{ profile.id }}">
+                        <i class="bi bi-card-text me-1"></i> Bio
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% if profile.bio %}
+            <div class="collapse mt-2" id="bio-{{ profile.id }}">
+                <div class="card card-body bg-light py-2 small">{{ profile.bio }}</div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<p class="text-muted small mb-4"><i class="bi bi-check-circle text-success me-1"></i>No pending applications — you're all caught up.</p>
+{% endif %}
+
+<!-- ── Approved Agents ────────────────────────────────────────── -->
+<h6 class="text-uppercase text-muted fw-semibold mb-2 mt-3">
+    <i class="bi bi-check-circle me-1"></i> Approved
+    {% if approved %}<span class="badge bg-success ms-1">{{ approved|length }}</span>{% endif %}
+</h6>
+
+{% if approved %}
+<div class="card shadow-sm mb-4">
+    <div class="list-group list-group-flush">
+        {% for profile in approved %}
+        {% set an = owner_notes.get(profile.id) %}
+        <div class="list-group-item px-3 py-2">
+            <div class="row align-items-center g-2 mb-2">
+                <div class="col-md-5">
+                    <div class="fw-semibold">{{ profile.full_name }}</div>
+                    <div class="text-muted small">{{ profile.user.email }} &nbsp;·&nbsp; @{{ profile.user.username }}</div>
+                </div>
+                <div class="col-md-4">
+                    {% if profile.brokerage %}
+                    <div class="small text-muted">{{ profile.brokerage }}</div>
+                    {% endif %}
+                    <div class="small text-muted">
+                        Approved {{ profile.approved_at.strftime('%b %d, %Y') if profile.approved_at else '—' }}
+                        &nbsp;·&nbsp; {{ profile.client_count }} client{{ 's' if profile.client_count != 1 }}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <form method="POST"
+                          action="{{ site_url('dashboard.admin_agent_action', agent_profile_id=profile.id) }}">
+                        <input type="hidden" name="action" value="suspend">
+                        <button type="submit" class="btn btn-outline-warning btn-sm w-100"
+                                onclick="return confirm('Suspend {{ profile.full_name }}? They will not be able to log in.')">
+                            <i class="bi bi-pause-circle me-1"></i> Suspend
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <!-- Owner checkboxes + notes -->
+            <div class="agent-notes-form border-top pt-2" data-agent-id="{{ profile.id }}">
+                <div class="d-flex flex-wrap gap-3 mb-2">
+                    {% set boxes = [
+                        ('contract_signed',    'Contract Signed'),
+                        ('background_checked', 'Background Checked'),
+                        ('mls_verified',       'MLS Verified'),
+                    ] %}
+                    {% for field, label in boxes %}
+                    <div class="form-check form-check-inline mb-0">
+                        <input class="form-check-input agent-checkbox"
+                               type="checkbox" id="achk_{{ field }}_{{ profile.id }}"
+                               name="{{ field }}"
+                               {% if an and an|attr(field) %}checked{% endif %}>
+                        <label class="form-check-label small text-muted"
+                               for="achk_{{ field }}_{{ profile.id }}">{{ label }}</label>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <textarea class="form-control form-control-sm agent-notes-text"
+                              rows="1" placeholder="Owner notes…"
+                              style="resize:none; font-size:0.8rem;">{{ an.notes if an and an.notes else '' }}</textarea>
+                    <span class="save-indicator text-muted" style="min-width:52px; font-size:0.72rem;"></span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<p class="text-muted small mb-4">No approved agents yet. When agents sign up at <code>/auth/agent-signup</code>, they'll appear here for your review.</p>
+{% endif %}
+
+<!-- ── Suspended Agents ───────────────────────────────────────── -->
+{% if suspended %}
+<h6 class="text-uppercase text-muted fw-semibold mb-2 mt-3">
+    <i class="bi bi-pause-circle me-1"></i> Suspended
+    <span class="badge bg-danger ms-1">{{ suspended|length }}</span>
+</h6>
+<div class="card shadow-sm mb-4">
+    <div class="list-group list-group-flush">
+        {% for profile in suspended %}
+        <div class="list-group-item">
+            <div class="row align-items-center g-2">
+                <div class="col-md-5">
+                    <div class="fw-semibold text-muted">{{ profile.full_name }}</div>
+                    <div class="text-muted small">{{ profile.user.email }} &nbsp;·&nbsp; @{{ profile.user.username }}</div>
+                </div>
+                <div class="col-md-4">
+                    {% if profile.brokerage %}
+                    <div class="small text-muted">{{ profile.brokerage }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-3">
+                    <form method="POST"
+                          action="{{ site_url('dashboard.admin_agent_action', agent_profile_id=profile.id) }}">
+                        <input type="hidden" name="action" value="reactivate">
+                        <button type="submit" class="btn btn-outline-success btn-sm w-100">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reactivate
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if not agents %}
+<div class="text-center text-muted py-5">
+    <i class="bi bi-people" style="font-size:2.5rem;"></i>
+    <p class="mt-2 mb-1">No agent applications yet.</p>
+    <p class="small">Share your agent signup link to start building your team:<br>
+    <code>/auth/agent-signup</code></p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function saveAgentNotes(agentId) {
+    const form = document.querySelector(`.agent-notes-form[data-agent-id="${agentId}"]`);
+    const ind  = form.querySelector('.save-indicator');
+    const fd   = new FormData();
+
+    form.querySelectorAll('.agent-checkbox').forEach(cb => {
+        if (cb.checked) fd.append(cb.name, 'on');
+    });
+    fd.append('notes', form.querySelector('.agent-notes-text').value);
+
+    ind.textContent = 'Saving…';
+    const url = `{{ site_url('dashboard.admin_agent_notes', agent_profile_id=0) }}`.replace('/0/', `/${agentId}/`);
+    fetch(url, { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            ind.textContent = data.ok ? '✓ Saved' : '✗ Error';
+            setTimeout(() => ind.textContent = '', 2000);
+        })
+        .catch(() => { ind.textContent = '✗ Error'; });
+}
+
+document.querySelectorAll('.agent-notes-form').forEach(form => {
+    const agentId = form.dataset.agentId;
+
+    form.querySelectorAll('.agent-checkbox').forEach(cb => {
+        cb.addEventListener('change', () => saveAgentNotes(agentId));
+    });
+
+    let notesTimer;
+    form.querySelector('.agent-notes-text').addEventListener('input', () => {
+        clearTimeout(notesTimer);
+        notesTimer = setTimeout(() => saveAgentNotes(agentId), 1000);
+    });
+    form.querySelector('.agent-notes-text').addEventListener('blur', () => {
+        clearTimeout(notesTimer);
+        saveAgentNotes(agentId);
+    });
+});
+</script>
+{% endblock %}

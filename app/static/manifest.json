@@ -1,0 +1,33 @@
+{
+  "name": "HomeFinder Social",
+  "short_name": "HomeFinder",
+  "description": "AI-powered home discovery with social sharing, deal scoring, and community listings",
+  "start_url": "/home_finder_agents_social/welcome",
+  "scope": "/home_finder_agents_social/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "icons": [
+    {
+      "src": "/home_finder_agents_social/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/home_finder_agents_social/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["lifestyle", "finance"],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "url": "/home_finder_agents_social/welcome",
+      "icons": [{"src": "/home_finder_agents_social/static/icons/icon-192.png", "sizes": "192x192"}]
+    }
+  ]
+}

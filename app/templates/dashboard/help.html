@@ -1,0 +1,367 @@
+<!--
+  File: app/templates/dashboard/help.html
+  App Version: 2026.03.12 | File Version: 1.1.0
+  Last Modified: 2026-03-12
+-->
+{% extends "base.html" %}
+{% block title %}Help – HomeFinder{% endblock %}
+
+{% block head %}
+<style>
+    .help-section { margin-bottom: 2.5rem; }
+    .help-section h5 {
+        color: #1e3a5f; padding-bottom: 6px;
+        border-bottom: 2px solid #e5e7eb;
+        margin-bottom: 1rem;
+    }
+    .help-card { border: none; border-radius: 10px; transition: box-shadow 0.2s; }
+    .help-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .feature-icon {
+        font-size: 1.4rem; width: 44px; height: 44px; border-radius: 10px;
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .score-example {
+        display: inline-block; width: 28px; height: 28px; border-radius: 50%;
+        text-align: center; line-height: 28px; font-size: 0.7rem;
+        font-weight: 700; color: #fff;
+    }
+    .new-badge {
+        font-size: 0.6rem; background: #2563eb; color: #fff;
+        padding: 1px 6px; border-radius: 10px; vertical-align: middle;
+        margin-left: 6px; font-weight: 600; letter-spacing: 0.5px;
+    }
+    .role-badge {
+        font-size: 0.65rem; padding: 2px 8px; border-radius: 10px;
+        font-weight: 600; letter-spacing: 0.5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-lg-9">
+
+    <div class="text-center mb-4">
+        <h3><i class="bi bi-question-circle"></i> Help &amp; Guide</h3>
+        <p class="text-muted">Complete reference for all HomeFinder features</p>
+        {% if current_user.is_authenticated %}
+        <div class="d-flex justify-content-center gap-2 mt-2">
+            <a href="{{ site_url('dashboard.why_user') }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-person me-1"></i>Why HomeFinder? (Buyers)
+            </a>
+            {% if current_user.is_agent or current_user.is_owner %}
+            <a href="{{ site_url('dashboard.why_agent') }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-briefcase me-1"></i>Why HomeFinder? (Agents)
+            </a>
+            {% endif %}
+            {% if current_user.is_owner %}
+            <a href="{{ site_url('dashboard.why_owner') }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-shield-check me-1"></i>Why HomeFinder? (Owners)
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ── What is HomeFinder ─────────────────────────── -->
+    <div class="help-section">
+        <h5><i class="bi bi-house-heart"></i> What is HomeFinder?</h5>
+        <p>
+            HomeFinder aggregates listings from <strong>Zillow</strong> and <strong>Realtor.com</strong>,
+            scores every property against your personal criteria using 17 weighted factors, and provides
+            AI-powered deal analysis. Unlike listing sites that serve both buyers and sellers, HomeFinder
+            works <strong>exclusively for the buyer</strong> — including negotiation advice, suggested
+            opening offers, and honest assessments no listing portal would ever give you.
+        </p>
+    </div>
+
+    <!-- ── Features overview ─────────────────────────── -->
+    <div class="help-section">
+        <h5><i class="bi bi-grid"></i> Features</h5>
+        <div class="row g-3">
+            {% set features = [
+                ("bi-speedometer2","#dbeafe","#2563eb","Deal Scoring","",
+                 "Every listing gets a composite score (0–100) based on 17 factors you control: price, size, yard, flood risk, year built, single story, HOA, days on market, and more."),
+                ("bi-robot","#f0fdf4","#059669","AI Deal Analyst","",
+                 "Click 'Analyze This Deal' on any listing. Claude writes a buyer-focused brief: strengths, concerns, negotiation leverage, and a specific dollar opening offer."),
+                ("bi-geo-alt","#fef3c7","#d97706","Map View","",
+                 "All listings on an interactive map with color-coded score markers. Click any pin for a photo, price, and link to the detail page."),
+                ("bi-table","#fce7f3","#db2777","Listing Data / Digest","NEW",
+                 "Full tabular view of all listings with every data field — sortable, filterable by flag or area, and exportable to CSV for your own analysis."),
+                ("bi-star","#f3e8ff","#7c3aed","Favorites & Flags","",
+                 "Flag listings as ⭐ Favorite, 🤔 Maybe, or 🙈 Hidden. Filter the dashboard and table by your flags."),
+                ("bi-journal-text","#ecfdf5","#047857","Notes & Visit Tracking","NEW",
+                 "On any listing's detail page, write private notes and check off visit status: Scheduled, Visited, Not Interested, or Made an Offer."),
+                ("bi-map","#fff7ed","#ea580c","Tour Planner","NEW",
+                 "Check the houses you want to visit, tap 'Open in Google Maps,' and get a multi-stop navigation route instantly — built for phone use on driving days."),
+                ("bi-sliders","#f0f9ff","#0369a1","Preferences","",
+                 "Set your price range, must-have features, target areas, zip codes, and importance weights for all 17 scoring factors."),
+            ] %}
+            {% for icon, bg, color, title, badge, desc in features %}
+            <div class="col-md-6">
+                <div class="card help-card shadow-sm h-100">
+                    <div class="card-body d-flex gap-3">
+                        <div class="feature-icon" style="background:{{ bg }}; color:{{ color }};">
+                            <i class="bi {{ icon }}"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-1">
+                                {{ title }}
+                                {% if badge %}<span class="new-badge">{{ badge }}</span>{% endif %}
+                            </h6>
+                            <p class="mb-0 small text-muted">{{ desc }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ── Understanding scores ───────────────────────── -->
+    <div class="help-section">
+        <h5><i class="bi bi-bar-chart"></i> Understanding Deal Scores</h5>
+        <p>Each listing is scored 0–100. The composite is a weighted average of 17 factor scores.</p>
+        <div class="d-flex gap-3 mb-3 flex-wrap">
+            <div><span class="score-example" style="background:#10b981;">82</span> <strong>75+</strong> = Great deal</div>
+            <div><span class="score-example" style="background:#3b82f6;">63</span> <strong>50–74</strong> = Decent match</div>
+            <div><span class="score-example" style="background:#ef4444;">34</span> <strong>Below 50</strong> = Weak match</div>
+        </div>
+        <div class="row g-3">
+            {% for group, items in [
+                ("Core Factors", [
+                    ("Price","Lower within your range scores higher"),
+                    ("House Size","Larger square footage"),
+                    ("Yard Size","Bigger lot = higher score"),
+                    ("Features","Garage, porch, patio, beds, baths"),
+                    ("Flood Risk","Above flood plain = 100"),
+                ]),
+                ("Property Condition", [
+                    ("Year Built","Newer = less maintenance risk"),
+                    ("Single Story","One-level preferred for retirement"),
+                    ("Price/Sqft","Value-for-money metric"),
+                ]),
+                ("Deal Opportunity", [
+                    ("Days on Market","90+ days = motivated seller"),
+                    ("Price Trend","Dropping price = leverage"),
+                    ("HOA Fee","None or low scores highest"),
+                    ("Property Tax","Lower annual tax = better"),
+                ]),
+                ("Location & Lifestyle", [
+                    ("Near Medical","Hospital/urgent care proximity"),
+                    ("Near Grocery","Shopping convenience"),
+                    ("Community Pool","Pool/clubhouse access"),
+                    ("Lot Ratio","Yard vs. house footprint"),
+                    ("Walkability","Sidewalks & walkable area"),
+                ]),
+            ] %}
+            <div class="col-md-6">
+                <div class="card bg-light border-0 p-3">
+                    <h6 class="mb-2">{{ group }}</h6>
+                    <ul class="mb-0 small ps-3">
+                        {% for name, desc in items %}
+                        <li><strong>{{ name }}</strong> — {{ desc }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <p class="mt-3 small text-muted">
+            Control weights on the <a href="{{ site_url('dashboard.preferences') }}">Preferences</a> page.
+            Set any factor to 0 to ignore it entirely.
+        </p>
+    </div>
+
+    <!-- ── AI Analyst ─────────────────────────────────── -->
+    <div class="help-section">
+        <h5><i class="bi bi-robot"></i> AI Deal Analyst</h5>
+        <p>
+            Requires a free account. On any listing's detail page click <strong>"Analyze This Deal"</strong>.
+            The AI reads all listing data against your criteria and produces a Deal Brief:
+        </p>
+        <div class="row g-3 mb-3">
+            {% for icon, color, title, desc in [
+                ("bi-check-circle-fill","text-success","Strengths","What's good about this property for you"),
+                ("bi-exclamation-triangle-fill","text-warning","Concerns","Red flags and things to investigate"),
+                ("bi-cash-stack","text-primary","Negotiation","Leverage points and a specific opening offer"),
+            ] %}
+            <div class="col-md-4">
+                <div class="card bg-light border-0 p-3 text-center">
+                    <i class="bi {{ icon }} {{ color }} fs-4"></i>
+                    <div class="small mt-1 fw-semibold">{{ title }}</div>
+                    <div class="small text-muted">{{ desc }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <p class="mb-2"><strong>Portfolio Analysis</strong> — filter to Favorites, then click "Analyze
+        Favorites." The AI ranks them, finds cross-listing patterns, and picks a dark horse.</p>
+        <p class="mb-0"><strong>Preferences Coach</strong> — on the Preferences page, click "Analyze My
+        Setup." Gets market-specific feedback on your scoring configuration before you save.</p>
+    </div>
+
+    <!-- ── Notes & Tour ───────────────────────────────── -->
+    <div class="help-section">
+        <h5><i class="bi bi-journal-text"></i> Notes, Visit Tracking &amp; Tour Planner
+            <span class="new-badge">NEW</span></h5>
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <div class="card bg-light border-0 p-3 h-100">
+                    <h6><i class="bi bi-journal-text me-1 text-primary"></i>My Notes (Detail Page)</h6>
+                    <p class="small text-muted mb-2">
+                        Every listing has a private notes section — up to 3,000 characters.
+                        Notes autosave when you click away. Check off your visit status:
+                    </p>
+                    <ul class="small text-muted mb-0">
+                        <li>📅 <strong>Scheduled a Visit</strong></li>
+                        <li>🏠 <strong>Visited</strong></li>
+                        <li>✗ <strong>Not Interested After Visit</strong></li>
+                        <li>💰 <strong>Made an Offer</strong></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card bg-light border-0 p-3 h-100">
+                    <h6><i class="bi bi-map me-1 text-success"></i>Tour Planner</h6>
+                    <p class="small text-muted mb-2">
+                        Available from the <strong>Tour</strong> nav link (logged-in users).
+                        Shows all favorites and maybes with their visit status.
+                    </p>
+                    <ol class="small text-muted mb-0">
+                        <li>Check the houses you want to visit today</li>
+                        <li>Enter your starting address (optional)</li>
+                        <li>Tap <strong>Open Route in Google Maps</strong></li>
+                        <li>Navigate with all stops pre-loaded</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Data Table / Digest ────────────────────────── -->
+    <div class="help-section">
+        <h5><i class="bi bi-table"></i> Listing Data Table
+            <span class="new-badge">NEW</span></h5>
+        <p>
+            The <strong>Digest</strong> page is now a full spreadsheet-style view of all listings.
+            Every data field appears as a sortable column.
+        </p>
+        <ul class="small text-muted">
+            <li>Click any <strong>column header</strong> to sort ascending/descending</li>
+            <li>Use the <strong>flag buttons</strong> (All, New, Favorites, Maybes, Hidden) to filter rows</li>
+            <li>Use the <strong>area buttons</strong> to filter by neighborhood</li>
+            <li>Type in the <strong>filter box</strong> to search by address or area</li>
+            <li>Click <strong>Export CSV</strong> to download the current filtered view for Excel/Sheets analysis</li>
+        </ul>
+    </div>
+
+    <!-- ── Role-specific sections ─────────────────────── -->
+    {% if current_user.is_authenticated and (current_user.is_agent or current_user.is_owner) %}
+    <div class="help-section">
+        <h5><i class="bi bi-briefcase"></i> Agent Features</h5>
+        <p>As an approved agent you have access to additional capabilities:</p>
+        <ul class="small text-muted">
+            <li><strong>Agent Dashboard</strong> — manage your branding (color, icon, tagline) and view your clients</li>
+            <li><strong>Brand Customization</strong> — your logo icon and brand color appear in the navbar for your clients</li>
+            <li><strong>Client Assignment</strong> — clients linked to your account see your branding throughout</li>
+            <li><strong>Fetch Now</strong> — trigger an immediate refresh of listings from Zillow and Realtor.com</li>
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if current_user.is_owner %}
+    <div class="help-section">
+        <h5><i class="bi bi-shield-check"></i> Owner Features</h5>
+        <ul class="small text-muted">
+            <li><strong>Admin</strong> — approve, suspend, or review pending agent applications</li>
+            <li><strong>Metrics</strong> — API usage and cost breakdown by user: Zillow/Realtor fetches, AI calls, all time and 30-day</li>
+            <li><strong>Full Access</strong> — all agent and user features</li>
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- ── FAQ ────────────────────────────────────────── -->
+    <div class="help-section">
+        <h5><i class="bi bi-chat-dots"></i> Frequently Asked Questions</h5>
+        <div class="accordion" id="faqAccordion">
+            {% set faqs = [
+                ("How often are listings updated?",
+                 "Listings refresh every 6 hours automatically via the background scheduler. Click 'Fetch Now' on the dashboard for an immediate refresh (agents and owner only)."),
+                ("Why do some listings have no photos?",
+                 "Photos depend on what the APIs return. Zillow typically provides multiple carousel photos; Realtor.com a primary photo. If a photo fails to load, click through to the source site."),
+                ("Can I change my scoring weights?",
+                 "Yes — go to Preferences and adjust the importance sliders (0–10) for each factor. Changes take effect immediately. Set a factor to 0 to ignore it entirely."),
+                ("How does the CSV export work?",
+                 "On the Digest (Listing Data) page, the Export CSV button downloads every row currently shown — filtered by your flag/area selection. Open it in Excel or Google Sheets for your own analysis."),
+                ("Are my notes private?",
+                 "Yes. Notes are stored in your account only. No other user — including agents — can see your notes."),
+                ("Why are some listings only on Zillow or only on Realtor?",
+                 "Not all listings appear on both platforms. HomeFinder searches both to maximize coverage and deduplicates by property ID."),
+                ("How is the suggested offer calculated?",
+                 "The AI considers days on market, price history, tax-assessed value vs. list price, and the listing description. It's a starting point — always consult your agent."),
+                ("Is my data private?",
+                 "Yes. Flags, notes, and preferences are stored in your account. The AI analyst sends listing data (not personal info) to the Anthropic API."),
+                ("What is the Tour Planner?",
+                 "The Tour link in the navbar opens your favorites and maybes in a checklist. Select the houses you want to visit, enter a start address, and tap 'Open in Google Maps' for a multi-stop route — works great on a phone."),
+            ] %}
+            {% for q, a in faqs %}
+            <div class="accordion-item border-0 border-bottom">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed bg-transparent" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#faq{{ loop.index }}">
+                        {{ q }}
+                    </button>
+                </h2>
+                <div id="faq{{ loop.index }}" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body small text-muted">{{ a }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ── Tips ───────────────────────────────────────── -->
+    <div class="help-section">
+        <h5><i class="bi bi-lightbulb"></i> Tips</h5>
+        <div class="card bg-light border-0 p-3">
+            <ul class="mb-0 small">
+                <li class="mb-2">Use the <strong>Map view</strong> to find clusters of listings near your target areas.</li>
+                <li class="mb-2">The <strong>DOM column</strong> in the data table is your best friend — sort by it descending to find the most motivated sellers.</li>
+                <li class="mb-2">Use <strong>Export CSV</strong> after filtering to Favorites for a clean spreadsheet of just the houses you're serious about.</li>
+                <li class="mb-2"><strong>Hidden</strong> listings 🙈 stay in the database — filter for them to recover anything you hid by mistake.</li>
+                <li class="mb-2">Run the <strong>AI Analyst</strong> before calling your agent about a listing — the negotiation section gives you a prepared position.</li>
+                <li class="mb-2">On driving days, pre-check your tour stops in the <strong>Tour Planner</strong> the night before so the route is ready on your phone.</li>
+                <li>The <strong>Preferences Coach</strong> gives market-specific advice on your setup — run it once when you first configure your weights.</li>
+            </ul>
+        </div>
+    </div>
+
+
+    <!-- ── About / Version ───────────────────────────────── -->
+    <div class="help-section mt-4">
+        <h5><i class="bi bi-info-circle"></i> About</h5>
+        <div class="card bg-light border-0 p-3">
+            <div class="d-flex align-items-center gap-3">
+                <div>
+                    <div class="fw-semibold">HomeFinder</div>
+                    <div class="text-muted small">Real estate intelligence platform for buyers</div>
+                </div>
+                <div class="ms-auto text-end">
+                    <span class="badge bg-secondary" style="font-size:0.8rem; letter-spacing:0.04em;">
+                        v{{ app_version }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mb-4">
+        <a href="{{ site_url('dashboard.index') }}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+        </a>
+    </div>
+
+</div>
+</div>
+{% endblock %}

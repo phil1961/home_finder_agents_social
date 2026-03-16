@@ -1,0 +1,198 @@
+<!--
+  File: app/templates/_sites_cards.html
+  App Version: 1.0.0 | File Version: 1.0.0
+  Last Modified: 2026-03-15
+-->
+<!-- ── Existing Sites ──────────────────────────────────────────────── -->
+{% if sites %}
+<div class="row g-3 mb-4">
+    {% for site in sites %}
+    <div class="col-lg-6">
+        <div class="card site-card shadow-sm h-100 {% if not site.active %}border-secondary opacity-75{% endif %}">
+            <div class="card-body">
+
+                <!-- Header row -->
+                <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                    <div>
+                        <h5 class="mb-1">
+                            {% if site.active %}
+                            <i class="bi bi-circle-fill text-success me-1" style="font-size:.55rem; vertical-align:middle;"></i>
+                            {% else %}
+                            <i class="bi bi-circle text-secondary me-1" style="font-size:.55rem; vertical-align:middle;"></i>
+                            {% endif %}
+                            {{ site.display_name }}
+                        </h5>
+                        <span class="site-key-badge">{{ site.site_key }}</span>
+                        <span class="stat-pill bg-primary bg-opacity-10 text-primary ms-1">
+                            {{ site.live_count }} listings
+                        </span>
+                        <a href="/home_finder_agents_social/site/{{ site.site_key }}/"
+                           class="stat-pill bg-success bg-opacity-10 text-success ms-1 text-decoration-none"
+                           target="_blank" title="Open this site">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>Open Site
+                        </a>
+                    </div>
+                    <div class="d-flex gap-1 flex-shrink-0">
+                        <!-- Nginx snippet -->
+                        <button class="btn btn-sm btn-outline-secondary"
+                                onclick="showNginx('{{ site.site_key }}', '{{ site.display_name }}')"
+                                title="nginx config">
+                            <i class="bi bi-server"></i>
+                        </button>
+                        <!-- Toggle active -->
+                        <form method="POST"
+                              action="{{ url_for('site_manager.sites_toggle', site_key=site.site_key) }}">
+                            <button type="submit"
+                                    class="btn btn-sm {% if site.active %}btn-outline-warning{% else %}btn-outline-success{% endif %}"
+                                    title="{{ 'Deactivate' if site.active else 'Activate' }}">
+                                <i class="bi {% if site.active %}bi-pause-circle{% else %}bi-play-circle{% endif %}"></i>
+                            </button>
+                        </form>
+                        <!-- Delete -->
+                        <form method="POST"
+                              action="{{ url_for('site_manager.sites_delete', site_key=site.site_key) }}"
+                              onsubmit="return confirm('Delete \'{{ site.display_name }}\'?\n\nThe database will be renamed to {{ site.site_key }}.db.deleted — you can recover it by renaming it back.\n\nThis cannot be undone from the UI.')">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete site">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Stats row -->
+                <div class="d-flex flex-wrap gap-2 mb-3 small text-muted">
+                    <span><i class="bi bi-database me-1"></i>{{ site.db_path }}</span>
+                    {% if site.pipeline_last_run %}
+                    <span><i class="bi bi-arrow-repeat me-1"></i>Pipeline: {{ site.pipeline_last_run[:16] }}</span>
+                    {% else %}
+                    <span class="text-warning"><i class="bi bi-exclamation-circle me-1"></i>Pipeline never run</span>
+                    {% endif %}
+                    {% if site.owner_email %}
+                    <span><i class="bi bi-person me-1"></i>{{ site.owner_email }}</span>
+                    {% endif %}
+                </div>
+
+                <!-- Master controls: scheduler lock + fetch limit -->
+                <div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
+                    <form method="POST"
+                          action="{{ url_for('site_manager.sites_edit', site_key=site.site_key) }}"
+                          class="d-flex align-items-center gap-2">
+                        <!-- Scheduler lock -->
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="lock_{{ site.site_key }}"
+                                   name="scheduler_locked" value="1"
+                                   {% if site.scheduler_locked %}checked{% endif %}
+                                   onchange="this.form.submit()">
+                            <label class="form-check-label small {% if site.scheduler_locked %}text-danger fw-semibold{% else %}text-muted{% endif %}"
+                                   for="lock_{{ site.site_key }}">
+                                {% if site.scheduler_locked %}
+                                <i class="bi bi-lock-fill me-1"></i>Scheduler Locked
+                                {% else %}
+                                <i class="bi bi-unlock me-1"></i>Scheduler Unlocked
+                                {% endif %}
+                            </label>
+                        </div>
+                        <span class="text-muted">|</span>
+                        <!-- Fetch limit -->
+                        <div class="d-flex align-items-center gap-1">
+                            <label class="small text-muted mb-0" for="maxfetch_{{ site.site_key }}">Max fetch:</label>
+                            <input type="number" class="form-control form-control-sm" style="width:70px;"
+                                   id="maxfetch_{{ site.site_key }}"
+                                   name="max_fetches_per_run"
+                                   value="{{ site.max_fetches_per_run or 0 }}"
+                                   min="0" max="10000" placeholder="0">
+                            <button type="submit" class="btn btn-sm btn-outline-primary py-0 px-1" title="Save">
+                                <i class="bi bi-check-lg"></i>
+                            </button>
+                            <span class="text-muted small">(0 = no limit)</span>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Zip codes -->
+                {% if site.zip_codes_json %}
+                {% set zips = site.zip_codes_json | from_json %}
+                <div class="mb-3">
+                    {% for z in zips %}
+                    <span class="badge bg-light text-secondary border me-1 mb-1" style="font-size:.7rem;">{{ z }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Edit form (collapsible) -->
+                <div>
+                    <a class="collapse-header text-decoration-none small text-primary"
+                       data-bs-toggle="collapse"
+                       href="#edit-{{ site.site_key }}">
+                        <i class="bi bi-pencil me-1"></i>Edit configuration
+                    </a>
+                    <div class="collapse mt-2" id="edit-{{ site.site_key }}">
+                        <form method="POST"
+                              action="{{ url_for('site_manager.sites_edit', site_key=site.site_key) }}">
+                            <div class="form-section">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Display Name</label>
+                                        <input type="text" class="form-control form-control-sm"
+                                               name="display_name" value="{{ site.display_name }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Owner Email</label>
+                                        <input type="text" class="form-control form-control-sm"
+                                               name="owner_email" value="{{ site.owner_email or '' }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small">Map Center Lat</label>
+                                        <input type="number" step="0.001" class="form-control form-control-sm"
+                                               name="map_center_lat" value="{{ site.map_center_lat }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small">Map Center Lon</label>
+                                        <input type="number" step="0.001" class="form-control form-control-sm"
+                                               name="map_center_lon" value="{{ site.map_center_lon }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small">Map Zoom</label>
+                                        <input type="number" class="form-control form-control-sm"
+                                               name="map_zoom" value="{{ site.map_zoom }}" min="6" max="16">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label small">Zip Codes (comma-separated)</label>
+                                        <textarea class="form-control form-control-sm" name="zip_codes"
+                                                  rows="2" style="font-family:monospace; font-size:.8rem;">{% if site.zip_codes_json %}{{ site.zip_codes_json | from_json | join(', ') }}{% endif %}</textarea>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label small">Map Bounds</label>
+                                        <div class="row g-1">
+                                            {% if site.map_bounds_json %}
+                                            {% set bounds = site.map_bounds_json | from_json %}
+                                            {% set sw = bounds[0] %}{% set ne = bounds[1] %}
+                                            {% else %}
+                                            {% set sw = [0,0] %}{% set ne = [0,0] %}
+                                            {% endif %}
+                                            <div class="col-3"><input type="number" step="0.001" class="form-control form-control-sm" name="sw_lat" placeholder="SW Lat" value="{{ sw[0] or '' }}"></div>
+                                            <div class="col-3"><input type="number" step="0.001" class="form-control form-control-sm" name="sw_lon" placeholder="SW Lon" value="{{ sw[1] or '' }}"></div>
+                                            <div class="col-3"><input type="number" step="0.001" class="form-control form-control-sm" name="ne_lat" placeholder="NE Lat" value="{{ ne[0] or '' }}"></div>
+                                            <div class="col-3"><input type="number" step="0.001" class="form-control form-control-sm" name="ne_lon" placeholder="NE Lon" value="{{ ne[1] or '' }}"></div>
+                                        </div>
+                                        <div class="form-text">SW corner and NE corner of the map bounding box</div>
+                                    </div>
+                                </div>
+                                <div class="text-end mt-2">
+                                    <button type="submit" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-check-lg me-1"></i>Save Changes
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            </div><!-- /card-body -->
+        </div><!-- /card -->
+    </div><!-- /col -->
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">No sites registered yet. Create one below.</div>
+{% endif %}

@@ -1,0 +1,312 @@
+<!--
+  File: app/templates/social/share_landing.html
+  App Version: 2026.03.13 | File Version: 1.0.0
+  Last Modified: 2026-03-13
+-->
+{% extends "base.html" %}
+{% block title %}{{ share.sharer_name or "Someone" }} shared a listing with you{% endblock %}
+
+{% block head %}
+<style>
+    .share-hero {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+    }
+    .share-message {
+        background: rgba(255,255,255,0.15);
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        font-style: italic;
+        margin-top: 1rem;
+    }
+    .listing-hero-img {
+        width: 100%;
+        height: 350px;
+        object-fit: cover;
+        border-radius: 12px;
+    }
+    .reaction-btn {
+        border: 2px solid #dee2e6;
+        border-radius: 12px;
+        padding: 0.75rem 1.25rem;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: center;
+    }
+    .reaction-btn:hover {
+        border-color: #667eea;
+        background: #f8f9ff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    }
+    .reaction-btn.active {
+        border-color: #667eea;
+        background: #eef0ff;
+    }
+    .reaction-btn i {
+        font-size: 1.5rem;
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+    .share-card {
+        border: none;
+        border-radius: 16px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 1rem;
+    }
+    .detail-item {
+        text-align: center;
+        padding: 1rem;
+        background: #f8fafc;
+        border-radius: 10px;
+    }
+    .detail-item .value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #334155;
+    }
+    .detail-item .label {
+        font-size: 0.8rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .viral-cta {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        border: none;
+        color: white;
+        border-radius: 12px;
+        padding: 1rem 2rem;
+        font-weight: 600;
+    }
+    .viral-cta:hover {
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(245, 87, 108, 0.3);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero banner -->
+<div class="share-hero text-center rounded-4 mb-4 p-4">
+    <h3>
+        <i class="bi bi-send-fill me-2"></i>
+        {{ share.sharer_name or "Someone" }} shared a listing with you!
+    </h3>
+    {% if share.relationship %}
+    <p class="mb-0 opacity-75">
+        Shared by your {{ share.relationship }}
+    </p>
+    {% endif %}
+    {% if share.message %}
+    <div class="share-message mx-auto" style="max-width:600px;">
+        "{{ share.message }}"
+    </div>
+    {% endif %}
+</div>
+
+{% if listing %}
+<div class="card share-card mb-4">
+    {% if listing.primary_photo_large %}
+    <img src="{{ listing.primary_photo_large }}" alt="{{ listing.address }}" class="listing-hero-img">
+    {% endif %}
+    <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+                <h4 class="mb-1">${{ "{:,}".format(listing.price) }}</h4>
+                <p class="text-muted mb-0">
+                    <i class="bi bi-geo-alt me-1"></i>{{ listing.address }}
+                    {% if listing.city %}, {{ listing.city }}{% endif %}
+                    {% if listing.zip_code %} {{ listing.zip_code }}{% endif %}
+                </p>
+            </div>
+            {% if listing.deal_score %}
+            <div class="text-center">
+                <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto
+                    {% if listing.deal_score.composite_score >= 75 %}bg-success
+                    {% elif listing.deal_score.composite_score >= 50 %}bg-warning
+                    {% else %}bg-secondary{% endif %}"
+                    style="width:60px;height:60px;color:white;font-weight:700;font-size:1.2rem;">
+                    {{ listing.deal_score.composite_score|round|int }}
+                </div>
+                <small class="text-muted">Deal Score</small>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Property details grid -->
+        <div class="detail-grid mb-4">
+            {% if listing.beds %}
+            <div class="detail-item">
+                <div class="value">{{ listing.beds }}</div>
+                <div class="label">Beds</div>
+            </div>
+            {% endif %}
+            {% if listing.baths %}
+            <div class="detail-item">
+                <div class="value">{{ listing.baths|round(1) }}</div>
+                <div class="label">Baths</div>
+            </div>
+            {% endif %}
+            {% if listing.sqft %}
+            <div class="detail-item">
+                <div class="value">{{ "{:,}".format(listing.sqft) }}</div>
+                <div class="label">Sq Ft</div>
+            </div>
+            {% endif %}
+            {% if listing.year_built %}
+            <div class="detail-item">
+                <div class="value">{{ listing.year_built }}</div>
+                <div class="label">Built</div>
+            </div>
+            {% endif %}
+            {% if listing.lot_sqft %}
+            <div class="detail-item">
+                <div class="value">{{ "{:,}".format(listing.lot_sqft) }}</div>
+                <div class="label">Lot Sq Ft</div>
+            </div>
+            {% endif %}
+            {% if listing.price_per_sqft %}
+            <div class="detail-item">
+                <div class="value">${{ listing.price_per_sqft|round|int }}</div>
+                <div class="label">Per Sq Ft</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Features -->
+        {% if listing.has_garage or listing.has_porch or listing.has_patio or listing.has_community_pool %}
+        <div class="mb-4">
+            {% if listing.has_garage %}<span class="badge bg-light text-dark border me-1"><i class="bi bi-car-front me-1"></i>Garage</span>{% endif %}
+            {% if listing.has_porch %}<span class="badge bg-light text-dark border me-1"><i class="bi bi-columns-gap me-1"></i>Porch</span>{% endif %}
+            {% if listing.has_patio %}<span class="badge bg-light text-dark border me-1"><i class="bi bi-tree me-1"></i>Patio</span>{% endif %}
+            {% if listing.has_community_pool %}<span class="badge bg-light text-dark border me-1"><i class="bi bi-water me-1"></i>Pool</span>{% endif %}
+            {% if listing.is_single_story %}<span class="badge bg-light text-dark border me-1"><i class="bi bi-house me-1"></i>Single Story</span>{% endif %}
+        </div>
+        {% endif %}
+
+        {% if listing.description %}
+        <p class="text-muted" style="font-size:0.9rem;">{{ listing.description[:300] }}{% if listing.description|length > 300 %}...{% endif %}</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Reactions -->
+<div class="card share-card mb-4">
+    <div class="card-body p-4">
+        <h5 class="mb-3"><i class="bi bi-chat-heart me-2"></i>What do you think?</h5>
+        <div class="row g-2" id="reaction-buttons">
+            {% for rtype, rlabel, ricon, rcolor in reaction_types %}
+            <div class="col">
+                <form method="POST" action="{{ url_for('social.react_to_share', share_id=share.id) }}" class="d-inline w-100">
+                    <input type="hidden" name="reaction_type" value="{{ rtype }}">
+                    <input type="hidden" name="reactor_email" value="{{ share.recipient_email }}">
+                    <button type="submit" class="reaction-btn w-100">
+                        <i class="bi {{ ricon }} {{ rcolor }}"></i>
+                        <small>{{ rlabel }}</small>
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Optional comment -->
+        <form method="POST" action="{{ url_for('social.react_to_share', share_id=share.id) }}" class="mt-3">
+            <input type="hidden" name="reaction_type" value="interested">
+            <input type="hidden" name="reactor_email" value="{{ share.recipient_email }}">
+            <div class="input-group">
+                <input type="text" name="comment" class="form-control" placeholder="Add a comment (optional)...">
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="bi bi-send"></i> Send
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Viral loop: share with someone else -->
+<div class="card share-card mb-4">
+    <div class="card-body p-4 text-center">
+        <h5 class="mb-3">Know someone who'd love this?</h5>
+        <p class="text-muted">Share it forward and help them find their dream home!</p>
+        <button class="btn viral-cta" data-bs-toggle="modal" data-bs-target="#reshareModal">
+            <i class="bi bi-share me-2"></i>Share with Someone Else
+        </button>
+    </div>
+</div>
+
+<!-- CTA: Sign up -->
+{% if not current_user.is_authenticated %}
+<div class="card share-card mb-4 border-primary">
+    <div class="card-body p-4 text-center">
+        <h5 class="mb-2"><i class="bi bi-house-heart me-2"></i>Want to discover more great deals?</h5>
+        <p class="text-muted">Create a free account to save favorites, get AI-powered deal analysis, and more.</p>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">
+            <i class="bi bi-person-plus me-2"></i>Create Free Account
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Re-share modal -->
+<div class="modal fade" id="reshareModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-share me-2"></i>Share This Listing</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('social.share_listing') }}">
+                <div class="modal-body">
+                    <input type="hidden" name="listing_id" value="{{ listing.id }}">
+                    {% if not current_user.is_authenticated %}
+                    <div class="mb-3">
+                        <label class="form-label">Your Name</label>
+                        <input type="text" name="sharer_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Your Email</label>
+                        <input type="email" name="sharer_email" class="form-control" required>
+                    </div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <label class="form-label">Recipient's Email</label>
+                        <input type="email" name="recipient_email" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Recipient's Name</label>
+                        <input type="text" name="recipient_name" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">How do you know them?</label>
+                        <select name="relationship" class="form-select">
+                            <option value="friend">Friend</option>
+                            <option value="family">Family</option>
+                            <option value="coworker">Coworker</option>
+                            <option value="neighbor">Neighbor</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Personal Message</label>
+                        <textarea name="message" class="form-control" rows="3" placeholder="Check out this listing!"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-send me-1"></i>Share</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

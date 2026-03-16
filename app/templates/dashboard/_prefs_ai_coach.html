@@ -1,0 +1,124 @@
+<!--
+  File: app/templates/dashboard/_prefs_ai_coach.html
+  App Version: 2026.03.14 | File Version: 1.0.0
+  Last Modified: 2026-03-15
+-->
+<!-- AI Preferences Analyst -->
+{% if current_user.is_authenticated %}
+<div class="card border-0 shadow-sm mb-3" id="prefs-analyst-card">
+    <div class="card-body py-2 d-flex justify-content-between align-items-center">
+        <div>
+            <strong><i class="bi bi-robot"></i> AI Preferences Coach</strong>
+            <span class="text-muted small ms-2">
+                Get feedback on your scoring setup — blind spots, balance, market-specific tips
+            </span>
+        </div>
+        <button class="btn btn-sm btn-primary" id="prefs-analyze-btn" onclick="analyzePreferences()">
+            <i class="bi bi-lightning-charge"></i> Analyze My Setup
+        </button>
+    </div>
+
+    <div id="prefs-ai-result" style="display:none;">
+        <hr class="my-0">
+        <div class="card-body pt-3">
+            <div id="prefs-ai-loading" style="display:none;" class="text-center py-4">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="text-muted mt-2 small">Claude is reviewing your scoring configuration...</p>
+            </div>
+            <div id="prefs-ai-error" class="alert alert-danger small" style="display:none;"></div>
+            <div id="prefs-ai-brief" style="display:none;">
+                <div class="alert alert-primary border-0 mb-3" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);">
+                    <strong><i class="bi bi-lightbulb"></i> Overall Assessment:</strong>
+                    <span id="pa-headline"></span>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light h-100">
+                            <div class="card-body">
+                                <h6 class="card-title"><i class="bi bi-check-circle text-success"></i> What's Working</h6>
+                                <div id="pa-strengths" class="small" style="white-space:pre-line;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light h-100">
+                            <div class="card-body">
+                                <h6 class="card-title"><i class="bi bi-exclamation-triangle text-warning"></i> Blind Spots</h6>
+                                <div id="pa-blind-spots" class="small" style="white-space:pre-line;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light h-100">
+                            <div class="card-body">
+                                <h6 class="card-title"><i class="bi bi-sliders text-primary"></i> Suggested Tweaks</h6>
+                                <div id="pa-tweaks" class="small" style="white-space:pre-line;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light h-100">
+                            <div class="card-body">
+                                <h6 class="card-title"><i class="bi bi-geo-alt text-danger"></i> {{ current_site.display_name if current_site else 'Local' }} Insight</h6>
+                                <div id="pa-local" class="small" style="white-space:pre-line;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="alert alert-success border-0 mt-3 mb-0" style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);">
+                    <strong><i class="bi bi-check-circle"></i> Bottom Line:</strong>
+                    <span id="pa-bottom-line"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2 d-flex justify-content-between align-items-center">
+        <div>
+            <strong><i class="bi bi-robot"></i> AI Preferences Coach</strong>
+            <span class="text-muted small ms-2">
+                Get AI feedback on your scoring setup
+            </span>
+        </div>
+        <button class="btn btn-sm btn-outline-primary" onclick="showJoinModal('analyze')">
+            <i class="bi bi-lock"></i> Analyze My Setup
+        </button>
+    </div>
+</div>
+{% endif %}
+
+<!-- Guest save confirmation modal -->
+{% if not current_user.is_authenticated %}
+<div class="modal fade" id="guestSavedModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-body text-center p-4">
+                <div style="font-size:2.5rem; margin-bottom:4px;">
+                    <i class="bi bi-check-circle text-success"></i>
+                </div>
+                <h5 class="fw-bold">Preferences Applied!</h5>
+                <p class="text-muted">
+                    Your custom scoring weights are now active — head back to the dashboard and
+                    you'll see updated deal scores based on what matters to you.
+                </p>
+                <hr>
+                <p class="small text-muted mb-3">
+                    <i class="bi bi-exclamation-triangle text-warning"></i>
+                    <strong>Heads up:</strong> These preferences live in your browser session only.
+                    They'll be lost when you close the browser or clear cookies.
+                </p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <a href="{{ site_url('dashboard.index') }}" class="btn btn-primary px-4">
+                        <i class="bi bi-grid"></i> See My Scores
+                    </a>
+                    <a href="{{ site_url('auth.register') }}" class="btn btn-outline-secondary px-3">
+                        Save Permanently — It's Free
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}

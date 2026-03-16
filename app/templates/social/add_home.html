@@ -1,0 +1,90 @@
+<!--
+  File: app/templates/social/add_home.html
+  App Version: 2026.03.14 | File Version: 1.0.0
+  Last Modified: 2026-03-14
+-->
+{% extends "base.html" %}
+{% block title %}Add a Home — HomeFinder{% endblock %}
+
+{% block content %}
+<h4 class="mb-2"><i class="bi bi-house-add me-2 text-success"></i>Add a Home</h4>
+<p class="text-muted small mb-4">
+    Know a home for sale that isn't listed yet? Share it as a Neighborhood Tip and earn <strong>5 points</strong>.
+</p>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Address <span class="text-danger">*</span></label>
+                            <input type="text" name="address" class="form-control" required placeholder="123 Main St">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label">City</label>
+                            <input type="text" name="city" class="form-control" placeholder="Charleston">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label">Zip Code <span class="text-danger">*</span></label>
+                            <input type="text" name="zip_code" class="form-control" required placeholder="29401" maxlength="10">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label">Asking Price</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" name="price" class="form-control" placeholder="350000">
+                            </div>
+                        </div>
+                        <div class="col-sm-2">
+                            <label class="form-label">Beds</label>
+                            <input type="number" name="bedrooms" class="form-control" min="0" max="20">
+                        </div>
+                        <div class="col-sm-2">
+                            <label class="form-label">Baths</label>
+                            <input type="number" name="bathrooms" class="form-control" step="0.5" min="0" max="20">
+                        </div>
+                        <div class="col-sm-2">
+                            <label class="form-label">Sqft</label>
+                            <input type="number" name="sqft" class="form-control" min="0">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Description</label>
+                            <textarea name="description" class="form-control" rows="3" placeholder="Tell us about this home..."></textarea>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label">Your relationship to this home</label>
+                            <select name="relationship" class="form-select">
+                                <option value="friend">Friend's home</option>
+                                <option value="neighbor">Neighbor</option>
+                                <option value="family">Family member</option>
+                                <option value="my_home">My own home</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label">Photos (up to 5)</label>
+                            <input type="file" name="photos" class="form-control" multiple accept=".jpg,.jpeg,.png,.webp">
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="has_permission" id="permCheck" required>
+                                <label class="form-check-label" for="permCheck">
+                                    I confirm I have permission to share information about this property.
+                                    <span class="text-danger">*</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-house-add me-1"></i>Submit Home
+                            </button>
+                            <span class="text-muted small ms-2">Listing will be active for 90 days.</span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,135 @@
+<!--
+  File: app/templates/social/collection_detail.html
+  App Version: 2026.03.13 | File Version: 1.0.0
+  Last Modified: 2026-03-13
+-->
+{% extends "base.html" %}
+{% block title %}{{ collection.title }} — HomeFinder{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <h4><i class="bi bi-collection me-2 text-primary"></i>{{ collection.title }}</h4>
+        {% if collection.description %}
+        <p class="text-muted mb-0">{{ collection.description }}</p>
+        {% endif %}
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#shareCollectionModal">
+            <i class="bi bi-share me-1"></i>Share
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="copyCollectionLink()">
+            <i class="bi bi-link-45deg me-1"></i>Copy Link
+        </button>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col">
+        <span class="badge bg-primary bg-opacity-10 text-primary me-1">
+            {{ collection.listing_count }} listings
+        </span>
+        <span class="badge bg-success bg-opacity-10 text-success me-1">
+            {{ collection.share_count }} shares
+        </span>
+        <span class="badge bg-info bg-opacity-10 text-info">
+            {{ collection.view_count }} views
+        </span>
+    </div>
+</div>
+
+{% set items = collection.items.all() %}
+{% if not items %}
+<div class="text-center py-5">
+    <i class="bi bi-plus-circle" style="font-size:3rem;color:#94a3b8;"></i>
+    <p class="text-muted mt-3">This collection is empty.</p>
+    <p class="text-muted">Browse listings and use "Add to Collection" to build your collection.</p>
+</div>
+{% else %}
+<div class="row g-3">
+    {% for item in items %}
+    {% set listing = item.listing %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm">
+            {% if listing.primary_photo_large %}
+            <img src="{{ listing.primary_photo_large }}" class="card-img-top"
+                 alt="{{ listing.address }}" style="height:180px;object-fit:cover;">
+            {% endif %}
+            <div class="card-body">
+                <h6 class="mb-1">${{ "{:,}".format(listing.price) }}</h6>
+                <p class="text-muted small mb-2">
+                    <i class="bi bi-geo-alt me-1"></i>{{ listing.address }}
+                </p>
+                <div class="d-flex gap-2 mb-2" style="font-size:0.8rem;">
+                    {% if listing.beds %}<span><strong>{{ listing.beds }}</strong> bd</span>{% endif %}
+                    {% if listing.baths %}<span><strong>{{ listing.baths|round(1) }}</strong> ba</span>{% endif %}
+                    {% if listing.sqft %}<span><strong>{{ "{:,}".format(listing.sqft) }}</strong> sqft</span>{% endif %}
+                </div>
+                {% if item.note %}
+                <p class="fst-italic small text-muted mb-0">"{{ item.note }}"</p>
+                {% endif %}
+            </div>
+            {% if collection.creator_id == current_user.id %}
+            <div class="card-footer bg-transparent d-flex justify-content-between">
+                <a href="{{ site_url('dashboard.listing_detail', listing_id=listing.id) }}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-eye me-1"></i>Details
+                </a>
+                <form method="POST" action="{{ site_url('social.collection_remove_listing', collection_id=collection.id, item_id=item.id) }}"
+                      onsubmit="return confirm('Remove from collection?')">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Share Collection Modal -->
+<div class="modal fade" id="shareCollectionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-share me-2"></i>Share Collection</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ site_url('social.collection_share', collection_id=collection.id) }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Recipient's Email</label>
+                        <input type="email" name="recipient_email" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Recipient's Name</label>
+                        <input type="text" name="recipient_name" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Personal Message</label>
+                        <textarea name="message" class="form-control" rows="3"
+                                  placeholder="Check out this collection of homes!"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-send me-1"></i>Share</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyCollectionLink() {
+    const url = "{{ url_for('social.collection_public', token=collection.share_token, _external=True) }}";
+    navigator.clipboard.writeText(url).then(() => {
+        const btn = event.target.closest('button');
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check me-1"></i>Copied!';
+        setTimeout(() => btn.innerHTML = orig, 2000);
+    });
+}
+</script>
+{% endblock %}

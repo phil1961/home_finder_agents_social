@@ -1,0 +1,284 @@
+<!--
+  File: app/templates/dashboard/map.html
+  App Version: 2026.03.12 | File Version: 1.1.0
+  Last Modified: 2026-03-12
+-->
+{% extends "base.html" %}
+{% block title %}Map – HomeFinder{% endblock %}
+
+{% block head %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<!-- MarkerCluster CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+<style>
+    #map { height: calc(100vh - 160px); min-height: 500px; border-radius: 10px; z-index: 1; }
+    .lm-tooltip { font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border: 1px solid #dc2626; background: #fff; color: #1e293b; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+    .map-controls {
+        background: #fff; border-radius: 10px; padding: 10px 14px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+    .legend-dot {
+        display: inline-block; width: 12px; height: 12px;
+        border-radius: 50%; margin-right: 4px; vertical-align: middle;
+    }
+    .popup-photo {
+        width: 100%; height: 120px; object-fit: cover;
+        border-radius: 6px 6px 0 0; margin-bottom: 6px;
+    }
+    .popup-content { font-size: 13px; max-width: 260px; }
+    .popup-content h6 { font-size: 14px; margin: 0 0 4px 0; }
+    .popup-content .price { color: #2563eb; font-weight: 700; font-size: 16px; }
+    .popup-content .meta { color: #6b7280; font-size: 11px; }
+    .popup-content .badges { margin: 4px 0; }
+    .popup-content .badges span {
+        display: inline-block; font-size: 10px; padding: 1px 5px;
+        border-radius: 3px; background: #e5e7eb; margin-right: 3px;
+    }
+    .source-z { background: #006AFF !important; color: #fff !important; }
+    .source-r { background: #D92228 !important; color: #fff !important; }
+    .score-badge {
+        display: inline-block; padding: 2px 8px; border-radius: 10px;
+        font-weight: 700; font-size: 12px; color: #fff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h4 class="mb-0"><i class="bi bi-geo-alt"></i> Map View</h4>
+    <div class="map-controls d-flex align-items-center gap-3">
+        <div>
+            <label class="form-label small mb-0">Filter</label>
+            <select id="mapFilter" class="form-select form-select-sm" style="width:140px;" onchange="applyFilter()">
+                <option value="all">All Listings</option>
+                <option value="favorites">⭐ Favorites</option>
+                <option value="maybe">🤔 Maybe</option>
+                <option value="great">Great Deals</option>
+            </select>
+        </div>
+        <div>
+            <label class="form-label small mb-0">Area</label>
+            <select id="areaFilter" class="form-select form-select-sm" style="width:150px;" onchange="applyFilter()">
+                <option value="all">All Areas</option>
+                {% for area_name, zips in target_areas.items() %}
+                <option value="{{ zips|join(',') }}">{{ area_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="form-label small mb-0">Source</label>
+            <select id="sourceFilter" class="form-select form-select-sm" style="width:120px;" onchange="applyFilter()">
+                <option value="all">All</option>
+                <option value="zillow">Zillow</option>
+                <option value="realtor">Realtor</option>
+            </select>
+        </div>
+        <div class="d-flex align-items-center gap-2 ms-2" style="font-size: 0.75rem;">
+            <span><span class="legend-dot" style="background:#10b981;"></span>75+</span>
+            <span><span class="legend-dot" style="background:#3b82f6;"></span>50–74</span>
+            <span><span class="legend-dot" style="background:#ef4444;"></span>&lt;50</span>
+            <span><span class="legend-dot" style="background:#f59e0b;"></span>⭐ Fav</span>
+        </div>
+    </div>
+</div>
+
+<div id="map"></div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<!-- MarkerCluster JS -->
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+<script>
+// ── Listing data from Flask ────────────────────────────────
+const listings = [
+    {% for l in listings %}
+    {
+        id: {{ l.id }},
+        address: {{ l.address|tojson }},
+        area: {{ l.city|tojson }},
+        zip_code: {{ l.zip_code|tojson }},
+        price: {{ l.price }},
+        beds: {{ l.beds or 0 }},
+        baths: {{ l.baths or 0 }},
+        sqft: {{ l.sqft or 0 }},
+        lat: {{ l.latitude or 'null' }},
+        lng: {{ l.longitude or 'null' }},
+        score: {{ l.deal_score.composite_score|round(0) if l.deal_score else 0 }},
+        source: {{ l.source|tojson }},
+        flag: {{ user_flags.get(l.id, '')|tojson }},
+        photo: {{ l.primary_photo|tojson }},
+        url: {{ l.url|tojson }},
+        detailUrl: "{{ site_url('dashboard.listing_detail', listing_id=l.id) }}",
+        garage: {{ l.has_garage|tojson }},
+        porch: {{ l.has_porch|tojson }},
+        patio: {{ l.has_patio|tojson }},
+        flood_safe: {{ l.above_flood_plain|tojson }},
+    },
+    {% endfor %}
+];
+
+// ── Initialize map centered on current site ─────────────────
+const map = L.map('map').setView(
+    [{{ current_site.map_center_lat|default(32.7765) }}, {{ current_site.map_center_lon|default(-79.9311) }}],
+    {{ current_site.map_zoom|default(12) }}
+);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+}).addTo(map);
+
+// ── Marker cluster group ───────────────────────────────────
+const clusterGroup = L.markerClusterGroup({
+    maxClusterRadius: 40,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+});
+map.addLayer(clusterGroup);
+
+// ── Color helpers ──────────────────────────────────────────
+function scoreColor(score, flag) {
+    if (flag === 'favorite') return '#f59e0b';
+    if (score >= 75) return '#10b981';
+    if (score >= 50) return '#3b82f6';
+    return '#ef4444';
+}
+
+function createIcon(color) {
+    return L.divIcon({
+        className: 'custom-marker',
+        html: `<svg width="28" height="36" viewBox="0 0 28 36">
+            <path d="M14 0C6.27 0 0 6.27 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.27 21.73 0 14 0z"
+                  fill="${color}" stroke="#fff" stroke-width="2"/>
+            <circle cx="14" cy="13" r="5" fill="#fff"/>
+        </svg>`,
+        iconSize: [28, 36],
+        iconAnchor: [14, 36],
+        popupAnchor: [0, -36],
+    });
+}
+
+// ── Build markers ──────────────────────────────────────────
+let allMarkers = [];
+
+listings.forEach(l => {
+    if (!l.lat || !l.lng) return;
+
+    const color = scoreColor(l.score, l.flag);
+    const marker = L.marker([l.lat, l.lng], { icon: createIcon(color) });
+
+    // Source badge
+    const srcClass = l.source === 'zillow' ? 'source-z' : 'source-r';
+    const srcLabel = l.source === 'zillow' ? 'Zillow' : 'Realtor';
+
+    // Photo
+    const photoHtml = l.photo
+        ? `<img src="${l.photo}" class="popup-photo" onerror="this.style.display='none'" loading="lazy">`
+        : '';
+
+    // Score badge color
+    let scoreBg = '#ef4444';
+    if (l.score >= 75) scoreBg = '#10b981';
+    else if (l.score >= 50) scoreBg = '#3b82f6';
+
+    // Feature badges
+    let badges = '';
+    if (l.garage) badges += '<span>Garage</span>';
+    if (l.porch) badges += '<span>Porch</span>';
+    if (l.patio) badges += '<span>Patio</span>';
+    if (l.flood_safe) badges += '<span style="background:#dbeafe;color:#1e40af;">Above Flood</span>';
+
+    const popup = `
+        <div class="popup-content">
+            ${photoHtml}
+            <h6>${l.address}</h6>
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="price">$${l.price.toLocaleString()}</span>
+                <span class="score-badge" style="background:${scoreBg}">${l.score}</span>
+            </div>
+            <div class="meta">${l.beds}bd · ${l.baths}ba · ${l.sqft.toLocaleString()}sqft · ${l.area}</div>
+            <div class="badges">
+                <span class="${srcClass}">${srcLabel}</span>
+                ${badges}
+            </div>
+            <div class="mt-1" style="font-size:12px;">
+                <a href="${l.detailUrl}">View Details</a>
+                ${l.url ? ` · <a href="${l.url}" target="_blank">Open on ${srcLabel}</a>` : ''}
+            </div>
+        </div>
+    `;
+
+    marker.bindPopup(popup, { maxWidth: 280 });
+
+    allMarkers.push({ marker, data: l });
+});
+
+// ── Landmark markers (not clustered — always visible) ─────
+{% if landmarks %}
+{% for lm in landmarks %}
+L.marker([{{ lm.lat }}, {{ lm.lng }}], {
+    icon: L.divIcon({
+        className: '',
+        html: '<i class="bi bi-star-fill" style="font-size:1.2rem;color:#dc2626;text-shadow:0 0 4px #fff, 0 0 4px #fff;"></i>',
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
+    }),
+    zIndexOffset: 1000,
+}).addTo(map).bindTooltip('{{ lm.name }}', {
+    permanent: false,
+    direction: 'top',
+    offset: [0, -8],
+    className: 'lm-tooltip',
+});
+{% endfor %}
+{% endif %}
+
+// ── Add all markers initially ──────────────────────────────
+function applyFilter() {
+    const filter = document.getElementById('mapFilter').value;
+    const source = document.getElementById('sourceFilter').value;
+
+    clusterGroup.clearLayers();
+
+    const areaZips = document.getElementById('areaFilter').value;
+    const areaZipList = areaZips !== 'all' ? areaZips.split(',') : null;
+
+    allMarkers.forEach(({ marker, data }) => {
+        // Area filter
+        if (areaZipList && !areaZipList.includes(data.zip_code)) return;
+
+        // Source filter
+        if (source !== 'all' && data.source !== source) return;
+
+        // Flag/score filter
+        if (filter === 'favorites' && data.flag !== 'favorite') return;
+        if (filter === 'maybe' && data.flag !== 'maybe') return;
+        if (filter === 'great' && data.score < 75) return;
+
+        clusterGroup.addLayer(marker);
+    });
+
+    // Update count
+    const visible = clusterGroup.getLayers().length;
+    document.getElementById('markerCount').textContent = `${visible} listing${visible !== 1 ? 's' : ''}`;
+}
+
+// Initial load
+applyFilter();
+
+// Fit bounds to markers
+if (clusterGroup.getLayers().length > 0) {
+    map.fitBounds(clusterGroup.getBounds().pad(0.1));
+}
+</script>
+
+<div class="text-center mt-2">
+    <small class="text-muted" id="markerCount">{{ listings|length }} listings</small>
+</div>
+{% endblock %}

@@ -1,0 +1,60 @@
+<!--
+  File: app/templates/auth/login.html
+  App Version: 2026.03.12 | File Version: 1.1.0
+  Last Modified: 2026-03-12
+-->
+{% extends "base.html" %}
+{% block title %}Sign In – HomeFinder{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow-sm mt-4">
+            <div class="card-body p-4">
+                <h3 class="card-title text-center mb-4">
+                    <i class="bi bi-house-heart-fill text-primary"></i><br>
+                    Sign In
+                </h3>
+
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="login_id" class="form-label">Email or Username</label>
+                        <input type="text" class="form-control" id="login_id" name="login_id"
+                               value="{{ login_id|default('') }}" required autofocus>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="remember" name="remember">
+                            <label class="form-check-label" for="remember">Remember me</label>
+                        </div>
+                        <a href="{{ site_url('auth.forgot_password') }}" class="small">Forgot password?</a>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">Sign In</button>
+                </form>
+
+                <hr>
+                <p class="text-center mb-1">
+                    Don't have an account?
+                    <a href="{{ site_url('auth.register') }}">Create one</a>
+                </p>
+                <p class="text-center mb-1 small text-muted">
+                    Real estate agent?
+                    <a href="{{ site_url('auth.agent_signup') }}">Apply as an operator</a>
+                </p>
+                <p class="text-center mb-0 small text-muted">
+                    <a href="{{ site_url('dashboard.welcome') }}">
+                        <i class="bi bi-grid-3x3-gap me-1"></i>View all markets
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

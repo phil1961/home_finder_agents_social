@@ -1,0 +1,99 @@
+<!--
+  File: app/templates/social/referral.html
+  App Version: 2026.03.13 | File Version: 1.0.0
+  Last Modified: 2026-03-13
+-->
+{% extends "base.html" %}
+{% block title %}Refer a Friend — HomeFinder{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <h4 class="mb-4"><i class="bi bi-people me-2 text-primary"></i>Refer a Friend</h4>
+
+        <!-- Referral code card -->
+        <div class="card shadow-sm mb-4" style="border-radius:16px;">
+            <div class="card-body p-4 text-center">
+                <h5 class="mb-3">Your Referral Code</h5>
+                <div class="d-inline-block px-4 py-2 rounded-3 mb-3" style="background:#f1f5f9;font-family:monospace;font-size:1.5rem;font-weight:700;letter-spacing:2px;">
+                    {{ my_code }}
+                </div>
+                <p class="text-muted small mb-3">Share this code with friends — when they sign up, you both benefit!</p>
+                <button class="btn btn-outline-primary btn-sm" onclick="copyReferralLink()">
+                    <i class="bi bi-link-45deg me-1"></i>Copy Referral Link
+                </button>
+            </div>
+        </div>
+
+        <!-- Invite form -->
+        <div class="card shadow-sm mb-4" style="border-radius:16px;">
+            <div class="card-body p-4">
+                <h5 class="mb-3"><i class="bi bi-envelope me-2"></i>Send an Invitation</h5>
+                <form method="POST" action="{{ site_url('social.referral_invite') }}">
+                    <div class="input-group">
+                        <input type="email" name="email" class="form-control" placeholder="friend@example.com" required>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-send me-1"></i>Invite
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Referral history -->
+        <div class="card shadow-sm" style="border-radius:16px;">
+            <div class="card-body p-4">
+                <h5 class="mb-3"><i class="bi bi-clock-history me-2"></i>Your Referrals</h5>
+                {% if not referrals %}
+                <p class="text-muted text-center py-3">No referrals yet. Start inviting friends!</p>
+                {% else %}
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Invited</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ref in referrals %}
+                            <tr>
+                                <td style="font-size:0.85rem;">{{ ref.referred_email }}</td>
+                                <td>
+                                    {% if ref.status == 'invited' %}
+                                    <span class="badge bg-secondary">Invited</span>
+                                    {% elif ref.status == 'registered' %}
+                                    <span class="badge bg-info">Registered</span>
+                                    {% elif ref.status == 'active' %}
+                                    <span class="badge bg-success">Active</span>
+                                    {% elif ref.status == 'converted' %}
+                                    <span class="badge bg-warning text-dark">Converted</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-muted" style="font-size:0.8rem;">
+                                    {{ ref.created_at.strftime('%b %d, %Y') }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyReferralLink() {
+    const url = "{{ url_for('social.referral_landing', code=my_code, _external=True) }}";
+    navigator.clipboard.writeText(url).then(() => {
+        const btn = event.target.closest('button');
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check me-1"></i>Copied!';
+        setTimeout(() => btn.innerHTML = orig, 2000);
+    });
+}
+</script>
+{% endblock %}

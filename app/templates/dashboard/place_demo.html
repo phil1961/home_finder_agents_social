@@ -1,0 +1,612 @@
+{# v20260309-1 #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HomeFinder — Census Place Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #181c25;
+    --surface2: #1e2433;
+    --border: #2a3045;
+    --accent: #4f8ef7;
+    --accent2: #f76b4f;
+    --green: #4fba89;
+    --yellow: #f7c44f;
+    --text: #e8ecf4;
+    --muted: #7a8399;
+    --mono: 'DM Mono', monospace;
+    --serif: 'DM Serif Display', serif;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(79,142,247,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,142,247,0.03) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .layout {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ─── LEFT PANEL ─── */
+  .panel {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 24px 24px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .app-title {
+    font-family: var(--serif);
+    font-size: 22px;
+    letter-spacing: -0.3px;
+    margin-bottom: 4px;
+  }
+
+  .app-title span { color: var(--accent); }
+
+  .app-sub {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-family: var(--mono);
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    padding: 16px 24px 8px;
+  }
+
+  /* Avoid areas multi-select */
+  .avoid-wrapper {
+    padding: 0 16px 16px;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .place-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 14px;
+    border-radius: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+  }
+
+  .place-chip:hover { border-color: var(--accent); background: #1e2433cc; }
+
+  .place-chip.avoided {
+    background: rgba(247,107,79,0.08);
+    border-color: rgba(247,107,79,0.4);
+  }
+
+  .place-chip .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .place-chip .chip-name {
+    flex: 1;
+    font-size: 13px;
+  }
+
+  .place-chip .chip-type {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    background: var(--bg);
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+
+  .place-chip .chip-count {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .place-chip.avoided .chip-count {
+    color: var(--accent2);
+  }
+
+  .avoid-icon {
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .place-chip.avoided .avoid-icon { opacity: 1; }
+
+  .filter-summary {
+    margin: 0 16px 16px;
+    padding: 12px 14px;
+    background: rgba(79,142,247,0.06);
+    border: 1px solid rgba(79,142,247,0.2);
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .filter-summary strong { color: var(--accent); }
+
+  /* ─── RIGHT PANEL ─── */
+  .main {
+    padding: 28px 32px;
+    overflow-y: auto;
+  }
+
+  .main-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    gap: 16px;
+  }
+
+  .main-title {
+    font-family: var(--serif);
+    font-size: 28px;
+    letter-spacing: -0.5px;
+  }
+
+  .result-count {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .result-count span { color: var(--accent); }
+
+  /* Listings grid */
+  .listings {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .listing-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    position: relative;
+  }
+
+  .listing-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  .listing-card.filtered {
+    opacity: 0;
+    transform: scale(0.95);
+    pointer-events: none;
+    position: absolute;
+    visibility: hidden;
+  }
+
+  .card-img {
+    height: 140px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-img-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+  }
+
+  .place-badge {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+
+  .card-body { padding: 14px 16px; }
+
+  .card-price {
+    font-family: var(--serif);
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+
+  .card-addr {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .card-stats {
+    display: flex;
+    gap: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .card-stats span { display: flex; align-items: center; gap: 4px; }
+
+  .avoided-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(247,107,79,0.12);
+    border: 2px solid var(--accent2);
+    border-radius: 12px;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 6px;
+    backdrop-filter: blur(2px);
+  }
+
+  .listing-card.being-avoided .avoided-overlay { display: flex; }
+
+  .avoided-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent2);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* Transition */
+  .listings-container {
+    transition: all 0.3s ease;
+  }
+
+  /* Info banner */
+  .info-banner {
+    background: rgba(79,186,137,0.07);
+    border: 1px solid rgba(79,186,137,0.25);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #a0c8b8;
+  }
+  .info-banner strong { color: var(--green); }
+
+  /* How it works */
+  .how-it-works {
+    margin-top: 32px;
+    padding: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .how-title {
+    font-family: var(--serif);
+    font-size: 18px;
+    margin-bottom: 16px;
+  }
+  .steps { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .step {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .step-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .step-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .step-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  code {
+    font-family: var(--mono);
+    background: var(--bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 11px;
+    color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- LEFT: Avoid Areas selector -->
+  <aside class="panel">
+    <div class="panel-header">
+      <div class="app-title">Home<span>Finder</span></div>
+      <div class="app-sub">Census Places Demo</div>
+    </div>
+
+    <div class="section-label">Avoid Areas — click to exclude</div>
+
+    <div class="avoid-wrapper" id="placeList">
+      <!-- populated by JS -->
+    </div>
+
+    <div class="filter-summary" id="filterSummary">
+      <strong>No areas avoided</strong><br>
+      Showing all 18 listings across the Charleston metro.
+    </div>
+  </aside>
+
+  <!-- RIGHT: Listings -->
+  <main class="main">
+    <div class="main-header">
+      <div class="main-title">Charleston Metro Listings</div>
+      <div class="result-count" id="resultCount"><span>18</span> listings shown</div>
+    </div>
+
+    <div class="info-banner">
+      <strong>How this works:</strong> Each listing is assigned a <strong>Census place name</strong>
+      via point-in-polygon lookup against the free Census TIGER/Line shapefile for South Carolina.
+      Names like <strong>"James Island CDP"</strong>, <strong>"Goose Creek city"</strong>, and
+      <strong>"Summerville town"</strong> are official Census-defined boundaries — stored once in
+      the DB as <code>place_name</code>, never needing re-lookup. Toggle places on the left to see
+      filtering in action.
+    </div>
+
+    <div class="legend" id="legend"></div>
+
+    <div class="listings-container">
+      <div class="listings" id="listingsGrid"></div>
+    </div>
+
+    <div class="how-it-works">
+      <div class="how-title">Implementation Plan</div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">STEP 01 — ONE TIME SETUP</div>
+          <div class="step-title">Download shapefile</div>
+          <div class="step-desc">Download <code>tl_2024_45_place.zip</code> from Census TIGER (~3 MB). Unzip to <code>data/</code> in your project. Install <code>geopandas</code> + <code>shapely</code>.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">STEP 02 — PIPELINE</div>
+          <div class="step-title">Enrich at ingest</div>
+          <div class="step-desc">Pipeline calls <code>get_place_name(lat, lon)</code> for each new listing. Stores result in <code>place_name</code> column. Costs zero API calls — pure local geometry.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">STEP 03 — FILTERING</div>
+          <div class="step-title">Query by place</div>
+          <div class="step-desc">Dashboard excludes <code>WHERE place_name IN (avoided_list)</code>. Preferences page stores avoided place names. Autocomplete from shapefile's name list.</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ── Data ──────────────────────────────────────────────────────────────────────
+const PLACES = [
+  { id: 'charleston',    name: 'Charleston',      type: 'city', color: '#4f8ef7', count: 3 },
+  { id: 'northcharleston', name: 'North Charleston', type: 'city', color: '#7c6ff7', count: 2 },
+  { id: 'mountpleasant', name: 'Mount Pleasant',  type: 'town', color: '#4fba89', count: 2 },
+  { id: 'summerville',   name: 'Summerville',     type: 'town', color: '#f7c44f', count: 2 },
+  { id: 'goosecreek',   name: 'Goose Creek',      type: 'city', color: '#f76b4f', count: 2 },
+  { id: 'hanahan',      name: 'Hanahan',           type: 'city', color: '#f74fa0', count: 1 },
+  { id: 'jamisisland',  name: 'James Island',      type: 'CDP',  color: '#4fc8f7', count: 2 },
+  { id: 'ladson',       name: 'Ladson',            type: 'CDP',  color: '#a0f74f', count: 1 },
+  { id: 'johnsisland',  name: "Johns Island",      type: 'CDP',  color: '#f7a04f', count: 1 },
+  { id: 'follybeach',   name: 'Folly Beach',       type: 'city', color: '#4ff7e0', count: 1 },
+  { id: 'monckscorner', name: "Moncks Corner",     type: 'town', color: '#c44ff7', count: 1 },
+];
+
+const LISTINGS = [
+  { price: '$389,000', addr: '1204 Wentworth St',       place: 'charleston',    beds:3, baths:2, sqft:1640, emoji:'🏡', bg:'#1a2540' },
+  { price: '$512,000', addr: '88 Broad St',             place: 'charleston',    beds:4, baths:3, sqft:2100, emoji:'🏛️', bg:'#1a2540' },
+  { price: '$278,500', addr: '3301 Rivers Ave',         place: 'charleston',    beds:3, baths:2, sqft:1480, emoji:'🏘️', bg:'#1a2540' },
+  { price: '$445,000', addr: '2200 Ashley River Rd',    place: 'northcharleston', beds:4, baths:2, sqft:1920, emoji:'🏠', bg:'#1e1a40' },
+  { price: '$334,900', addr: '5010 Dorchester Rd',      place: 'northcharleston', beds:3, baths:2, sqft:1560, emoji:'🏗️', bg:'#1e1a40' },
+  { price: '$675,000', addr: '109 Pitt St',             place: 'mountpleasant', beds:5, baths:3, sqft:2800, emoji:'🌊', bg:'#1a2e20' },
+  { price: '$598,000', addr: '1801 Rifle Range Rd',     place: 'mountpleasant', beds:4, baths:3, sqft:2400, emoji:'🌴', bg:'#1a2e20' },
+  { price: '$319,000', addr: '412 Old Trolley Rd',      place: 'summerville',   beds:3, baths:2, sqft:1700, emoji:'🌳', bg:'#2a2a1a' },
+  { price: '$289,500', addr: '107 Azalea Dr',           place: 'summerville',   beds:3, baths:2, sqft:1520, emoji:'🌸', bg:'#2a2a1a' },
+  { price: '$345,000', addr: '200 Redbank Rd',          place: 'goosecreek',    beds:4, baths:2, sqft:1880, emoji:'🦆', bg:'#2a1a1a' },
+  { price: '$298,000', addr: '1403 Henry E Brown Blvd', place: 'goosecreek',    beds:3, baths:2, sqft:1560, emoji:'🏡', bg:'#2a1a1a' },
+  { price: '$362,000', addr: '1115 Yeamans Hall Rd',    place: 'hanahan',       beds:4, baths:2, sqft:1960, emoji:'🌲', bg:'#2a1a28' },
+  { price: '$425,000', addr: '1820 Camp Rd',            place: 'jamisisland',   beds:3, baths:2, sqft:1780, emoji:'🌅', bg:'#1a2a2a' },
+  { price: '$388,000', addr: '3344 Maybank Hwy',        place: 'jamisisland',   beds:3, baths:2, sqft:1640, emoji:'🏝️', bg:'#1a2a2a' },
+  { price: '$255,000', addr: '108 Brandywine Dr',       place: 'ladson',        beds:3, baths:2, sqft:1420, emoji:'🏘️', bg:'#202a1a' },
+  { price: '$449,000', addr: '4201 Betsy Kerrison Pkwy',place: 'johnsisland',   beds:4, baths:3, sqft:2200, emoji:'🌾', bg:'#2a2020' },
+  { price: '$629,000', addr: '201 W Erie Ave',          place: 'follybeach',    beds:3, baths:2, sqft:1450, emoji:'🏖️', bg:'#1a2a28' },
+  { price: '$305,000', addr: '206 W Main St',           place: 'monckscorner',  beds:4, baths:2, sqft:1780, emoji:'🌿', bg:'#221a2a' },
+];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+const avoided = new Set();
+
+// ── Build sidebar place list ──────────────────────────────────────────────────
+const placeListEl = document.getElementById('placeList');
+
+PLACES.forEach(p => {
+  const chip = document.createElement('div');
+  chip.className = 'place-chip';
+  chip.dataset.id = p.id;
+  chip.innerHTML = `
+    <div class="dot" style="background:${p.color}"></div>
+    <span class="chip-name">${p.name}</span>
+    <span class="chip-type">${p.type}</span>
+    <span class="chip-count">${p.count}</span>
+    <span class="avoid-icon">✕</span>
+  `;
+  chip.addEventListener('click', () => toggleAvoid(p.id));
+  placeListEl.appendChild(chip);
+});
+
+// ── Build legend ──────────────────────────────────────────────────────────────
+const legendEl = document.getElementById('legend');
+PLACES.forEach(p => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  item.innerHTML = `<div class="legend-dot" style="background:${p.color}"></div>${p.name}`;
+  legendEl.appendChild(item);
+});
+
+// ── Build listings grid ───────────────────────────────────────────────────────
+const grid = document.getElementById('listingsGrid');
+
+LISTINGS.forEach((l, i) => {
+  const place = PLACES.find(p => p.id === l.place);
+  const card = document.createElement('div');
+  card.className = 'listing-card';
+  card.dataset.place = l.place;
+  card.innerHTML = `
+    <div class="card-img" style="background:${l.bg}">
+      <div class="card-img-placeholder">${l.emoji}</div>
+      <div class="place-badge" style="background:${place.color}22; color:${place.color}">
+        ${place.name} ${place.type}
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="card-price">${l.price}</div>
+      <div class="card-addr">${l.addr}</div>
+      <div class="card-stats">
+        <span>🛏 ${l.beds} bd</span>
+        <span>🚿 ${l.baths} ba</span>
+        <span>📐 ${l.sqft.toLocaleString()} sf</span>
+      </div>
+    </div>
+    <div class="avoided-overlay">
+      <div style="font-size:24px">🚫</div>
+      <div class="avoided-label">Avoided — ${place.name}</div>
+    </div>
+  `;
+  grid.appendChild(card);
+});
+
+// ── Toggle logic ──────────────────────────────────────────────────────────────
+function toggleAvoid(placeId) {
+  const wasAvoided = avoided.has(placeId);
+  if (wasAvoided) {
+    avoided.delete(placeId);
+  } else {
+    avoided.add(placeId);
+  }
+
+  // Update chip styles
+  document.querySelectorAll('.place-chip').forEach(chip => {
+    chip.classList.toggle('avoided', avoided.has(chip.dataset.id));
+  });
+
+  // Brief "being avoided" animation before hiding
+  document.querySelectorAll('.listing-card').forEach(card => {
+    const isAvoided = avoided.has(card.dataset.place);
+    card.classList.toggle('being-avoided', isAvoided);
+    setTimeout(() => {
+      card.classList.toggle('filtered', isAvoided);
+    }, isAvoided ? 400 : 0);
+    if (!isAvoided) card.classList.remove('filtered');
+  });
+
+  updateSummary();
+}
+
+function updateSummary() {
+  const total = LISTINGS.length;
+  const hidden = LISTINGS.filter(l => avoided.has(l.place)).length;
+  const shown = total - hidden;
+  const summaryEl = document.getElementById('filterSummary');
+  const countEl = document.getElementById('resultCount');
+
+  countEl.innerHTML = `<span>${shown}</span> listings shown`;
+
+  if (avoided.size === 0) {
+    summaryEl.innerHTML = `<strong>No areas avoided</strong><br>Showing all ${total} listings across the Charleston metro.`;
+  } else {
+    const names = Array.from(avoided).map(id => PLACES.find(p => p.id === id).name);
+    summaryEl.innerHTML = `
+      <strong>${hidden} listings hidden</strong> from:<br>
+      ${names.map(n => `<span style="color:var(--accent2)">✕ ${n}</span>`).join('  ')}
+      <br><br>
+      ${shown} listings remain in ${PLACES.length - avoided.size} areas.
+    `;
+  }
+}
+</script>
+</body>
+</html>

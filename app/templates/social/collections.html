@@ -1,0 +1,63 @@
+<!--
+  File: app/templates/social/collections.html
+  App Version: 2026.03.13 | File Version: 1.0.0
+  Last Modified: 2026-03-13
+-->
+{% extends "base.html" %}
+{% block title %}My Collections — HomeFinder{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="bi bi-collection me-2 text-primary"></i>My Collections</h4>
+    <a href="{{ site_url('social.collection_create') }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>New Collection
+    </a>
+</div>
+
+{% if not collections %}
+<div class="text-center py-5">
+    <i class="bi bi-collection" style="font-size:3rem;color:#94a3b8;"></i>
+    <p class="text-muted mt-3">You don't have any collections yet.</p>
+    <p class="text-muted">Create a collection to group and share your favorite listings!</p>
+    <a href="{{ site_url('social.collection_create') }}" class="btn btn-outline-primary">
+        <i class="bi bi-plus-lg me-1"></i>Create Your First Collection
+    </a>
+</div>
+{% else %}
+<div class="row g-3">
+    {% for collection in collections %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">{{ collection.title }}</h5>
+                {% if collection.description %}
+                <p class="text-muted small mb-2">{{ collection.description[:100] }}{% if collection.description|length > 100 %}...{% endif %}</p>
+                {% endif %}
+                <div class="d-flex gap-2 mb-2">
+                    <span class="badge bg-primary bg-opacity-10 text-primary">
+                        <i class="bi bi-house me-1"></i>{{ collection.listing_count }} listings
+                    </span>
+                    <span class="badge bg-success bg-opacity-10 text-success">
+                        <i class="bi bi-share me-1"></i>{{ collection.share_count }} shares
+                    </span>
+                    <span class="badge bg-info bg-opacity-10 text-info">
+                        <i class="bi bi-eye me-1"></i>{{ collection.view_count }} views
+                    </span>
+                </div>
+                {% if collection.is_public %}
+                <span class="badge bg-light text-dark border"><i class="bi bi-globe me-1"></i>Public</span>
+                {% else %}
+                <span class="badge bg-light text-dark border"><i class="bi bi-lock me-1"></i>Private</span>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="{{ site_url('social.collection_detail', collection_id=collection.id) }}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-eye me-1"></i>View
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

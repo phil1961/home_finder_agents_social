@@ -1,0 +1,202 @@
+<!--
+  File: app/templates/dashboard/agent_client_prefs.html
+  App Version: 2026.03.12 | File Version: 1.1.0
+  Last Modified: 2026-03-12
+-->
+{% extends "base.html" %}
+{% block title %}Preferences for {{ client.username }} — HomeFinder{% endblock %}
+
+{% block head %}
+<style>
+    .imp-group { background: #f8fafc; border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; }
+    .imp-label { font-size: 0.85rem; font-weight: 500; }
+    .imp-val { font-size: 0.85rem; font-weight: 700; color: #2563eb; min-width: 18px; text-align: right; }
+    input[type=range] { accent-color: #2563eb; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+    <a href="{{ site_url('dashboard.agent_dashboard') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <div>
+        <h4 class="mb-0">
+            <i class="bi bi-sliders me-2 text-primary"></i>Preferences for {{ client.username }}
+        </h4>
+        <small class="text-muted">{{ client.email }}</small>
+    </div>
+</div>
+
+<form method="POST">
+<div class="row g-4">
+
+    <!-- ── Left: Search Criteria ─────────────────────────────── -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom py-2">
+                <strong><i class="bi bi-search me-1 text-primary"></i> Search Criteria</strong>
+            </div>
+            <div class="card-body">
+
+                <!-- Price range -->
+                <label class="form-label small fw-semibold">Price Range</label>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-text">Min ($)</label>
+                        <input type="number" class="form-control form-control-sm" name="min_price"
+                               value="{{ prefs.min_price }}" step="5000">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-text">Max ($)</label>
+                        <input type="number" class="form-control form-control-sm" name="max_price"
+                               value="{{ prefs.max_price }}" step="5000">
+                    </div>
+                </div>
+
+                <!-- Beds / Baths -->
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold">Min Bedrooms</label>
+                        <input type="number" class="form-control form-control-sm" name="min_beds"
+                               value="{{ prefs.min_beds }}" min="1" max="10">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold">Min Bathrooms</label>
+                        <input type="number" class="form-control form-control-sm" name="min_baths"
+                               value="{{ prefs.min_baths }}" min="1" max="10" step="0.5">
+                    </div>
+                </div>
+
+                <!-- Must-haves -->
+                <label class="form-label small fw-semibold">Must Have</label>
+                <div class="mb-3">
+                    {% for key, label in [('must_have_garage','Garage'), ('must_have_porch','Porch'), ('must_have_patio','Patio')] %}
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="{{ key }}" name="{{ key }}"
+                               {% if prefs.get(key) %}checked{% endif %}>
+                        <label class="form-check-label small" for="{{ key }}">{{ label }}</label>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Great deal threshold -->
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">
+                        Great Deal Threshold
+                        <span class="text-muted fw-normal">(score to show green border)</span>
+                    </label>
+                    <input type="number" class="form-control form-control-sm" name="great_deal_threshold"
+                           value="{{ prefs.get('great_deal_threshold', 75) }}" min="0" max="100">
+                </div>
+
+                <!-- Target areas -->
+                <label class="form-label small fw-semibold">Target Areas</label>
+                {% set target_areas = prefs.get('target_areas', {}) %}
+                {% for area_name, zips in target_areas.items() %}
+                <div class="row g-1 mb-1">
+                    <div class="col-5">
+                        <input type="text" class="form-control form-control-sm" name="area_name"
+                               value="{{ area_name }}" placeholder="Area name">
+                    </div>
+                    <div class="col-7">
+                        <input type="text" class="form-control form-control-sm" name="area_zips"
+                               value="{{ zips|join(', ') }}" placeholder="ZIP codes (comma-sep)">
+                    </div>
+                </div>
+                {% else %}
+                <div class="row g-1 mb-1">
+                    <div class="col-5">
+                        <input type="text" class="form-control form-control-sm" name="area_name" placeholder="Area name">
+                    </div>
+                    <div class="col-7">
+                        <input type="text" class="form-control form-control-sm" name="area_zips" placeholder="ZIP codes">
+                    </div>
+                </div>
+                {% endfor %}
+                <div class="form-text mb-3">One row per target area.</div>
+
+                <!-- Avoid areas -->
+                <div class="mb-2">
+                    <label class="form-label small fw-semibold">Avoid Areas</label>
+                    <input type="text" class="form-control form-control-sm" name="avoid_areas"
+                           value="{{ prefs.get('avoid_areas', [])|join(', ') }}"
+                           placeholder="e.g., East Goose Creek, Upper Summerville">
+                    <div class="form-text">Comma-separated.</div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Right: Scoring Weights ────────────────────────────── -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom py-2">
+                <strong><i class="bi bi-bar-chart me-1 text-primary"></i> Scoring Importance
+                    <span class="text-muted fw-normal small">(0 = ignore, 10 = critical)</span>
+                </strong>
+            </div>
+            <div class="card-body">
+
+                {% set sections = [
+                    ('Core', [
+                        ('imp_price',          'Price'),
+                        ('imp_size',           'House Size'),
+                        ('imp_yard',           'Yard Size'),
+                        ('imp_features',       'Features (garage/porch/patio)'),
+                        ('imp_flood',          'Flood Risk'),
+                    ]),
+                    ('Property Condition', [
+                        ('imp_year_built',     'Year Built'),
+                        ('imp_single_story',   'Single Story'),
+                        ('imp_price_per_sqft', 'Price per Sqft'),
+                    ]),
+                    ('Deal Opportunity', [
+                        ('imp_days_on_market', 'Days on Market'),
+                        ('imp_price_trend',    'Price Trend'),
+                        ('imp_hoa',            'HOA Fee'),
+                        ('imp_property_tax',   'Property Tax'),
+                    ]),
+                    ('Location & Lifestyle', [
+                        ('imp_proximity_medical',  'Near Medical'),
+                        ('imp_proximity_grocery',  'Near Grocery'),
+                        ('imp_community_pool',     'Community Pool'),
+                        ('imp_lot_ratio',          'Lot-to-House Ratio'),
+                        ('imp_walkability',        'Walkability'),
+                    ]),
+                ] %}
+
+                {% for section_name, fields in sections %}
+                <div class="mb-1 mt-2">
+                    <div class="text-uppercase text-muted small fw-bold mb-1"
+                         style="font-size:0.68rem; letter-spacing:.5px;">{{ section_name }}</div>
+                    {% for key, label in fields %}
+                    {% set val = prefs.get(key, prefs_defaults.get(key, 5)) %}
+                    <div class="imp-group d-flex align-items-center gap-2">
+                        <span class="imp-label flex-grow-1">{{ label }}</span>
+                        <input type="range" name="{{ key }}" min="0" max="10" value="{{ val }}"
+                               class="form-range" style="width:120px;"
+                               oninput="this.nextElementSibling.textContent=this.value">
+                        <span class="imp-val">{{ val }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="d-flex justify-content-end gap-2 mt-3">
+    <a href="{{ site_url('dashboard.agent_dashboard') }}" class="btn btn-outline-secondary">
+        Cancel
+    </a>
+    <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-check-lg me-1"></i> Save Preferences for {{ client.username }}
+    </button>
+</div>
+</form>
+{% endblock %}

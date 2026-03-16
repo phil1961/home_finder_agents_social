@@ -1,0 +1,127 @@
+<!--
+  File: app/templates/dashboard/_prefs_landmarks_admin.html
+  App Version: 2026.03.14 | File Version: 1.0.0
+  Last Modified: 2026-03-15
+-->
+<!-- ══════════════════════════════════════════════════════════════
+     SECTION 2: LANDMARKS (owner/master only)
+     ══════════════════════════════════════════════════════════════ -->
+{% if current_user.is_authenticated and current_user.is_owner %}
+<div style="border: 2px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 24px; background: #fefefe;">
+<div class="d-flex align-items-center gap-2 mb-3">
+    <i class="bi bi-pin-map" style="font-size:1.1rem; color: #dc2626;"></i>
+    <h6 class="mb-0">Landmarks</h6>
+    <small class="text-muted">Points of interest for proximity scoring (auto-saved)</small>
+</div>
+<div class="card pref-section shadow-sm mb-3">
+    <div class="card-header">
+        <i class="bi bi-pin-map"></i> Manage Landmarks
+    </div>
+    <div class="card-body">
+        <!-- Existing landmarks -->
+        <div id="lm-list-container" class="mb-3" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px;">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="small fw-semibold text-muted"><i class="bi bi-pin-map-fill me-1"></i>Saved Landmarks</span>
+                <span class="badge bg-light text-dark border" id="lm-count-badge" style="font-size:0.68rem;">{{ landmarks|length }}</span>
+            </div>
+            <div id="lm-list">
+            {% if landmarks %}
+                {% for lm in landmarks %}
+                <div class="d-flex align-items-center justify-content-between py-1 {% if not loop.last %}border-bottom{% endif %} lm-row" data-name="{{ lm.name }}">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted fw-bold" style="font-size:0.72rem; min-width:18px;">{{ loop.index }}.</span>
+                        <div>
+                            <span class="fw-semibold small">{{ lm.name }}</span>
+                            <span class="text-muted" style="font-size:0.65rem;"> {{ "%.4f"|format(lm.lat) }}, {{ "%.4f"|format(lm.lng) }}</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" style="font-size:0.65rem;"
+                            onclick="lmDelete('{{ lm.name|e }}', this)">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="small text-muted mb-0" id="lm-empty-msg">No landmarks yet. Search, pick from the list, or click the map below.</p>
+            {% endif %}
+            </div>
+        </div>
+
+        <!-- Add landmark form (AJAX — no page jump) -->
+        <form id="lmAddForm" onsubmit="return lmAdd(event)">
+            <input type="hidden" name="landmark_action" value="add">
+
+            <!-- Row 1: Search + Famous Places -->
+            <div class="row g-2 mb-2">
+                <div class="col-md-6">
+                    <label class="form-label small mb-0"><i class="bi bi-search me-1"></i>Search for a place</label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" id="lm-search-input"
+                               placeholder="e.g. MUSC Hospital, Main Street..."
+                               autocomplete="off">
+                        <button type="button" class="btn btn-outline-primary" onclick="lmSearch()" id="lm-search-btn">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                    <div id="lm-search-results" class="list-group position-absolute shadow-sm" style="z-index:999;max-height:200px;overflow-y:auto;display:none;font-size:0.78rem;"></div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small mb-0"><i class="bi bi-star me-1"></i>Common landmarks</label>
+                    <select class="form-select form-select-sm" id="lm-famous-select" onchange="lmFamousSelect(this)">
+                        <option value="">-- Pick a category to search --</option>
+                        <option value="city hall">City Hall / Town Center</option>
+                        <option value="hospital">Major Hospital</option>
+                        <option value="university">University / College</option>
+                        <option value="high school">High School</option>
+                        <option value="airport">Airport</option>
+                        <option value="train station">Train / Transit Station</option>
+                        <option value="shopping mall">Shopping Mall / Center</option>
+                        <option value="military base">Military Base</option>
+                        <option value="interstate interchange">Interstate / Highway</option>
+                        <option value="beach">Beach / Waterfront</option>
+                        <option value="park">Major Park</option>
+                        <option value="library">Public Library</option>
+                        <option value="church">Church / Place of Worship</option>
+                        <option value="fire station">Fire Station</option>
+                        <option value="police station">Police Station</option>
+                        <option value="post office">Post Office</option>
+                        <option value="grocery store">Grocery Store</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Row 2: Map picker -->
+            <div class="mb-2">
+                <label class="form-label small mb-0"><i class="bi bi-geo-alt me-1"></i>Click the map to set location</label>
+                <div id="lm-picker-map" style="height:220px;border-radius:8px;border:1px solid #dee2e6;"></div>
+                <div class="text-muted" style="font-size:0.65rem;" id="lm-map-hint">Click anywhere on the map to place a pin, or use search/dropdown above.</div>
+            </div>
+
+            <!-- Row 3: Name + coordinates (auto-filled) + Add button -->
+            <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small mb-0">Name</label>
+                    <input type="text" class="form-control form-control-sm" name="landmark_name" id="lm-name"
+                           placeholder="Give this landmark a name" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small mb-0">Latitude</label>
+                    <input type="number" step="any" class="form-control form-control-sm" name="landmark_lat" id="lm-lat"
+                           placeholder="auto-filled" required readonly style="background:#f8fafc;">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small mb-0">Longitude</label>
+                    <input type="number" step="any" class="form-control form-control-sm" name="landmark_lng" id="lm-lng"
+                           placeholder="auto-filled" required readonly style="background:#f8fafc;">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-sm btn-primary w-100">
+                        <i class="bi bi-plus-lg me-1"></i>Add
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+{% endif %}

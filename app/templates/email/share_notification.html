@@ -1,0 +1,58 @@
+<!--
+  File: app/templates/email/share_notification.html
+  App Version: 2026.03.13 | File Version: 1.0.0
+  Last Modified: 2026-03-13
+-->
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 0;">
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #667eea, #764ba2); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+        <div style="font-size: 32px; margin-bottom: 4px;">&#x1F3E0;</div>
+        <h1 style="color: #fff; margin: 0; font-size: 22px;">{{ sharer }} shared a listing with you!</h1>
+        {% if share.relationship %}
+        <p style="color: #ddd6fe; margin: 6px 0 0 0; font-size: 13px;">
+            From your {{ share.relationship }}
+        </p>
+        {% endif %}
+    </div>
+
+    <!-- Body -->
+    <div style="background: #fff; padding: 24px; border: 1px solid #e5e7eb; border-top: none;">
+        {% if share.message %}
+        <div style="background: #f8fafc; border-radius: 8px; padding: 16px; margin-bottom: 20px; font-style: italic; color: #475569;">
+            "{{ share.message }}"
+        </div>
+        {% endif %}
+
+        {% if listing %}
+        <div style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin-bottom: 20px;">
+            {% if listing.primary_photo_large %}
+            <img src="{{ listing.primary_photo_large }}" alt="{{ listing.address }}"
+                 style="width: 100%; height: 200px; object-fit: cover;">
+            {% endif %}
+            <div style="padding: 16px;">
+                <h2 style="margin: 0 0 4px 0; font-size: 20px; color: #1e293b;">${{ "{:,}".format(listing.price) }}</h2>
+                <p style="margin: 0 0 8px 0; color: #64748b; font-size: 14px;">{{ listing.address }}{% if listing.city %}, {{ listing.city }}{% endif %}</p>
+                <div style="font-size: 14px; color: #475569;">
+                    {% if listing.beds %}{{ listing.beds }} bd{% endif %}
+                    {% if listing.baths %} &middot; {{ listing.baths }} ba{% endif %}
+                    {% if listing.sqft %} &middot; {{ "{:,}".format(listing.sqft) }} sqft{% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div style="text-align: center;">
+            <a href="{{ share_url }}"
+               style="display: inline-block; background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                View Listing & React
+            </a>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="background: #f8fafc; padding: 16px; border-radius: 0 0 12px 12px; border: 1px solid #e5e7eb; border-top: none; text-align: center;">
+        <p style="margin: 0; color: #94a3b8; font-size: 12px;">
+            Sent via HomeFinder Social &middot; AI-powered home discovery
+        </p>
+    </div>
+</div>

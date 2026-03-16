@@ -1,0 +1,677 @@
+<!--
+  File: app/templates/dashboard/index.html
+  App Version: 2026.03.14 | File Version: 1.8.0
+  Last Modified: 2026-03-14
+-->
+{% extends "base.html" %}
+{% block title %}Dashboard – HomeFinder{% endblock %}
+
+{% block head %}
+<style>
+    .listing-card { transition: box-shadow 0.15s; }
+    .listing-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+    .listing-card.great-deal { border-left: 4px solid #198754; }
+    .source-badge-zillow { background: #006AFF; color: #fff; }
+    .source-badge-realtor { background: #D92228; color: #fff; }
+    .score-ring {
+        width: 48px; height: 48px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 0.85rem; flex-shrink: 0;
+    }
+    .score-high { background: #d1fae5; color: #065f46; border: 2px solid #10b981; }
+    .score-mid  { background: #dbeafe; color: #1e40af; border: 2px solid #3b82f6; }
+    .score-low  { background: #fee2e2; color: #991b1b; border: 2px solid #ef4444; }
+    .xref-link { font-size: 0.75rem; }
+    .feature-tag { font-size: 0.7rem; padding: 2px 6px; }
+    .stat-val { font-size: 1.1rem; font-weight: 600; line-height: 1; }
+    .stat-label { font-size: 0.65rem; text-transform: uppercase; color: #6b7280; letter-spacing: 0.5px; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if current_user.is_authenticated and current_user.assigned_agent %}
+{% set ab = current_user.assigned_agent %}
+<div class="d-flex align-items-center gap-2 mb-3 px-3 py-2 rounded-3"
+     style="background: linear-gradient(135deg, {{ ab.brand_color or '#2563eb' }}11, {{ ab.brand_color or '#2563eb' }}08); border: 1px solid {{ ab.brand_color or '#2563eb' }}22;">
+    {% if ab.brand_icon %}
+    <span style="font-size: 1.2rem;">{{ ab.brand_icon }}</span>
+    {% endif %}
+    <span class="small">
+        Your agent <strong style="color: {{ ab.brand_color or '#2563eb' }};">{{ ab.full_name }}</strong>
+        is here to help.
+    </span>
+    <a href="#" class="btn btn-sm ms-auto" data-bs-toggle="modal" data-bs-target="#contactAgentModal"
+       style="background: {{ ab.brand_color or '#2563eb' }}; color: #fff; border: none; font-size: 0.78rem;">
+        <i class="bi bi-chat-dots me-1"></i>Message
+    </a>
+</div>
+{% endif %}
+
+<!-- "Since your last visit" / value banner -->
+{% if since_stats %}
+<div class="d-flex flex-wrap align-items-center gap-3 mb-3 px-3 py-2 rounded-3"
+     style="background: linear-gradient(135deg, #f0fdf4, #ecfdf5); border: 1px solid #bbf7d0;">
+    <i class="bi bi-graph-up-arrow text-success"></i>
+    {% if since_stats.new_count is defined %}
+    {# Logged-in user: show changes since last login #}
+    <span class="small">
+        <strong>Since your last visit:</strong>
+        {% if since_stats.new_count > 0 %}
+        <span class="badge bg-success rounded-pill ms-1">{{ since_stats.new_count }} new</span>
+        {% endif %}
+        {% if since_stats.drop_count > 0 %}
+        <span class="badge bg-warning text-dark rounded-pill ms-1">{{ since_stats.drop_count }} price drop{{ 's' if since_stats.drop_count != 1 }}</span>
+        {% endif %}
+        {% if since_stats.new_count == 0 and since_stats.drop_count == 0 %}
+        No changes — you're all caught up.
+        {% endif %}
+        <span class="text-muted ms-1">·</span>
+        {{ since_stats.total_scored }} listings scored for you
+    </span>
+    {% else %}
+    {# Guest: show total value #}
+    <span class="small">
+        <strong>{{ since_stats.total_scored }} listings scored</strong> across this market
+        {% if since_stats.top_score > 0 %}
+         — top deal score: <strong class="text-success">{{ "%.0f"|format(since_stats.top_score) }}</strong>
+        {% endif %}
+    </span>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Header row -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0"><i class="bi bi-house-door"></i> {{ current_site.display_name if current_site else 'HomeFinder' }}</h4>
+        <small class="text-muted">{{ listings|length }} listings{% if current_area != 'all' %} in {{ current_area }}{% endif %}</small>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+    </div>
+</div>
+
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col">
+                <label class="form-label small mb-0">Area</label>
+                <select name="area" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="all" {% if current_area == 'all' %}selected{% endif %}>All Areas</option>
+                    {% for a in areas %}
+                    <option value="{{ a }}" {% if current_area == a %}selected{% endif %}>{{ a }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col">
+                <label class="form-label small mb-0">Sort</label>
+                <select name="sort" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="score" {% if current_sort == 'score' %}selected{% endif %}>Deal Score</option>
+                    <option value="price_asc" {% if current_sort == 'price_asc' %}selected{% endif %}>Price ↑</option>
+                    <option value="price_desc" {% if current_sort == 'price_desc' %}selected{% endif %}>Price ↓</option>
+                    <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>Newest</option>
+                    <option value="yard" {% if current_sort == 'yard' %}selected{% endif %}>Yard Size</option>
+                </select>
+            </div>
+            <div class="col">
+                <label class="form-label small mb-0">Flag</label>
+                <select name="flag" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="all" {% if current_flag == 'all' %}selected{% endif %}>All</option>
+                    <option value="favorite" {% if current_flag == 'favorite' %}selected{% endif %}>⭐ Favorites</option>
+                    <option value="maybe" {% if current_flag == 'maybe' %}selected{% endif %}>🤔 Maybe</option>
+                    <option value="hidden" {% if current_flag == 'hidden' %}selected{% endif %}>🙈 Hidden</option>
+                </select>
+            </div>
+            <div class="col">
+                <label class="form-label small mb-0">Source</label>
+                <select name="source" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="all" {% if current_source == 'all' %}selected{% endif %}>All Sources</option>
+                    <option value="zillow" {% if current_source == 'zillow' %}selected{% endif %}>Zillow</option>
+                    <option value="realtor" {% if current_source == 'realtor' %}selected{% endif %}>Realtor.com</option>
+                </select>
+            </div>
+            <div class="col">
+                <label class="form-label small mb-0">Min Score</label>
+                <input type="number" name="min_score" class="form-control form-control-sm"
+                       value="{{ current_min_score }}" min="0" max="100" placeholder="0">
+            </div>
+            {% if poi_filter_name %}
+            <div class="col">
+                <label class="form-label small mb-0">Max Mi</label>
+                <select name="max_distance" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="0" {% if current_max_distance == 0 %}selected{% endif %}>Any</option>
+                    <option value="0.5" {% if current_max_distance == 0.5 %}selected{% endif %}>0.5 mi</option>
+                    <option value="1" {% if current_max_distance == 1 %}selected{% endif %}>1 mi</option>
+                    <option value="2" {% if current_max_distance == 2 %}selected{% endif %}>2 mi</option>
+                    <option value="3" {% if current_max_distance == 3 %}selected{% endif %}>3 mi</option>
+                    <option value="5" {% if current_max_distance == 5 %}selected{% endif %}>5 mi</option>
+                    <option value="10" {% if current_max_distance == 10 %}selected{% endif %}>10 mi</option>
+                    <option value="15" {% if current_max_distance == 15 %}selected{% endif %}>15 mi</option>
+                    <option value="25" {% if current_max_distance == 25 %}selected{% endif %}>25 mi</option>
+                </select>
+            </div>
+            {% endif %}
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-funnel"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Street Watch widget -->
+{% if watched_streets and watched_streets|length > 0 %}
+<div class="card border-0 shadow-sm mb-3" style="border-left: 4px solid #8b5cf6;">
+    <div class="card-body py-2">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-eye" style="color: #8b5cf6; font-size: 1.1rem;"></i>
+                <strong style="color: #8b5cf6;">Street Watch</strong>
+                <span class="badge rounded-pill" style="background: #8b5cf6;">{{ watched_streets|length }}</span>
+            </div>
+            <a href="{{ site_url('dashboard.watch_manage') }}" class="btn btn-sm btn-outline-secondary" style="font-size: 0.75rem;">
+                Manage <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+        <div class="mt-2 d-flex flex-wrap gap-1">
+            {% for w in watched_streets[:8] %}
+            <span class="badge rounded-pill bg-light text-dark border" style="font-size: 0.72rem;">
+                {{ w.label }} <small class="text-muted">{{ w.zip_code }}</small>
+            </span>
+            {% endfor %}
+            {% if watched_streets|length > 8 %}
+            <span class="badge rounded-pill bg-light text-muted border" style="font-size: 0.72rem;">
+                +{{ watched_streets|length - 8 }} more
+            </span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Portfolio AI Analysis (only when filtering by flag) -->
+{% if current_flag in ['favorite', 'maybe', 'hidden'] and listings|length > 0 %}
+{% set flag_labels = {'favorite': 'Favorites', 'maybe': 'Maybes', 'hidden': 'Hidden'} %}
+<div class="card border-0 shadow-sm mb-3" id="portfolio-analyst-card">
+    <div class="card-body py-2 d-flex justify-content-between align-items-center">
+        <div>
+            <strong><i class="bi bi-robot"></i> AI Portfolio Analyst</strong>
+            <span class="text-muted small ms-2">
+                Compare all {{ listings|length }} {{ flag_labels[current_flag]|lower }} — find the best deal, spot patterns, get a game plan
+            </span>
+        </div>
+        {% if current_user.is_authenticated %}
+        <button class="btn btn-sm btn-primary" id="portfolio-btn" onclick="runPortfolioAnalysis()">
+            <i class="bi bi-lightning-charge"></i> Analyze {{ flag_labels[current_flag] }}
+        </button>
+        {% else %}
+        <button class="btn btn-sm btn-outline-primary" onclick="showJoinModal('analyze')">
+            <i class="bi bi-lock"></i> Analyze {{ flag_labels[current_flag] }}
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- Results area (hidden until analysis runs, auth only) -->
+    {% if current_user.is_authenticated %}
+    <div id="portfolio-result" style="display:none;">
+        <hr class="my-0">
+        <div class="card-body pt-3">
+            <!-- Loading -->
+            <div id="portfolio-loading" style="display:none;" class="text-center py-4">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="text-muted mt-2 small">
+                    Claude is reviewing all {{ listings|length }} properties as your buyer's agent...
+                </p>
+            </div>
+            <!-- Error -->
+            <div id="portfolio-error" class="alert alert-danger small" style="display:none;"></div>
+            <!-- Brief -->
+            <div id="portfolio-brief" style="display:none;">
+                <!-- Headline -->
+                <div class="alert alert-primary border-0 mb-3" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);">
+                    <strong><i class="bi bi-lightbulb"></i> Big Picture:</strong>
+                    <span id="pf-headline"></span>
+                </div>
+
+                <div class="row g-3">
+                    <!-- Ranking -->
+                    <div class="col-lg-6">
+                        <div class="card border-0 bg-light h-100">
+                            <div class="card-body">
+                                <h6 class="card-title"><i class="bi bi-trophy"></i> Ranking</h6>
+                                <div id="pf-ranking" class="small" style="white-space:pre-line;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Patterns -->
+                    <div class="col-lg-6">
+                        <div class="card border-0 bg-light h-100">
+                            <div class="card-body">
+                                <h6 class="card-title"><i class="bi bi-diagram-3"></i> Patterns</h6>
+                                <div id="pf-patterns" class="small" style="white-space:pre-line;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Strategy -->
+                    <div class="col-lg-6">
+                        <div class="card border-0 bg-light h-100">
+                            <div class="card-body">
+                                <h6 class="card-title"><i class="bi bi-bullseye"></i> Strategy</h6>
+                                <div id="pf-strategy" class="small" style="white-space:pre-line;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Dark Horse -->
+                    <div class="col-lg-6">
+                        <div class="card border-0 bg-light h-100">
+                            <div class="card-body">
+                                <h6 class="card-title"><i class="bi bi-star"></i> Dark Horse</h6>
+                                <div id="pf-dark-horse" class="small" style="white-space:pre-line;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Line -->
+                <div class="alert alert-success border-0 mt-3 mb-0" style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);">
+                    <strong><i class="bi bi-check-circle"></i> Bottom Line:</strong>
+                    <span id="pf-bottom-line"></span>
+                </div>
+                <p class="text-muted mb-0 mt-2" style="font-size:0.65rem;">
+                    <i class="bi bi-clock"></i> Analyzed <span id="pf-timestamp"></span>
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Most Shared This Week -->
+{% if most_shared_week and most_shared_week|length > 0 %}
+<div class="mb-3">
+    <h6 class="text-muted mb-2"><i class="bi bi-fire me-1 text-danger"></i>Most Shared This Week</h6>
+    <div class="d-flex gap-3 overflow-auto pb-2" style="scrollbar-width: thin;">
+        {% for ms_listing, ms_count in most_shared_week %}
+        <a href="{{ site_url('dashboard.listing_detail', listing_id=ms_listing.id) }}" class="text-decoration-none flex-shrink-0"
+           style="width: 200px;">
+            <div class="card border-0 shadow-sm h-100">
+                {% if ms_listing.primary_photo %}
+                <img src="{{ ms_listing.primary_photo }}" alt="" style="height:100px;object-fit:cover;border-radius:8px 8px 0 0;">
+                {% endif %}
+                <div class="card-body p-2">
+                    <div class="small text-dark fw-semibold text-truncate">{{ ms_listing.address[:35] }}</div>
+                    <div class="text-primary fw-bold small">${{ "{:,}".format(ms_listing.price) }}</div>
+                    <span class="badge bg-primary" style="font-size:0.65rem;"><i class="bi bi-share me-1"></i>{{ ms_count }} shares</span>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Friend-Listed Homes (Neighborhood Tips) -->
+{% if friend_listings_active and friend_listings_active|length > 0 %}
+<div class="mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="text-muted mb-0"><i class="bi bi-megaphone me-1 text-success"></i>Neighborhood Tips</h6>
+        <a href="{{ site_url('social.friend_listings') }}" class="small text-decoration-none">View all <i class="bi bi-arrow-right"></i></a>
+    </div>
+    <div class="d-flex gap-3 overflow-auto pb-2" style="scrollbar-width: thin;">
+        {% for fl in friend_listings_active[:5] %}
+        <div class="card border-0 shadow-sm flex-shrink-0" style="width: 220px; border-left: 3px solid #22c55e !important;">
+            {% if fl.primary_photo %}
+            <img src="{{ url_for('static', filename='uploads/' + fl.primary_photo) }}" alt="" style="height:100px;object-fit:cover;border-radius:8px 8px 0 0;">
+            {% endif %}
+            <div class="card-body p-2">
+                <div class="small text-dark fw-semibold text-truncate">{{ fl.address[:35] }}</div>
+                {% if fl.price %}<div class="text-primary fw-bold small">${{ "{:,}".format(fl.price) }}</div>{% endif %}
+                <div class="d-flex gap-2 small text-muted">
+                    {% if fl.bedrooms %}<span>{{ fl.bedrooms }}bd</span>{% endif %}
+                    {% if fl.bathrooms %}<span>{{ fl.bathrooms }}ba</span>{% endif %}
+                </div>
+                <span class="badge rounded-pill" style="background:#dcfce7;color:#166534;font-size:0.6rem;"><i class="bi bi-megaphone me-1"></i>Neighborhood Tip</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Listings -->
+{% if listings %}
+<div class="row">
+    {% for listing in listings %}
+    {% set score = user_composites.get(listing.id, 0) %}
+    {% set addr_encoded = listing.address|replace(',', '')|replace(' ', '-') %}
+    <div class="col-lg-6 mb-3">
+        <div class="card listing-card h-100 border-0 shadow-sm {% if score >= great_deal_threshold %}great-deal{% endif %}">
+            <div class="d-flex">
+                <!-- Photo -->
+                <div class="flex-shrink-0" style="width: 140px; min-height: 140px;">
+                    {% if listing.primary_photo_large %}
+                    <img src="{{ listing.primary_photo_large }}" alt="{{ listing.address }}"
+                         style="width: 140px; height: 100%; object-fit: cover; border-radius: 10px 0 0 10px;"
+                         loading="lazy"
+                         onerror="{% if listing.primary_photo != listing.primary_photo_large %}this.onerror=null;this.src='{{ listing.primary_photo }}';{% else %}this.parentElement.innerHTML='<div class=\'d-flex align-items-center justify-content-center h-100 bg-light\' style=\'border-radius:10px 0 0 10px;\'><i class=\'bi bi-house text-muted\' style=\'font-size:2rem;\'></i></div>';{% endif %}"
+                    >
+                    {% else %}
+                    <div class="d-flex align-items-center justify-content-center h-100 bg-light"
+                         style="border-radius: 10px 0 0 10px;">
+                        <i class="bi bi-house text-muted" style="font-size: 2rem;"></i>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Card body -->
+                <div class="card-body pb-2 flex-grow-1" style="min-width: 0;">
+                <!-- Top row: score ring + address + flag -->
+                <div class="d-flex gap-3 align-items-start mb-2">
+                    {% if listing.deal_score %}
+                    <div class="score-ring {% if score >= 75 %}score-high{% elif score >= 50 %}score-mid{% else %}score-low{% endif %}">
+                        {{ "%.0f"|format(score) }}
+                    </div>
+                    {% endif %}
+
+                    <div class="flex-grow-1 min-width-0">
+                        <h6 class="mb-0">
+                            <a href="{{ site_url('dashboard.listing_detail', listing_id=listing.id) }}" class="text-decoration-none text-dark">
+                                {{ listing.address }}
+                            </a>
+                        </h6>
+                        <small class="text-muted">{{ listing.area_name or listing.city }}{% if listing.zip_code %}, {{ listing.zip_code }}{% endif %}</small>
+                        {% if listing.place_name %}
+                        <br><span class="badge rounded-pill"
+                              style="background:#e8f0fe; color:#1a56db; font-size:0.68rem; font-weight:500;">
+                            <i class="bi bi-geo-fill"></i> {{ listing.place_name }}
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    {% if user_flags.get(listing.id) == 'favorite' %}
+                        <span class="fs-5">⭐</span>
+                    {% elif user_flags.get(listing.id) == 'maybe' %}
+                        <span class="fs-5">🤔</span>
+                    {% endif %}
+                </div>
+
+                <!-- Price + stats row -->
+                <div class="d-flex align-items-baseline gap-3 mb-2">
+                    <h5 class="text-primary mb-0">${{ "{:,}".format(listing.price) }}</h5>
+                    <div class="d-flex gap-3">
+                        <div><span class="stat-val">{{ listing.beds }}</span><span class="stat-label"> bd</span></div>
+                        <div><span class="stat-val">{{ listing.baths }}</span><span class="stat-label"> ba</span></div>
+                        <div><span class="stat-val">{{ "{:,}".format(listing.sqft or 0) }}</span><span class="stat-label"> sqft</span></div>
+                        {% if listing.lot_sqft %}
+                        <div><span class="stat-val">{{ "{:,}".format(listing.lot_sqft) }}</span><span class="stat-label"> lot</span></div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Feature tags -->
+                <div class="mb-2">
+                    {% if listing.has_garage %}<span class="badge feature-tag bg-secondary">Garage</span>{% endif %}
+                    {% if listing.has_porch %}<span class="badge feature-tag bg-secondary">Porch</span>{% endif %}
+                    {% if listing.has_patio %}<span class="badge feature-tag bg-secondary">Patio</span>{% endif %}
+                    {% if listing.above_flood_plain %}<span class="badge feature-tag bg-info text-dark">Above Flood Plain</span>{% endif %}
+                    {% if listing.year_built %}<span class="badge feature-tag bg-light text-dark">{{ listing.year_built }}</span>{% endif %}
+                    {% if poi_distances and poi_distances.get(listing.id) is not none %}
+                    {% set _d = poi_distances[listing.id] %}
+                    <span class="badge feature-tag {% if _d <= 2 %}bg-success{% elif _d <= 5 %}bg-primary{% elif _d <= 10 %}bg-warning text-dark{% else %}bg-danger{% endif %}"
+                          title="{{ poi_filter_name }}">
+                        <i class="bi bi-pin-map-fill" style="font-size:0.6rem;"></i> {{ "%.1f"|format(_d) }} mi
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- Source badge + cross-reference links + flag buttons -->
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        {% if listing.source == 'zillow' %}
+                            <span class="badge source-badge-zillow"><i class="bi bi-building"></i> Zillow</span>
+                            {% if listing.url %}
+                            <a href="{{ listing.url }}" target="_blank" class="xref-link text-decoration-none" style="color:#006AFF;">
+                                View <i class="bi bi-box-arrow-up-right"></i>
+                            </a>
+                            {% endif %}
+                            <span class="text-muted xref-link">·</span>
+                            <a href="https://www.realtor.com/realestateandhomes-search/{{ addr_encoded }}"
+                               target="_blank" class="xref-link text-decoration-none text-danger">
+                                Find on Realtor <i class="bi bi-box-arrow-up-right"></i>
+                            </a>
+                        {% elif listing.source == 'realtor' %}
+                            <span class="badge source-badge-realtor"><i class="bi bi-house-door"></i> Realtor</span>
+                            {% if listing.url %}
+                            <a href="{{ listing.url }}" target="_blank" class="xref-link text-decoration-none text-danger">
+                                View <i class="bi bi-box-arrow-up-right"></i>
+                            </a>
+                            {% endif %}
+                            <span class="text-muted xref-link">·</span>
+                            <a href="https://www.zillow.com/homes/{{ addr_encoded }}_rb/"
+                               target="_blank" class="xref-link text-decoration-none" style="color:#006AFF;">
+                                Find on Zillow <i class="bi bi-box-arrow-up-right"></i>
+                            </a>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ listing.source }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-sm btn-outline-primary py-0 px-1"
+                                title="Share" style="font-size:0.8rem;"
+                                data-bs-toggle="modal" data-bs-target="#shareModal{{ listing.id }}">
+                            <i class="bi bi-share"></i>
+                            {% if share_counts and share_counts.get(listing.id, 0) > 0 %}
+                            <span class="badge rounded-pill bg-primary" style="font-size:0.55rem;">{{ share_counts[listing.id] }}</span>
+                            {% endif %}
+                        </button>
+                        {% for f, icon, tip in [('favorite','⭐','Favorite'), ('maybe','🤔','Maybe'), ('hidden','🙈','Hide')] %}
+                        <form method="POST" action="{{ site_url('dashboard.toggle_flag', listing_id=listing.id) }}" class="d-inline">
+                            <input type="hidden" name="flag" value="{{ f }}">
+                            <button class="btn btn-sm {% if user_flags.get(listing.id) == f %}btn-primary{% else %}btn-outline-secondary{% endif %} py-0 px-1"
+                                    title="{{ tip }}" style="font-size:0.8rem;">{{ icon }}</button>
+                        </form>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            </div><!-- close d-flex photo+body -->
+
+            <!-- Share Modal for this listing -->
+            <div class="modal fade" id="shareModal{{ listing.id }}" tabindex="-1">
+                <div class="modal-dialog modal-sm">
+                    <div class="modal-content">
+                        <div class="modal-header py-2">
+                            <h6 class="modal-title"><i class="bi bi-share me-1"></i>Share Listing</h6>
+                            <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form method="POST" action="{{ site_url('social.share_listing') }}">
+                            <div class="modal-body py-2">
+                                <input type="hidden" name="listing_id" value="{{ listing.id }}">
+                                {% if not current_user.is_authenticated %}
+                                <div class="mb-2">
+                                    <input type="text" name="sharer_name" class="form-control form-control-sm" placeholder="Your name" required>
+                                </div>
+                                <div class="mb-2">
+                                    <input type="email" name="sharer_email" class="form-control form-control-sm" placeholder="Your email" required>
+                                </div>
+                                {% endif %}
+                                <div class="mb-2">
+                                    <input type="email" name="recipient_email" class="form-control form-control-sm" placeholder="Recipient's email" required>
+                                </div>
+                                <div class="mb-2">
+                                    <input type="text" name="recipient_name" class="form-control form-control-sm" placeholder="Their name (optional)">
+                                </div>
+                                <div class="mb-2">
+                                    <select name="relationship" class="form-select form-select-sm">
+                                        <option value="friend">Friend</option>
+                                        <option value="family">Family</option>
+                                        <option value="coworker">Coworker</option>
+                                        <option value="neighbor">Neighbor</option>
+                                    </select>
+                                </div>
+                                <div class="mb-0">
+                                    <textarea name="message" class="form-control form-control-sm" rows="2" placeholder="Personal message (optional)"></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer py-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyShareLink({{ listing.id }})">
+                                    <i class="bi bi-link-45deg"></i> Link
+                                </button>
+                                <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-send me-1"></i>Share</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center text-muted py-5">
+    <i class="bi bi-search" style="font-size: 3rem;"></i>
+    <p class="mt-3">No listings match your filters.</p>
+    {% if current_user.is_authenticated and current_user.assigned_agent and current_flag in ['favorite', 'maybe'] %}
+    {% set ab = current_user.assigned_agent %}
+    <div class="card border-0 shadow-sm mx-auto mt-4" style="max-width: 480px; border-left: 4px solid {{ ab.brand_color or '#2563eb' }} !important;">
+        <div class="card-body text-start">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                {% if ab.brand_icon %}
+                <span style="font-size: 1.4rem;">{{ ab.brand_icon }}</span>
+                {% endif %}
+                <strong style="color: {{ ab.brand_color or '#2563eb' }};">{{ ab.full_name }}</strong>
+                <span class="text-muted small">— your agent</span>
+            </div>
+            <p class="mb-2 small">
+                No {{ current_flag }}s yet — browse listings on the
+                <a href="{{ site_url('dashboard.index') }}">Dashboard</a>
+                and star the ones that catch your eye. I'll be able to see your picks and help you from there.
+            </p>
+            <a href="#" class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#contactAgentModal"
+               style="background: {{ ab.brand_color or '#2563eb' }}; color: #fff; border: none;">
+                <i class="bi bi-chat-dots me-1"></i>Message {{ ab.full_name.split(' ')[0] }}
+            </a>
+        </div>
+    </div>
+    {% else %}
+    <p>
+        <a href="{{ site_url('dashboard.index') }}">Clear filters</a>
+    </p>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if current_flag in ['favorite', 'maybe', 'hidden'] and listings|length > 0 and current_user.is_authenticated %}
+<script>
+function runPortfolioAnalysis() {
+// ── Paint portfolio brief into the DOM ────────────────────────────
+function _fmtNow() {
+    return new Date().toLocaleString('en-US', {
+        hour: 'numeric', minute: '2-digit', hour12: true,
+        month: 'short', day: 'numeric', year: 'numeric'
+    });
+}
+
+function paintPortfolioBrief(data) {
+    const resultDiv = document.getElementById('portfolio-result');
+    const brief     = document.getElementById('portfolio-brief');
+    const loading   = document.getElementById('portfolio-loading');
+    const error     = document.getElementById('portfolio-error');
+    const btn       = document.getElementById('portfolio-btn');
+
+    document.getElementById('pf-headline').textContent   = data.headline    || '';
+    document.getElementById('pf-ranking').textContent    = data.ranking     || '';
+    document.getElementById('pf-patterns').textContent   = data.patterns    || '';
+    document.getElementById('pf-strategy').textContent   = data.strategy    || '';
+    document.getElementById('pf-dark-horse').textContent = data.dark_horse  || '';
+    document.getElementById('pf-bottom-line').textContent= data.bottom_line || '';
+
+    loading.style.display   = 'none';
+    error.style.display     = 'none';
+    brief.style.display     = 'block';
+    resultDiv.style.display = 'block';
+    if (btn) {
+        btn.disabled  = false;
+        btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Re-Analyze';
+    }
+
+    const tsEl = document.getElementById('pf-timestamp');
+    if (tsEl) tsEl.textContent = data._analyzed_at || _fmtNow();
+}
+
+// ── Pre-populate from server-side cache on page load ───────────────
+{% if cached_portfolio and current_flag in cached_portfolio %}
+paintPortfolioBrief({{ cached_portfolio[current_flag] | tojson }});
+{% endif %}
+
+function runPortfolioAnalysis() {
+    const btn       = document.getElementById('portfolio-btn');
+    const resultDiv = document.getElementById('portfolio-result');
+    const loading   = document.getElementById('portfolio-loading');
+    const error     = document.getElementById('portfolio-error');
+    const brief     = document.getElementById('portfolio-brief');
+
+    resultDiv.style.display = 'block';
+    loading.style.display   = 'block';
+    error.style.display     = 'none';
+    brief.style.display     = 'none';
+    btn.disabled      = true;
+    btn.innerHTML     = '<span class="spinner-border spinner-border-sm"></span> Analyzing...';
+
+    resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    const formData = new FormData();
+    formData.append('flag', '{{ current_flag }}');
+
+    fetch('{{ site_url("dashboard.analyze_portfolio_route") }}', {
+        method: 'POST',
+        body: formData,
+    })
+    .then(resp => resp.json())
+    .then(data => {
+        loading.style.display = 'none';
+        if (data.error) {
+            error.textContent   = data.error;
+            error.style.display = 'block';
+            btn.disabled  = false;
+            btn.innerHTML = '<i class="bi bi-lightning-charge"></i> Try Again';
+            return;
+        }
+        paintPortfolioBrief(data);
+    })
+    .catch(() => {
+        loading.style.display = 'none';
+        error.textContent   = 'Network error. Please check your connection.';
+        error.style.display = 'block';
+        btn.disabled  = false;
+        btn.innerHTML = '<i class="bi bi-lightning-charge"></i> Try Again';
+    });
+}
+</script>
+{% endif %}
+
+<script>
+function copyShareLink(listingId) {
+    fetch("{{ url_for('social.copy_link', listing_id=0) }}".replace('/0', '/' + listingId))
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                navigator.clipboard.writeText(data.url);
+                const modal = bootstrap.Modal.getInstance(document.getElementById('shareModal' + listingId));
+                if (modal) modal.hide();
+                const toast = document.createElement('div');
+                toast.className = 'position-fixed bottom-0 end-0 p-3';
+                toast.style.zIndex = '9999';
+                toast.innerHTML = '<div class="alert alert-success alert-dismissible fade show py-2 px-3" role="alert" style="font-size:0.85rem;"><i class="bi bi-check-circle me-1"></i>Link copied!<button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert"></button></div>';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            }
+        });
+}
+</script>
+{% endblock %}

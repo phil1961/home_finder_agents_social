@@ -1,0 +1,608 @@
+{# v20260309-1 #}
+{% extends "base.html" %}
+{% block title %}Owner Operations Guide — HomeFinder{% endblock %}
+
+{% block head %}
+<style>
+/* ── Layout ──────────────────────────────────────────── */
+.toc-sidebar {
+    position: sticky; top: 80px;
+    max-height: calc(100vh - 100px); overflow-y: auto;
+}
+.toc-sidebar .nav-link {
+    color: #64748b; font-size: 0.82rem; padding: 4px 12px;
+    border-left: 2px solid #e2e8f0; border-radius: 0;
+    line-height: 1.5;
+}
+.toc-sidebar .nav-link:hover,
+.toc-sidebar .nav-link.active { color: #2563eb; border-left-color: #2563eb; background: none; }
+.toc-sidebar .toc-section { font-size: 0.7rem; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: #94a3b8; padding: 12px 12px 4px; }
+
+/* ── Content ─────────────────────────────────────────── */
+.guide-section {
+    scroll-margin-top: 80px;
+    padding-bottom: 48px;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 48px;
+}
+.guide-section:last-child { border-bottom: none; }
+
+.guide-h2 {
+    font-size: 1.35rem; font-weight: 700;
+    color: #0f172a; margin-bottom: 6px;
+    display: flex; align-items: center; gap: 10px;
+}
+.guide-h2 .h2-icon {
+    width: 34px; height: 34px; border-radius: 8px;
+    background: #dbeafe; color: #2563eb;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; flex-shrink: 0;
+}
+.guide-lead { color: #64748b; font-size: 0.95rem; margin-bottom: 20px; line-height: 1.65; }
+
+.guide-h3 { font-size: 1rem; font-weight: 600; color: #1e3a5f; margin: 20px 0 8px; }
+.guide-p  { font-size: 0.93rem; color: #374151; line-height: 1.7; margin-bottom: 12px; }
+
+/* ── Callout boxes ───────────────────────────────────── */
+.callout {
+    border-radius: 8px; padding: 14px 18px;
+    font-size: 0.88rem; line-height: 1.6; margin: 12px 0;
+    display: flex; gap: 12px; align-items: flex-start;
+}
+.callout i { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+.callout-info    { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+.callout-warn    { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+.callout-danger  { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+.callout-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+
+/* ── Step list ───────────────────────────────────────── */
+.step-list { list-style: none; padding: 0; margin: 12px 0; }
+.step-list li {
+    display: flex; gap: 12px; align-items: flex-start;
+    font-size: 0.9rem; color: #374151; margin-bottom: 10px;
+    line-height: 1.55;
+}
+.step-num-badge {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #2563eb; color: #fff;
+    font-size: 0.7rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+}
+
+/* ── Role table ──────────────────────────────────────── */
+.role-table th { font-size: 0.78rem; font-weight: 600; background: #f8fafc; }
+.role-table td { font-size: 0.83rem; vertical-align: middle; }
+.check { color: #059669; font-size: 1rem; }
+.cross { color: #dc2626; font-size: 1rem; }
+.partial { color: #d97706; font-size: 1rem; }
+
+/* ── Field reference ─────────────────────────────────── */
+.field-ref { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.field-row {
+    display: flex; gap: 12px; font-size: 0.85rem;
+    padding: 10px 14px; background: #f8fafc;
+    border: 1px solid #e2e8f0; border-radius: 6px; align-items: flex-start;
+}
+.field-name { font-family: monospace; font-size: 0.8rem; color: #2563eb;
+    background: #dbeafe; border-radius: 4px; padding: 1px 7px;
+    white-space: nowrap; flex-shrink: 0; }
+.field-desc { color: #374151; line-height: 1.5; }
+
+/* ── Cost table ──────────────────────────────────────── */
+.cost-table td:nth-child(2) { font-family: monospace; font-size: 0.82rem; text-align: right; }
+.cost-table td:nth-child(3) { font-size: 0.82rem; color: #64748b; }
+
+/* ── Nav header ──────────────────────────────────────── */
+.page-header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+    color: #fff; border-radius: 12px; padding: 32px 36px; margin-bottom: 32px;
+}
+.page-header h3 { font-size: 1.6rem; font-weight: 700; margin-bottom: 6px; }
+.page-header p { color: rgba(255,255,255,0.65); margin: 0; font-size: 0.95rem; }
+.page-header .badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.page-header .badge-row span {
+    background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.8);
+    border-radius: 20px; padding: 3px 12px; font-size: 0.72rem; font-weight: 500;
+}
+
+@media (max-width: 991px) { .toc-sidebar { display: none; } }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <h3><i class="bi bi-gear-fill me-2"></i>Owner Operations Guide</h3>
+    <p>Complete reference for administering a HomeFinder installation.</p>
+    <div class="badge-row">
+        <span><i class="bi bi-shield-fill-check me-1"></i>Owner &amp; Master access only</span>
+        <span><i class="bi bi-book me-1"></i>Reference guide</span>
+        <span><i class="bi bi-arrow-repeat me-1"></i>Updated for v2026</span>
+    </div>
+</div>
+
+<div class="row g-4">
+
+<!-- ── Table of Contents ─────────────────────────────── -->
+<div class="col-lg-3 d-none d-lg-block">
+    <nav class="toc-sidebar">
+        <div class="toc-section">Administration</div>
+        <a class="nav-link" href="#roles">Roles &amp; Permissions</a>
+        <a class="nav-link" href="#sites">Site Management</a>
+        <a class="nav-link" href="#agents">Agent Management</a>
+        <div class="toc-section">Pipeline</div>
+        <a class="nav-link" href="#pipeline">Running the Pipeline</a>
+        <a class="nav-link" href="#scheduler">Nightly Scheduler</a>
+        <div class="toc-section">AI &amp; Config</div>
+        <a class="nav-link" href="#prompts">Prompt Overrides</a>
+        <a class="nav-link" href="#metrics">API Metrics</a>
+        <div class="toc-section">Reference</div>
+        <a class="nav-link" href="#env">Environment Variables</a>
+        <a class="nav-link" href="#troubleshooting">Troubleshooting</a>
+    </nav>
+</div>
+
+<!-- ── Main content ──────────────────────────────────── -->
+<div class="col-lg-9">
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- ROLES & PERMISSIONS                                 -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="roles" class="guide-section">
+    <div class="guide-h2">
+        <div class="h2-icon"><i class="bi bi-people-fill"></i></div>
+        Roles &amp; Permissions
+    </div>
+    <p class="guide-lead">
+        HomeFinder uses four user roles. Roles are stored in the <code>users.role</code> column
+        of each site's database. The <strong>master</strong> role is the super-admin and exists
+        only once — only <code>palarson</code> holds this role.
+    </p>
+
+    <div class="table-responsive">
+    <table class="table table-bordered table-sm role-table align-middle">
+        <thead>
+            <tr>
+                <th>Capability</th>
+                <th class="text-center">User</th>
+                <th class="text-center">Agent</th>
+                <th class="text-center">Owner</th>
+                <th class="text-center">Master</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Browse listings, maps, digest</td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td></tr>
+            <tr><td>AI deal analysis &amp; portfolio</td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td></tr>
+            <tr><td>Save preferences permanently</td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td></tr>
+            <tr><td>Manage clients &amp; set client prefs</td>
+                <td class="text-center"><i class="bi bi-x-circle cross"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td></tr>
+            <tr><td>Masquerade as a client</td>
+                <td class="text-center"><i class="bi bi-x-circle cross"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td></tr>
+            <tr><td>Override AI prompts (per-agent)</td>
+                <td class="text-center"><i class="bi bi-x-circle cross"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td></tr>
+            <tr><td>Approve / suspend agents</td>
+                <td class="text-center"><i class="bi bi-x-circle cross"></i></td>
+                <td class="text-center"><i class="bi bi-x-circle cross"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td></tr>
+            <tr><td>View API cost metrics</td>
+                <td class="text-center"><i class="bi bi-x-circle cross"></i></td>
+                <td class="text-center"><i class="bi bi-x-circle cross"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td></tr>
+            <tr><td>Override AI prompts (global)</td>
+                <td class="text-center"><i class="bi bi-x-circle cross"></i></td>
+                <td class="text-center"><i class="bi bi-x-circle cross"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td></tr>
+            <tr><td>Trigger manual pipeline fetch</td>
+                <td class="text-center"><i class="bi bi-x-circle cross"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td></tr>
+            <tr><td>Create &amp; manage sites (multi-tenant)</td>
+                <td class="text-center"><i class="bi bi-x-circle cross"></i></td>
+                <td class="text-center"><i class="bi bi-x-circle cross"></i></td>
+                <td class="text-center"><i class="bi bi-x-circle cross"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill check"></i></td></tr>
+        </tbody>
+    </table>
+    </div>
+
+    <div class="callout callout-danger">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <div><strong>Never demote your master account.</strong> The migration script runs on
+        every app start and will restore <code>palarson</code> to at least <code>owner</code>
+        — but only the database holds the <code>master</code> role. If you need to inspect or
+        correct roles, use SQLite directly:
+        <code style="display:block;margin-top:6px;">UPDATE users SET role='master' WHERE username='palarson';</code>
+        </div>
+    </div>
+
+    <div class="callout callout-info">
+        <i class="bi bi-info-circle-fill"></i>
+        <div>The <code>is_admin</code> check in code is true for both <code>agent</code>,
+        <code>owner</code>, and <code>master</code> roles. The <code>is_owner</code> check
+        is true for <code>owner</code> and <code>master</code>. <code>is_master</code> is
+        true only for <code>master</code>.</div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SITE MANAGEMENT                                     -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="sites" class="guide-section">
+    <div class="guide-h2">
+        <div class="h2-icon"><i class="bi bi-globe2"></i></div>
+        Site Management
+    </div>
+    <p class="guide-lead">
+        Each HomeFinder "site" is an independent market with its own SQLite database, listing
+        data, users, and scores. Sites are tracked in <code>instance/registry.db</code>.
+        Site management requires the <strong>master</strong> role.
+    </p>
+
+    <div class="guide-h3">Creating a new site</div>
+    <ul class="step-list">
+        <li><span class="step-num-badge">1</span>Navigate to <strong>Sites</strong> in the top nav (master only). Click <strong>Map Picker</strong> to set the center location and select zip codes visually. Type a city name in the search box and press Enter to jump the map.</li>
+        <li><span class="step-num-badge">2</span>Click zip code polygons on the map to include them (green). Click again to remove. The bounding box auto-computes from your selection.</li>
+        <li><span class="step-num-badge">3</span>Click <strong>Apply to Form</strong>. This writes the lat/lon, zoom, zip codes, and SW/NE bounds into the create form.</li>
+        <li><span class="step-num-badge">4</span>Fill in Site Key (lowercase, e.g. <code>atlanta</code>), Display Name, and Owner Email. Click <strong>Create Site &amp; Initialize Database</strong>.</li>
+        <li><span class="step-num-badge">5</span>The system creates the SQLite database, initializes all tables, and seeds your master account as owner in the new site DB.</li>
+        <li><span class="step-num-badge">6</span>Run the pipeline once to populate listings: click <strong>Fetch Now</strong> from the dashboard of the new site.</li>
+    </ul>
+
+    <div class="callout callout-warn">
+        <i class="bi bi-exclamation-circle-fill"></i>
+        <div><strong>Site keys are permanent.</strong> The key becomes part of the cookie value
+        and URL routing. Changing it after launch will log out all existing users of that site.
+        Choose a short, obvious slug: <code>charleston</code>, <code>bathwv</code>, <code>atlanta</code>.</div>
+    </div>
+
+    <div class="guide-h3">Site configuration fields</div>
+    <div class="field-ref">
+        <div class="field-row"><span class="field-name">site_key</span><span class="field-desc">Unique slug. Used in the <code>hf_site</code> cookie and <code>X-HomeFinder-Site</code> header. Lowercase letters, numbers, underscores only.</span></div>
+        <div class="field-row"><span class="field-name">display_name</span><span class="field-desc">Human-readable name shown in the navbar and page titles. e.g. "Bath, West Virginia".</span></div>
+        <div class="field-row"><span class="field-name">db_path</span><span class="field-desc">Relative path from project root to the SQLite database. Stored as e.g. <code>instance/bathwv.db</code>. Do not change after creation unless you also move the file.</span></div>
+        <div class="field-row"><span class="field-name">zip_codes_json</span><span class="field-desc">JSON array of zip code strings. Used to seed the Preferences page target areas and constrain the pipeline's search area.</span></div>
+        <div class="field-row"><span class="field-name">map_bounds_json</span><span class="field-desc">[[sw_lat, sw_lon], [ne_lat, ne_lon]] bounding box. Constrains the census place autocomplete and the map default viewport.</span></div>
+        <div class="field-row"><span class="field-name">map_center_lat/lon</span><span class="field-desc">Default map center for the listing map page and preferences map.</span></div>
+        <div class="field-row"><span class="field-name">owner_email</span><span class="field-desc">Informational — the email of the owner user registered in this site's DB. Not used for access control.</span></div>
+    </div>
+
+    <div class="guide-h3">Activating and deactivating sites</div>
+    <p class="guide-p">Use the pause/play button on each site card. Inactive sites are skipped by the
+    nightly scheduler pipeline. Users with a valid <code>hf_site</code> cookie for an inactive site
+    will be routed to the default site as a fallback.</p>
+
+    <div class="guide-h3">How URL routing works</div>
+    <p class="guide-p">There are two ways to route a request to a specific site's database:</p>
+    <ol class="guide-p" style="padding-left:20px;">
+        <li style="margin-bottom:6px;"><strong>URL path prefix</strong> — <code>/site/&lt;key&gt;/</code> in the path. The <code>SitePathMiddleware</code> strips this and sets the <code>X-HomeFinder-Site</code> environ header before Flask sees the request.</li>
+        <li><strong>Cookie</strong> — <code>hf_site=&lt;key&gt;</code>. Set by the <code>/go/&lt;site_key&gt;</code> route when a user clicks a market on the landing page. No site key appears in any URL. Lasts 30 days.</li>
+    </ol>
+    <div class="callout callout-success">
+        <i class="bi bi-check-circle-fill"></i>
+        <div>The landing page at <code>/welcome</code> uses the cookie method, so users
+        always see clean URLs like <code>/auth/login</code> instead of
+        <code>/site/charleston/auth/login</code>.</div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- AGENT MANAGEMENT                                    -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="agents" class="guide-section">
+    <div class="guide-h2">
+        <div class="h2-icon"><i class="bi bi-person-badge"></i></div>
+        Agent Management
+    </div>
+    <p class="guide-lead">
+        Agents register via the <strong>Apply as an Operator</strong> link on the login page.
+        They start in <code>pending</code> status and cannot log in until approved.
+    </p>
+
+    <div class="guide-h3">Approving an agent</div>
+    <ul class="step-list">
+        <li><span class="step-num-badge">1</span>Go to <strong>Admin → Agents</strong>. Pending agents appear at the top with a warning badge.</li>
+        <li><span class="step-num-badge">2</span>Review the agent's name, license number, brokerage, and phone number.</li>
+        <li><span class="step-num-badge">3</span>Click <strong>Approve</strong>. The agent can now log in and access their dashboard.</li>
+        <li><span class="step-num-badge">4</span>Optionally expand the agent's row to add owner notes: contract signed, background checked, MLS verified checkboxes, plus a free-text notes field.</li>
+    </ul>
+
+    <div class="guide-h3">Suspending an agent</div>
+    <p class="guide-p">Click <strong>Suspend</strong> on any approved agent. Suspended agents receive a
+    "your account has been suspended" message at login. Their existing clients are not affected —
+    clients retain their accounts and data but lose the agent assignment functionality.</p>
+
+    <div class="guide-h3">Agent branding</div>
+    <p class="guide-p">Agents can customize the navbar color, add a logo URL or emoji icon, and set a tagline.
+    Clients of that agent see the branded navbar. As owner you cannot set an agent's branding —
+    only the agent can do this from their dashboard.</p>
+
+    <div class="callout callout-info">
+        <i class="bi bi-info-circle-fill"></i>
+        <div>Client accounts are created by the agent (not by the client registering themselves).
+        The agent uses <strong>My Clients → Add New Client</strong> — HomeFinder generates a username
+        and temporary password and emails the client automatically.</div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- PIPELINE                                            -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="pipeline" class="guide-section">
+    <div class="guide-h2">
+        <div class="h2-icon"><i class="bi bi-arrow-repeat"></i></div>
+        Running the Pipeline
+    </div>
+    <p class="guide-lead">
+        The pipeline fetches listings from Zillow and Realtor.com, geocodes them, assigns
+        Census place names, scores them, and marks removed listings as inactive. It is the
+        only mechanism that updates listing data.
+    </p>
+
+    <div class="guide-h3">Manual trigger (from the UI)</div>
+    <p class="guide-p">Click <strong>Fetch Now</strong> from the dashboard home page. This button is
+    visible to owners and agents. The pipeline runs synchronously — the page will not respond
+    until it completes (typically 30–120 seconds depending on listing volume).</p>
+
+    <div class="guide-h3">Manual trigger (command line)</div>
+    <pre style="background:#0f172a;color:#94a3b8;border-radius:8px;padding:16px;font-size:0.8rem;overflow-x:auto;">cd C:\path\to\home_finder_agents
+activate.bat
+python run.py pipeline --site charleston</pre>
+    <p class="guide-p">Omit <code>--site</code> to run for all active sites.</p>
+
+    <div class="guide-h3">Pipeline steps in order</div>
+    <ul class="step-list">
+        <li><span class="step-num-badge">1</span><strong>Fetch</strong> — Calls Zillow API and Realtor.com API for the site's zip codes. Returns raw listing objects.</li>
+        <li><span class="step-num-badge">2</span><strong>Deduplicate</strong> — Merges Zillow and Realtor.com results by address. Prefers Realtor.com for detail fields.</li>
+        <li><span class="step-num-badge">3</span><strong>Geocode</strong> — Adds lat/lon for any listing missing coordinates, using the Google Geocoding API.</li>
+        <li><span class="step-num-badge">4</span><strong>Upsert</strong> — Inserts new listings or updates existing ones. Preserves <code>first_seen</code>. Updates <code>price_history_json</code> on price changes.</li>
+        <li><span class="step-num-badge">5</span><strong>Place name</strong> — Assigns a Census TIGER place name (neighborhood/city) to each listing based on coordinates.</li>
+        <li><span class="step-num-badge">6</span><strong>Score</strong> — Runs the 17-factor scorer for every listing without an up-to-date score.</li>
+        <li><span class="step-num-badge">7</span><strong>Mark inactive</strong> — Any listing that did not appear in this run's results is marked <code>status=inactive</code>.</li>
+        <li><span class="step-num-badge">8</span><strong>Update registry</strong> — Writes <code>pipeline_last_run</code> and <code>listing_count</code> back to the registry.</li>
+    </ul>
+
+    <div class="callout callout-warn">
+        <i class="bi bi-exclamation-circle-fill"></i>
+        <div><strong>Lazy detail enrichment:</strong> Full property details (room details, HOA, photos)
+        are NOT fetched during the pipeline. They are fetched on-demand the first time a user opens a
+        listing's detail page (<code>details_fetched=False</code> triggers the fetch and caches the result).</div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- SCHEDULER                                           -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="scheduler" class="guide-section">
+    <div class="guide-h2">
+        <div class="h2-icon"><i class="bi bi-clock-history"></i></div>
+        Nightly Scheduler
+    </div>
+    <p class="guide-lead">
+        APScheduler runs the pipeline automatically at <strong>3:00 AM server time</strong> for
+        all active sites. It runs as a background thread inside the Waitress process.
+    </p>
+
+    <div class="guide-h3">Confirming the scheduler is running</div>
+    <p class="guide-p">At app startup you will see this in the log:</p>
+    <pre style="background:#0f172a;color:#6ee7b7;border-radius:8px;padding:14px;font-size:0.78rem;">Scheduler started — nightly pipeline at 3:00 AM</pre>
+    <p class="guide-p">If instead you see:</p>
+    <pre style="background:#0f172a;color:#fca5a5;border-radius:8px;padding:14px;font-size:0.78rem;">APScheduler not installed — nightly pipeline disabled.</pre>
+    <p class="guide-p">Run: <code>pip install apscheduler --break-system-packages</code> inside the virtualenv, then restart the app.</p>
+
+    <div class="guide-h3">IIS / Waitress restarts</div>
+    <p class="guide-p">When IIS recycles the app pool or Waitress restarts, APScheduler re-registers the job
+    on startup. No manual intervention is needed. However, if the app is down at 3 AM, that night's
+    pipeline run is skipped — there is no catch-up mechanism. You can manually trigger <strong>Fetch Now</strong>
+    the next morning.</p>
+
+    <div class="callout callout-info">
+        <i class="bi bi-info-circle-fill"></i>
+        <div>The scheduler uses a <strong>daemon thread</strong>. It does not prevent the process from
+        exiting normally. On IIS this is fine — Waitress handles the shutdown gracefully via
+        the <code>atexit</code> handler registered at startup.</div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- PROMPT OVERRIDES                                    -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="prompts" class="guide-section">
+    <div class="guide-h2">
+        <div class="h2-icon"><i class="bi bi-pencil-square"></i></div>
+        AI Prompt Overrides
+    </div>
+    <p class="guide-lead">
+        All three AI features (Deal Brief, Portfolio Analysis, Preferences Coach) have
+        default system prompts defined in <code>config.py</code>. Owners can override
+        these globally; agents can further override them for their own clients.
+    </p>
+
+    <div class="guide-h3">Priority order</div>
+    <ol class="guide-p" style="padding-left:20px;">
+        <li style="margin-bottom:6px;"><strong>Agent override</strong> — if an agent has a custom prompt for this type, it is used for all AI calls made by that agent's clients.</li>
+        <li style="margin-bottom:6px;"><strong>Global owner override</strong> — if no agent override exists but you have set a global override via Admin → Prompts, it is used.</li>
+        <li><strong>Default (config.py)</strong> — used when no override exists at either level.</li>
+    </ol>
+
+    <div class="guide-h3">The three prompt types</div>
+    <div class="field-ref">
+        <div class="field-row"><span class="field-name">deal</span><span class="field-desc">System prompt for single-listing Deal Brief analysis. Must instruct the model to return JSON with keys: <code>summary</code>, <code>strengths</code>, <code>concerns</code>, <code>negotiation</code>, <code>verdict</code>.</span></div>
+        <div class="field-row"><span class="field-name">portfolio</span><span class="field-desc">System prompt for multi-listing Portfolio Analysis. Must return JSON with keys: <code>headline</code>, <code>ranking</code>, <code>patterns</code>, <code>strategy</code>, <code>dark_horse</code>, <code>bottom_line</code>.</span></div>
+        <div class="field-row"><span class="field-name">preferences</span><span class="field-desc">System prompt for Preferences Coach analysis. Must return JSON with keys: <code>headline</code>, <code>strengths</code>, <code>blind_spots</code>, <code>tweaks</code>, <code>local_insight</code>, <code>bottom_line</code>.</span></div>
+    </div>
+
+    <div class="callout callout-danger">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <div><strong>Always keep the JSON instruction in your overrides.</strong> If you remove the
+        instruction to respond with a JSON object, the AI will return plain text and the UI
+        will display an "unexpected format" error. The <em>content</em> and <em>persona</em> of
+        the prompt can be changed freely — just keep the JSON structure requirement.</div>
+    </div>
+
+    <div class="guide-h3">Clearing an override</div>
+    <p class="guide-p">Leave the text field blank and click Save. The override row is deleted from the
+    database and the default from <code>config.py</code> is used on the next AI call.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- METRICS                                             -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="metrics" class="guide-section">
+    <div class="guide-h2">
+        <div class="h2-icon"><i class="bi bi-bar-chart-line"></i></div>
+        API Metrics
+    </div>
+    <p class="guide-lead">
+        The Metrics page (<strong>Admin → Metrics</strong>) shows API call counts and
+        estimated costs broken down by user and call type, with all-time and 30-day views.
+    </p>
+
+    <div class="guide-h3">Approximate costs per call</div>
+    <div class="table-responsive">
+    <table class="table table-sm table-bordered cost-table">
+        <thead><tr><th>Call Type</th><th>Est. Cost</th><th>When it fires</th></tr></thead>
+        <tbody>
+            <tr><td>anthropic_deal</td><td>$0.003</td><td>User clicks "Analyze Listing"</td></tr>
+            <tr><td>anthropic_portfolio</td><td>$0.005</td><td>User clicks "Analyze Favorites/Maybes"</td></tr>
+            <tr><td>anthropic_prefs</td><td>$0.002</td><td>User clicks "Coach Me" on Preferences page</td></tr>
+            <tr><td>google_places</td><td>$0.017</td><td>First detail page view for a listing (lazy fetch)</td></tr>
+            <tr><td>google_geocode</td><td>$0.005</td><td>Pipeline: listing missing lat/lon</td></tr>
+            <tr><td>zillow</td><td>$0.000</td><td>Pipeline fetch run (API subscription cost tracked separately)</td></tr>
+            <tr><td>realtor</td><td>$0.000</td><td>Pipeline fetch run</td></tr>
+        </tbody>
+    </table>
+    </div>
+
+    <div class="callout callout-info">
+        <i class="bi bi-info-circle-fill"></i>
+        <div>AI results are cached in <code>cached_analysis</code>. A user who clicks
+        "Analyze Listing" a second time on the same property sees the cached result — no
+        second API call is made. Portfolio analyses are re-fetched on demand (they change
+        as the user's flag set changes).</div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- ENVIRONMENT VARIABLES                               -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="env" class="guide-section">
+    <div class="guide-h2">
+        <div class="h2-icon"><i class="bi bi-key-fill"></i></div>
+        Environment Variables
+    </div>
+    <p class="guide-lead">
+        All secrets are loaded from <code>.env</code> in the project root via
+        <code>python-dotenv</code>. Never commit <code>.env</code> to source control.
+    </p>
+    <div class="field-ref">
+        <div class="field-row"><span class="field-name">SECRET_KEY</span><span class="field-desc">Flask session signing key. Generate with <code>python -c "import secrets; print(secrets.token_hex(32))"</code>. Changing this logs out all users.</span></div>
+        <div class="field-row"><span class="field-name">ANTHROPIC_API_KEY</span><span class="field-desc">Required for all AI features. Obtain from console.anthropic.com. If missing, AI buttons show an error message but the app continues to function.</span></div>
+        <div class="field-row"><span class="field-name">RAPIDAPI_KEY</span><span class="field-desc">Used for Zillow and Realtor.com API calls via RapidAPI. Required for the pipeline to return listings.</span></div>
+        <div class="field-row"><span class="field-name">GOOGLE_MAPS_API_KEY</span><span class="field-desc">Used for geocoding (coordinates from addresses) and Google Places detail enrichment. If missing, geocoding is skipped and detail pages may lack some fields.</span></div>
+        <div class="field-row"><span class="field-name">MAIL_SERVER / MAIL_PORT</span><span class="field-desc">SMTP configuration for transactional email (verification, password reset, welcome). <code>MAIL_USE_TLS</code>, <code>MAIL_USERNAME</code>, <code>MAIL_PASSWORD</code>, <code>MAIL_DEFAULT_SENDER</code> also required.</span></div>
+        <div class="field-row"><span class="field-name">HOMEFINDER_REGISTRY</span><span class="field-desc">Optional. Absolute path to <code>registry.db</code>. Defaults to <code>instance/registry.db</code> relative to the project root. Only set this if you need the registry in a non-standard location.</span></div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- TROUBLESHOOTING                                     -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="troubleshooting" class="guide-section">
+    <div class="guide-h2">
+        <div class="h2-icon"><i class="bi bi-bug-fill"></i></div>
+        Troubleshooting
+    </div>
+
+    <div class="guide-h3">Login takes me to the wrong site</div>
+    <p class="guide-p">Your browser has an <code>hf_site</code> cookie pointing to a different site.
+    Clear it in DevTools → Application → Cookies, or visit
+    <code>/home_finder_agents/go/&lt;correct_site_key&gt;</code> to set the right cookie.</p>
+
+    <div class="guide-h3">Pipeline runs but returns 0 listings</div>
+    <ul class="guide-p" style="padding-left: 20px;">
+        <li>Check that <code>RAPIDAPI_KEY</code> is set correctly in <code>.env</code>.</li>
+        <li>Verify the site's zip codes are valid and within the supported region (SC fully supported; WV partially supported via state-level fallback).</li>
+        <li>Confirm your RapidAPI subscription is active for both Zillow and Realtor endpoints.</li>
+    </ul>
+
+    <div class="guide-h3">AI analysis returns "unexpected format" error</div>
+    <p class="guide-p">The AI returned plain text instead of JSON. This usually means a prompt override
+    is missing the JSON instruction. Go to <strong>Admin → Prompts</strong>, check each override,
+    and ensure it instructs the model to respond "ONLY with a JSON object."
+    Clearing the override to restore the default also fixes this.</p>
+
+    <div class="guide-h3">My master role keeps changing to owner</div>
+    <p class="guide-p">This was a known bug in the migration script — now fixed. The old code used
+    <code>role != 'owner'</code> which demoted <code>master</code> on every startup. The fix
+    uses <code>role NOT IN ('owner', 'master')</code>. Deploy the updated <code>__init__.py</code>.</p>
+
+    <div class="guide-h3">SQLite WAL lock errors in logs</div>
+    <p class="guide-p">The registry uses WAL mode to reduce locking. If you see
+    <code>database is locked</code> errors during pipeline runs, it usually means a previous
+    pipeline is still running. The site DB connections use <code>check_same_thread=False</code>
+    which is safe for Waitress's multi-threaded model.</p>
+
+    <div class="guide-h3">After IIS deploy, old pages still appear</div>
+    <p class="guide-p">Python caches <code>.pyc</code> bytecode. After replacing Python files on the
+    server, touch <code>web.config</code> (open and save with no changes) to force IIS to recycle
+    the app pool, or delete all <code>__pycache__</code> directories and restart Waitress.</p>
+
+    <div class="callout callout-info">
+        <i class="bi bi-info-circle-fill"></i>
+        <div>All startup activity, site routing decisions, and scheduler events are logged at
+        <code>WARNING</code> level so they appear in the IIS log even with the default log level.
+        Check the IIS application log at
+        <code>C:\inetpub\logs\LogFiles\W3SVC1\</code> for a full trace of what happened on
+        the last request.</div>
+    </div>
+</div>
+
+</div><!-- /col-lg-9 -->
+</div><!-- /row -->
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Highlight active TOC item on scroll
+const sections = document.querySelectorAll('.guide-section[id]');
+const links = document.querySelectorAll('.toc-sidebar .nav-link');
+const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+        if (e.isIntersecting) {
+            links.forEach(l => l.classList.remove('active'));
+            const active = document.querySelector(`.toc-sidebar a[href="#${e.target.id}"]`);
+            if (active) active.classList.add('active');
+        }
+    });
+}, { threshold: 0.3 });
+sections.forEach(s => observer.observe(s));
+</script>
+{% endblock %}

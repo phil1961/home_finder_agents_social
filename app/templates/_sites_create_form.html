@@ -1,0 +1,148 @@
+<!--
+  File: app/templates/_sites_create_form.html
+  App Version: 1.0.0 | File Version: 1.0.0
+  Last Modified: 2026-03-15
+-->
+<!-- ── Create New Site ─────────────────────────────────────────────── -->
+<div class="card shadow-sm">
+    <div class="card-header fw-semibold">
+        <i class="bi bi-plus-circle me-2 text-success"></i>Create New HomeFinder Site
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('site_manager.sites_create') }}">
+            <div class="row g-3">
+                <!-- ── Quick Setup ── -->
+                <div class="col-12">
+                    <div class="d-flex align-items-center gap-3 p-2 rounded"
+                         style="background:#f0f7ff; border:1px solid #bfdbfe;">
+                        <button type="button" class="btn btn-primary btn-sm flex-shrink-0"
+                                onclick="openLocationPicker()">
+                            <i class="bi bi-geo-alt-fill me-1"></i>Location Picker
+                        </button>
+                        <span class="small text-muted" id="lp-hint">
+                            Search for a city to auto-fill site key, display name, map center, bounds, and first zip code.
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Site Key <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="site_key"
+                           id="create_site_key"
+                           placeholder="e.g. atlanta" required
+                           pattern="[a-z0-9_]+" title="Lowercase letters, numbers, underscores only"
+                           oninput="updateDbFilename(this.value)">
+                    <div class="form-text">Used in <code>X-HomeFinder-Site</code> header. Lowercase, no spaces.</div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Display Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="display_name"
+                           id="create_display_name"
+                           placeholder="e.g. Atlanta, GA" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Database Filename</label>
+                    <div class="input-group">
+                        <span class="input-group-text small text-muted">instance/</span>
+                        <input type="text" class="form-control" name="db_filename"
+                               id="db-filename-input" placeholder="bathwv.db">
+                    </div>
+                    <div class="form-text">Leave blank to auto-generate from site key.</div>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Owner Email</label>
+                    <input type="email" class="form-control" name="owner_email"
+                           placeholder="owner@example.com">
+                    <div class="form-text">Register this email as the owner user after creation.</div>
+                </div>
+                <div class="col-md-2">
+                    <!-- center lat/lon/zoom now in the Map Bounding Box section below -->
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label small fw-semibold">Target Zip Codes</label>
+                    <div class="d-flex gap-2 align-items-start">
+                        <textarea class="form-control flex-grow-1" name="zip_codes" id="create_zip_codes" rows="2"
+                                  style="font-family:monospace; font-size:.85rem;"
+                                  placeholder="30301, 30302, 30303, 30305, 30306"></textarea>
+                        <button type="button" class="btn btn-sm btn-outline-primary flex-shrink-0 mt-1"
+                                onclick="openZipPicker()">
+                            <i class="bi bi-map me-1"></i>Pick Zips
+                        </button>
+                    </div>
+                    <div class="form-text">Comma-separated. Can be edited later.</div>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label small fw-semibold">Map Center &amp; Bounding Box</label>
+                    <div class="row g-2 align-items-center mb-2">
+                        <div class="col-auto">
+                            <button type="button" class="btn btn-sm btn-outline-primary"
+                                    onclick="openMapPicker()">
+                                <i class="bi bi-map me-1"></i>Pick on Map
+                            </button>
+                        </div>
+                        <div class="col">
+                            <span class="text-muted small" id="map-picker-hint">
+                                Click to set center &amp; drag a rectangle for the bounding box.
+                            </span>
+                        </div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">SW Lat</span>
+                                <input type="number" step="0.0001" class="form-control" name="sw_lat" id="sw_lat" placeholder="33.5">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">SW Lon</span>
+                                <input type="number" step="0.0001" class="form-control" name="sw_lon" id="sw_lon" placeholder="-85.0">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">NE Lat</span>
+                                <input type="number" step="0.0001" class="form-control" name="ne_lat" id="ne_lat" placeholder="34.2">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">NE Lon</span>
+                                <input type="number" step="0.0001" class="form-control" name="ne_lon" id="ne_lon" placeholder="-83.8">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-2 mt-1">
+                        <div class="col-md-3">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">Ctr Lat</span>
+                                <input type="number" step="0.0001" class="form-control" name="map_center_lat" id="create_center_lat" placeholder="39.500">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">Ctr Lon</span>
+                                <input type="number" step="0.0001" class="form-control" name="map_center_lon" id="create_center_lon" placeholder="-98.350">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">Zoom</span>
+                                <input type="number" class="form-control" name="map_zoom" id="create_zoom" value="10" min="6" max="16">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-text">Use "Pick on Map" or enter coordinates manually. Bounding box constrains the Preferences map.</div>
+                </div>
+
+                <div class="col-12">
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-plus-circle me-1"></i>Create Site &amp; Initialize Database
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

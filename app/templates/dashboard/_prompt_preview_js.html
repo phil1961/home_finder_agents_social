@@ -1,0 +1,137 @@
+{# Shared partial: Prompt preview modal JS
+   Expects: `defaults` object and site_url in scope #}
+let currentPreviewType = 'deal';
+const PREF_DEFAULTS = {price:8,size:5,yard:7,features:8,flood:6,year_built:5,single_story:7,price_per_sqft:4,hoa:6,tax:5,dom:3,pool:2};
+const PORTFOLIO_DEFAULT = `Buyer's favorites (3 properties):\n\n1. 742 Evergreen Terrace — $385,000 | 4bd/2.5ba | 2,100 sqft | Score: 72\n   Garage, porch, patio. Year built 1989. Price dropped 3.5%.\n\n2. 15 Oak Lane — $420,000 | 4bd/3ba | 2,450 sqft | Score: 81\n   Garage, single story. Year built 2005. HOA $125/mo.\n\n3. 303 Palmetto Dr — $349,000 | 3bd/2ba | 1,850 sqft | Score: 68\n   Porch, patio. Year built 1975. No flood zone. Price dropped 6.1%.\n\nMarket: Charleston, SC`;
+
+function openPreviewModal(ptype) {
+    currentPreviewType = ptype;
+    const titles = {deal:'Deal Analyst',portfolio:'Portfolio Analyst',preferences:'Preferences Coach'};
+    document.getElementById('pm-title').textContent = titles[ptype]||ptype;
+    document.querySelectorAll('.pm-fields').forEach(el=>el.style.display='none');
+    document.getElementById('pm-fields-'+ptype).style.display='block';
+    ['pm-ready','pm-loading','pm-error','pm-result-deal','pm-result-portfolio','pm-result-preferences','pm-meta'].forEach(id=>{
+        const el=document.getElementById(id); if(el) el.style.display='none';
+    });
+    document.getElementById('pm-ready').style.display='block';
+    if(ptype==='preferences'){
+        for(const[k,v] of Object.entries(PREF_DEFAULTS)){
+            const sl=document.getElementById('pm-wt-'+k); if(sl){sl.value=v; document.getElementById('pm-wt-val-'+k).textContent=v+'/10';}
+        }
+    }
+    if(ptype==='portfolio') document.getElementById('pm-portfolio-text').value=PORTFOLIO_DEFAULT;
+    new bootstrap.Modal(document.getElementById('previewModal')).show();
+}
+
+function resetSampleData() {
+    if(currentPreviewType==='deal'){
+        const d={address:'742 Evergreen Terrace, Springfield',price:385000,beds:4,baths:2.5,sqft:2100,lot:8712,year:1989,dom:34,hoa:0,tax:4200,pchg:-3.5,score:72,stories:2,market:'Charleston, SC'};
+        for(const[k,v] of Object.entries(d)){const el=document.getElementById('pm-'+k);if(el)el.value=v;}
+        document.getElementById('pm-flood').value='X';
+        document.getElementById('pm-garage').checked=true;document.getElementById('pm-porch').checked=true;
+        document.getElementById('pm-patio').checked=true;document.getElementById('pm-pool').checked=false;document.getElementById('pm-single').checked=false;
+    } else if(currentPreviewType==='portfolio'){
+        document.getElementById('pm-portfolio-text').value=PORTFOLIO_DEFAULT;
+    } else {
+        for(const[k,v] of Object.entries(PREF_DEFAULTS)){
+            const sl=document.getElementById('pm-wt-'+k);if(sl){sl.value=v;document.getElementById('pm-wt-val-'+k).textContent=v+'/10';}
+        }
+        document.getElementById('pm-pref-beds').value=4;document.getElementById('pm-pref-baths').value=3;
+        document.getElementById('pm-pref-plow').value=200000;document.getElementById('pm-pref-phigh').value=600000;
+    }
+}
+
+function buildSampleContext() {
+    const t=currentPreviewType;
+    if(t==='deal'){
+        const v=id=>document.getElementById('pm-'+id).value;
+        const c=id=>document.getElementById('pm-'+id).checked;
+        const feats=[]; if(c('garage'))feats.push('garage'); if(c('porch'))feats.push('porch');
+        if(c('patio'))feats.push('patio'); if(c('pool'))feats.push('community pool'); if(c('single'))feats.push('single story');
+        const price=parseInt(v('price')); const sqft=parseInt(v('sqft'));
+        const ppsqft=sqft>0?Math.round(price/sqft):0;
+        const lot=parseInt(v('lot')); const acres=lot>0?(lot/43560).toFixed(2):'0';
+        const pchg=parseFloat(v('pchg')); const dir=pchg<0?'dropped':'increased';
+        const hoa=parseInt(v('hoa'));
+        let ctx=`Property: ${v('address')}\nPrice: $${price.toLocaleString()}\nBeds: ${v('beds')}  |  Baths: ${v('baths')}  |  Sqft: ${sqft.toLocaleString()}`;
+        if(lot>0)ctx+=`\nLot size: ${lot.toLocaleString()} sqft (${acres} acres)`;
+        ctx+=`\nYear built: ${v('year')}\nPrice per sqft: $${ppsqft}\nDays on market: ${v('dom')}`;
+        ctx+=`\nHOA: ${hoa>0?'$'+hoa+'/month':'None'}`;
+        ctx+=`\nEstimated annual property tax: $${parseInt(v('tax')).toLocaleString()}\nStories: ${v('stories')}`;
+        if(pchg!==0)ctx+=`\nPrice has ${dir} ${Math.abs(pchg).toFixed(1)}%`;
+        if(feats.length)ctx+=`\nFeatures: ${feats.join(', ')}`;
+        ctx+=`\nFlood zone: ${document.getElementById('pm-flood').value}\nDeal score: ${v('score')}/100\nMarket: ${v('market')}`;
+        return ctx;
+    } else if(t==='portfolio'){
+        return document.getElementById('pm-portfolio-text').value;
+    } else {
+        const wv=k=>(document.getElementById('pm-wt-'+k)||{}).value||'5';
+        let ctx="Buyer's scoring preferences:\n";
+        const labels={price:'Price',size:'Size',yard:'Yard',features:'Features',flood:'Flood risk',year_built:'Year built',single_story:'Single story',price_per_sqft:'Price per sqft',hoa:'HOA',tax:'Tax',dom:'Days on market',pool:'Community pool'};
+        for(const[k,l] of Object.entries(labels))ctx+=`  ${l} importance: ${wv(k)}/10\n`;
+        ctx+=`Price range: $${parseInt(document.getElementById('pm-pref-plow').value).toLocaleString()} - $${parseInt(document.getElementById('pm-pref-phigh').value).toLocaleString()}\n`;
+        ctx+=`Min beds: ${document.getElementById('pm-pref-beds').value}  |  Min baths: ${document.getElementById('pm-pref-baths').value}\nMust have: garage, porch, patio\nMarket: Charleston, SC`;
+        return ctx;
+    }
+}
+
+function sendPreview() {
+    const btn=document.getElementById('pm-send-btn');
+    const ta=document.getElementById('ta_'+currentPreviewType);
+    const promptText=ta.value.trim()||defaults[currentPreviewType];
+    if(!promptText){alert('No prompt to test.');return;}
+    ['pm-ready','pm-error','pm-result-deal','pm-result-portfolio','pm-result-preferences','pm-meta'].forEach(id=>{
+        const el=document.getElementById(id);if(el)el.style.display='none';
+    });
+    document.getElementById('pm-loading').style.display='block';
+    btn.disabled=true; btn.innerHTML='<span class="spinner-border spinner-border-sm"></span> Waiting for Claude...';
+    const fd=new FormData();
+    fd.append('ptype',currentPreviewType);
+    fd.append('prompt_text',promptText);
+    fd.append('sample_context',buildSampleContext());
+    fetch('{{ site_url("dashboard.prompt_preview") }}',{method:'POST',body:fd}).then(r=>r.json()).then(data=>{
+        document.getElementById('pm-loading').style.display='none';
+        if(data.error){document.getElementById('pm-error').textContent=data.error;document.getElementById('pm-error').style.display='block';return;}
+        const r=data.result;
+        if(currentPreviewType==='deal')renderDeal(r);
+        else if(currentPreviewType==='portfolio')renderPortfolio(r);
+        else renderPreferences(r);
+        document.getElementById('pm-time').textContent=data.response_time_ms||'?';
+        document.getElementById('pm-raw-json').textContent=JSON.stringify(r,null,2);
+        document.getElementById('pm-raw-json').classList.add('d-none');
+        document.getElementById('pm-meta').style.display='block';
+    }).catch(()=>{
+        document.getElementById('pm-loading').style.display='none';
+        document.getElementById('pm-error').textContent='Network error.';document.getElementById('pm-error').style.display='block';
+    }).finally(()=>{btn.disabled=false; btn.innerHTML='<i class="bi bi-send me-1"></i> Send to Claude';});
+}
+
+function renderDeal(r) {
+    document.getElementById('pm-deal-summary').textContent=r.summary||'';
+    document.getElementById('pm-deal-strengths').textContent=r.strengths||'';
+    document.getElementById('pm-deal-concerns').textContent=r.concerns||'';
+    document.getElementById('pm-deal-negotiation').textContent=r.negotiation||'';
+    const verdicts={strong_buy:['Strong Buy','bg-success'],worth_considering:['Worth Considering','bg-primary'],pass:['Pass','bg-danger']};
+    const v=verdicts[r.verdict]||verdicts['worth_considering'];
+    const badge=document.getElementById('pm-verdict-badge');
+    badge.textContent=v[0]; badge.className='badge fs-6 px-3 py-2 '+v[1];
+    document.getElementById('pm-result-deal').style.display='block';
+}
+function renderPortfolio(r) {
+    document.getElementById('pm-pf-headline').textContent=r.headline||'';
+    document.getElementById('pm-pf-ranking').textContent=r.ranking||'';
+    document.getElementById('pm-pf-patterns').textContent=r.patterns||'';
+    document.getElementById('pm-pf-strategy').textContent=r.strategy||'';
+    document.getElementById('pm-pf-darkhorse').textContent=r.dark_horse||'';
+    document.getElementById('pm-pf-bottomline').textContent=r.bottom_line||'';
+    document.getElementById('pm-result-portfolio').style.display='block';
+}
+function renderPreferences(r) {
+    document.getElementById('pm-pr-headline').textContent=r.headline||'';
+    document.getElementById('pm-pr-strengths').textContent=r.strengths||'';
+    document.getElementById('pm-pr-blindspots').textContent=r.blind_spots||'';
+    document.getElementById('pm-pr-tweaks').textContent=r.tweaks||'';
+    document.getElementById('pm-pr-local').textContent=r.local_insight||'';
+    document.getElementById('pm-pr-bottomline').textContent=r.bottom_line||'';
+    document.getElementById('pm-result-preferences').style.display='block';
+}

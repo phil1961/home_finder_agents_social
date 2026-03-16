@@ -1,0 +1,1203 @@
+<!--
+  File: app/templates/dashboard/detail.html
+  App Version: 2026.03.14 | File Version: 1.10.0
+  Last Modified: 2026-03-14
+-->
+{% extends "base.html" %}
+{% block title %}{{ listing.address }} – HomeFinder{% endblock %}
+
+{% block head %}
+<style>
+    .source-badge-zillow { background: #006AFF; color: #fff; font-size: 0.85rem; }
+    .source-badge-realtor { background: #D92228; color: #fff; font-size: 0.85rem; }
+    .xref-btn-zillow { border-color: #006AFF; color: #006AFF; }
+    .xref-btn-zillow:hover { background: #006AFF; color: #fff; }
+    .xref-btn-realtor { border-color: #D92228; color: #D92228; }
+    .xref-btn-realtor:hover { background: #D92228; color: #fff; }
+    .stat-block { text-align: center; padding: 12px 8px; background: #f9fafb; border-radius: 8px; }
+    .stat-block .val { font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
+    .stat-block .label { font-size: 0.7rem; text-transform: uppercase; color: #6b7280; letter-spacing: 0.5px; }
+    #detail-map { height: 250px; border-radius: 10px; z-index: 0; }
+    .zoom-btn.active { background: #2563eb !important; color: #fff !important; border-color: #2563eb !important; }
+    .zoom-btn { font-size: 0.7rem; padding: 2px 8px; }
+    .lm-tooltip { font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border: 1px solid #dc2626; background: #fff; color: #1e293b; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+</style>
+{% if listing.latitude and listing.longitude %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{% set addr_encoded = listing.address|replace(',', '')|replace(' ', '-') %}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ site_url('dashboard.index') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active">{{ listing.address }}</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <!-- ── Main column ─────────────────────────────────────────── -->
+    <div class="col-lg-8">
+        <h3 class="mb-1">{{ listing.address }}</h3>
+        <p class="text-muted mb-2">
+            {{ listing.area_name or listing.city }}, {{ listing.zip_code }}
+            {% if listing.place_name %}
+            <span class="badge rounded-pill ms-1"
+                  style="background:#e8f0fe; color:#1a56db; font-size:0.72rem; font-weight:500;">
+                <i class="bi bi-geo-fill me-1"></i>{{ listing.place_name }}
+            </span>
+            {% endif %}
+        </p>
+        <h2 class="text-primary mb-3">${{ "{:,}".format(listing.price) }}</h2>
+
+        <!-- Photo gallery -->
+        {% if listing.photos %}
+        <div class="mb-3">
+            {% set detail_photos = listing.photos_large %}
+            {% if detail_photos|length == 1 %}
+            <img src="{{ detail_photos[0] }}" alt="{{ listing.address }}"
+                 class="img-fluid rounded shadow-sm" style="max-height: 500px; width: 100%; object-fit: cover;"
+                 onerror="this.src='{{ listing.photos[0] }}'">
+            {% else %}
+            <div id="photoCarousel" class="carousel slide shadow-sm rounded overflow-hidden" data-bs-ride="false">
+                <div class="carousel-indicators">
+                    {% for p in detail_photos %}
+                    <button type="button" data-bs-target="#photoCarousel" data-bs-slide-to="{{ loop.index0 }}"
+                            {% if loop.first %}class="active"{% endif %}></button>
+                    {% endfor %}
+                </div>
+                <div class="carousel-inner">
+                    {% for p in detail_photos %}
+                    <div class="carousel-item {% if loop.first %}active{% endif %}">
+                        <img src="{{ p }}" alt="Photo {{ loop.index }}" class="d-block w-100"
+                             style="height: 500px; object-fit: cover;"
+                             loading="lazy"
+                             onerror="this.src='{{ listing.photos[loop.index0] }}'">
+                    </div>
+                    {% endfor %}
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#photoCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon"></span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#photoCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon"></span>
+                </button>
+            </div>
+            <small class="text-muted">{{ listing.photos|length }} photos</small>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Stats row -->
+        <div class="row g-2 mb-3">
+            <div class="col"><div class="stat-block"><div class="val">{{ listing.beds }}</div><div class="label">Beds</div></div></div>
+            <div class="col"><div class="stat-block"><div class="val">{{ listing.baths }}</div><div class="label">Baths</div></div></div>
+            <div class="col"><div class="stat-block"><div class="val">{{ "{:,}".format(listing.sqft or 0) }}</div><div class="label">Sqft</div></div></div>
+            <div class="col"><div class="stat-block"><div class="val">{{ "{:,}".format(listing.lot_sqft or 0) }}</div><div class="label">Lot Sqft</div></div></div>
+            {% if listing.year_built %}
+            <div class="col"><div class="stat-block"><div class="val">{{ listing.year_built }}</div><div class="label">Built</div></div></div>
+            {% endif %}
+        </div>
+
+        <!-- Feature tags -->
+        <div class="mb-3">
+            {% if listing.has_garage %}<span class="badge bg-secondary me-1">Garage</span>{% endif %}
+            {% if listing.has_porch %}<span class="badge bg-secondary me-1">Porch</span>{% endif %}
+            {% if listing.has_patio %}<span class="badge bg-secondary me-1">Patio</span>{% endif %}
+            {% if listing.above_flood_plain %}<span class="badge bg-info text-dark me-1">Above Flood Plain</span>{% endif %}
+            {% if listing.flood_zone %}<span class="badge bg-light text-dark border me-1">FEMA Zone: {{ listing.flood_zone }}</span>{% endif %}
+        </div>
+
+        <!-- Mini map -->
+        {% if listing.latitude and listing.longitude %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body pb-2">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="card-title mb-0"><i class="bi bi-geo-alt"></i> Location</h6>
+                    <div class="btn-group btn-group-sm" id="zoom-buttons" role="group">
+                        <button type="button" class="btn btn-outline-secondary zoom-btn" data-zoom="19" title="Street level">Street</button>
+                        <button type="button" class="btn btn-outline-secondary zoom-btn" data-zoom="16" title="Block level">Block</button>
+                        <button type="button" class="btn btn-outline-secondary zoom-btn active" data-zoom="14" title="Neighborhood">Neighborhood</button>
+                        <button type="button" class="btn btn-outline-secondary zoom-btn" data-zoom="12" title="Area / city">Area</button>
+                    </div>
+                </div>
+                <div id="detail-map"></div>
+                <div class="d-flex justify-content-between align-items-center mt-1">
+                    <div>
+                        {% if landmarks %}
+                        <span class="small text-muted" style="font-size:0.65rem;">
+                            <i class="bi bi-star-fill" style="color:#dc2626;font-size:0.6rem;"></i>
+                            {{ landmarks|length }} landmark{{ 's' if landmarks|length != 1 }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex gap-2">
+                        {% if poi_name and poi_distance_miles is not none %}
+                        <a href="https://www.google.com/maps/dir/{{ poi_name|urlencode }}/{{ listing.address|urlencode }}"
+                           target="_blank" class="small text-muted" style="font-size:0.72rem;"
+                           title="Directions from {{ poi_name }} to this listing">
+                            <i class="bi bi-pin-map-fill" style="color:#dc2626;font-size:0.6rem;"></i>
+                            {{ poi_name }} <i class="bi bi-box-arrow-up-right"></i>
+                        </a>
+                        <span class="text-muted">|</span>
+                        {% endif %}
+                        <a id="gmaps-link"
+                           href="https://www.google.com/maps/place/{{ listing.address|urlencode }}/@{{ listing.latitude }},{{ listing.longitude }},14z"
+                           target="_blank" class="small text-muted" style="font-size:0.72rem;">
+                            Google Maps <i class="bi bi-box-arrow-up-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Source + cross-reference links -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="card-title mb-3">View This Property</h6>
+
+                {% if listing.source == 'zillow' %}
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <span class="badge source-badge-zillow px-3 py-2">
+                        <i class="bi bi-building"></i> Found on Zillow
+                    </span>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    {% if listing.url %}
+                    <a href="{{ listing.url }}" target="_blank" class="btn btn-sm xref-btn-zillow">
+                        <i class="bi bi-building"></i> Open on Zillow <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                    {% endif %}
+                    <a href="https://www.realtor.com/realestateandhomes-search/{{ addr_encoded }}"
+                       target="_blank" class="btn btn-sm xref-btn-realtor">
+                        <i class="bi bi-house-door"></i> Find on Realtor.com <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                    <a href="https://www.google.com/maps/search/{{ listing.address|urlencode }}"
+                       target="_blank" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-geo-alt"></i> Google Maps <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                </div>
+
+                {% elif listing.source == 'realtor' %}
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <span class="badge source-badge-realtor px-3 py-2">
+                        <i class="bi bi-house-door"></i> Found on Realtor.com
+                    </span>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    {% if listing.url %}
+                    <a href="{{ listing.url }}" target="_blank" class="btn btn-sm xref-btn-realtor">
+                        <i class="bi bi-house-door"></i> Open on Realtor.com <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                    {% endif %}
+                    <a href="https://www.zillow.com/homes/{{ addr_encoded }}_rb/"
+                       target="_blank" class="btn btn-sm xref-btn-zillow">
+                        <i class="bi bi-building"></i> Find on Zillow <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                    <a href="https://www.google.com/maps/search/{{ listing.address|urlencode }}"
+                       target="_blank" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-geo-alt"></i> Google Maps <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Description -->
+        <div class="card border-0 shadow-sm mb-3" id="description-card">
+            <div class="card-body">
+                <h6 class="card-title">Description</h6>
+                {% if listing.description %}
+                <p class="mb-0" style="white-space: pre-line;" id="description-text">{{ listing.description }}</p>
+                {% elif not listing.details_fetched and listing.source in ('zillow', 'realtor') %}
+                <div id="enrich-prompt">
+                    <p class="text-muted small mb-2">
+                        Extended property details are available from {{ listing.source|capitalize }}.
+                    </p>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="enrich-btn"
+                            onclick="fetchEnrichment()">
+                        <i class="bi bi-cloud-download me-1"></i>Fetch Property Details
+                    </button>
+                </div>
+                <div id="enrich-loading" style="display:none;" class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                    <span class="text-muted small">Fetching details from {{ listing.source|capitalize }}...</span>
+                </div>
+                <div id="enrich-error" style="display:none;" class="alert alert-warning small mb-0"></div>
+                <p class="mb-0" style="white-space: pre-line; display:none;" id="description-text"></p>
+                {% else %}
+                <p class="text-muted small mb-0">No description available.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Structured property details (lazy-enriched from source API) -->
+        {% if detail_sections %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                <strong><i class="bi bi-list-ul me-1"></i> Property Details</strong>
+                <button class="btn btn-link btn-sm p-0 text-muted" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#prop-details-body"
+                        aria-expanded="false"
+                        onclick="this.querySelector('i').classList.toggle('bi-chevron-down'); this.querySelector('i').classList.toggle('bi-chevron-up');">
+                    <i class="bi bi-chevron-down" id="prop-details-chevron"></i>
+                </button>
+            </div>
+            <div class="collapse" id="prop-details-body">
+                <div class="card-body pt-0">
+                    <div class="row g-3">
+                        {% for section in detail_sections %}
+                        <div class="col-12 col-sm-6">
+                            <p class="text-muted fw-semibold mb-1 text-uppercase" style="font-size:0.7rem;letter-spacing:.05em;">
+                                {{ section.category }}
+                            </p>
+                            <ul class="list-unstyled mb-0 small">
+                                {% for item in section.text %}
+                                <li class="mb-1">{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Price History -->
+        {% set history = listing.price_history %}
+        {% if listing.has_price_changes %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="card-title"><i class="bi bi-graph-down"></i> Price History</h6>
+
+                <!-- Chart -->
+                <div style="position:relative; height:120px; margin-bottom:12px;" id="price-chart-wrap">
+                    <canvas id="price-chart"></canvas>
+                </div>
+
+                <!-- Table -->
+                <table class="table table-sm table-borderless mb-0" style="font-size:0.8rem;">
+                    <thead>
+                        <tr class="text-muted">
+                            <th style="font-weight:600;">Date</th>
+                            <th style="font-weight:600;">Price</th>
+                            <th style="font-weight:600;">Change</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in history %}
+                        <tr{% if entry.event == 'current' %} class="fw-semibold"{% endif %}>
+                            <td>{{ entry.date[:10] }}</td>
+                            <td>${{ "{:,}".format(entry.price) }}</td>
+                            <td>
+                                {% if loop.first %}
+                                    —
+                                {% else %}
+                                    {% set diff = entry.price - history[loop.index0 - 1].price %}
+                                    {% if diff < 0 %}
+                                        <span class="text-success">▼ ${{ "{:,}".format(diff|abs) }}</span>
+                                    {% elif diff > 0 %}
+                                        <span class="text-danger">▲ ${{ "{:,}".format(diff) }}</span>
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if entry.event == 'listed' %}
+                                    <span class="badge bg-primary" style="font-size:0.65rem;">Listed</span>
+                                {% elif entry.event == 'reduced' %}
+                                    <span class="badge bg-success" style="font-size:0.65rem;">Reduced</span>
+                                {% elif entry.event == 'increased' %}
+                                    <span class="badge bg-danger" style="font-size:0.65rem;">Increased</span>
+                                {% elif entry.event == 'current' %}
+                                    <span class="badge bg-dark" style="font-size:0.65rem;">Current</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% set first_price = history[0].price %}
+                {% set current_price = history[-1].price %}
+                {% if first_price != current_price %}
+                {% set total_change = current_price - first_price %}
+                {% set pct = (total_change / first_price * 100) %}
+                <p class="mt-2 mb-0 small text-muted">
+                    Total change: <strong class="text-{{ 'success' if total_change < 0 else 'danger' }}">
+                    {{ "▼" if total_change < 0 else "▲" }}
+                    ${{ "{:,}".format(total_change|abs) }}
+                    ({{ "{:.1f}".format(pct) }}%)</strong>
+                    over {{ history|length - 1 }} update{{ "s" if history|length > 2 else "" }}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        {% elif history|length >= 1 %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="card-title"><i class="bi bi-graph-down"></i> Price History</h6>
+                <p class="text-muted small mb-0">
+                    Listed at ${{ "{:,}".format(history[0].price) }} on {{ history[0].date[:10] }}.
+                    No price changes recorded yet.
+                </p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- AI Deal Analyst -->
+        <div class="card border-0 shadow-sm mb-3" id="ai-analyst-card">
+            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                <strong><i class="bi bi-robot"></i> AI Deal Analyst</strong>
+                {% if current_user.is_authenticated %}
+                <button class="btn btn-sm btn-primary" id="analyze-btn" onclick="runAnalysis()">
+                    <i class="bi bi-lightning-charge"></i> Analyze This Deal
+                </button>
+                {% else %}
+                <button class="btn btn-sm btn-outline-primary" onclick="showJoinModal('analyze')">
+                    <i class="bi bi-lock"></i> Analyze This Deal
+                </button>
+                {% endif %}
+            </div>
+            <div class="card-body pt-0" id="ai-result" style="display:none;">
+                <!-- Loading state -->
+                <div id="ai-loading" style="display:none;" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="text-muted mt-2 small">Claude is analyzing this listing as your buyer's agent...</p>
+                </div>
+
+                <!-- Error state -->
+                <div id="ai-error" style="display:none;" class="alert alert-warning mb-0"></div>
+
+                <!-- Results -->
+                <div id="ai-brief" style="display:none;">
+                    <!-- Verdict badge -->
+                    <div class="text-center mb-3">
+                        <span class="badge fs-6 px-3 py-2" id="ai-verdict-badge"></span>
+                    </div>
+
+                    <!-- Summary -->
+                    <p class="fw-semibold mb-3" id="ai-summary" style="font-size:1.05rem;"></p>
+
+                    <!-- Strengths -->
+                    <div class="mb-3">
+                        <h6 class="text-success"><i class="bi bi-check-circle-fill"></i> Strengths</h6>
+                        <p class="mb-0 small" id="ai-strengths" style="white-space:pre-line;"></p>
+                    </div>
+
+                    <!-- Concerns -->
+                    <div class="mb-3">
+                        <h6 class="text-warning"><i class="bi bi-exclamation-triangle-fill"></i> Concerns</h6>
+                        <p class="mb-0 small" id="ai-concerns" style="white-space:pre-line;"></p>
+                    </div>
+
+                    <!-- Negotiation -->
+                    <div class="mb-2 p-3 rounded" style="background:#eff6ff; border-left:4px solid #2563eb;">
+                        <h6 class="text-primary mb-2"><i class="bi bi-cash-stack"></i> Negotiation Strategy</h6>
+                        <p class="mb-0 small" id="ai-negotiation" style="white-space:pre-line;"></p>
+                    </div>
+
+                    <p class="text-muted mt-2" style="font-size:0.65rem;">
+                        <i class="bi bi-info-circle"></i>
+                        AI analysis is advisory only. Always consult your real estate agent and do your own due diligence.
+                        &nbsp;·&nbsp; <i class="bi bi-clock"></i> Analyzed <span id="ai-timestamp"></span>
+                        <span id="ai-cached-note" class="ms-2" style="display:none;">
+                            <i class="bi bi-clock-history"></i> Showing saved analysis —
+                            <a href="#" onclick="runAnalysis(); return false;">refresh</a>
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Sidebar ─────────────────────────────────────────────── -->
+    <div class="col-lg-4">
+        <!-- Deal Score -->
+        {% if listing.deal_score %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-transparent border-0"><strong>Deal Score</strong></div>
+            <div class="card-body pt-0">
+                {% set score = user_composite %}
+                <h2 class="text-center text-{{ 'success' if score >= 75 else ('primary' if score >= 50 else 'danger') }} mb-3">
+                    {{ "%.0f"|format(score) }}<small class="text-muted">/100</small>
+                </h2>
+
+                {% set all_scores = [
+                    ('Price', user_scores.get('price_score')),
+                    ('House Size', user_scores.get('size_score')),
+                    ('Yard Size', user_scores.get('yard_score')),
+                    ('Features', user_scores.get('feature_score')),
+                    ('Flood Risk', user_scores.get('flood_score')),
+                    ('Year Built', user_scores.get('year_built_score')),
+                    ('Single Story', user_scores.get('single_story_score')),
+                    ('Price/Sqft', user_scores.get('price_per_sqft_score')),
+                    ('Days on Market', user_scores.get('days_on_market_score')),
+                    ('HOA Fee', user_scores.get('hoa_score')),
+                    ('Near Medical', user_scores.get('proximity_medical_score')),
+                    ('Near Grocery', user_scores.get('proximity_grocery_score')),
+                    ('Community Pool', user_scores.get('community_pool_score')),
+                    ('Property Tax', user_scores.get('property_tax_score')),
+                    ('Lot Ratio', user_scores.get('lot_ratio_score')),
+                    ('Price Trend', user_scores.get('price_trend_score')),
+                    ('Walkability', user_scores.get('walkability_score')),
+                ] %}
+
+                <table class="table table-sm table-borderless mb-0" style="font-size:0.8rem;">
+                    {% for label, val in all_scores %}
+                    {% if val is not none %}
+                    <tr>
+                        <td class="py-0">{{ label }}</td>
+                        <td class="py-0" style="width:50%">
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar {% if val >= 75 %}bg-success{% elif val >= 50 %}bg-primary{% else %}bg-danger{% endif %}"
+                                     style="width: {{ val }}%"></div>
+                            </div>
+                        </td>
+                        <td class="py-0 text-end text-muted" style="width:28px;">{{ "%.0f"|format(val) }}</td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if poi_name and poi_distance_miles is not none %}
+                    {% set poi_val = user_scores.get('proximity_poi_score', 50) %}
+                    <tr style="border-top: 1px solid #e5e7eb;">
+                        <td class="py-1">
+                            <i class="bi bi-pin-map-fill me-1" style="color:#dc2626; font-size:0.7rem;"></i>
+                            {{ poi_name }}
+                            <div style="font-size:0.65rem; color:#64748b; margin-top:-1px;">
+                                {% if poi_distance_miles < 0.5 %}
+                                    <strong style="color:#059669;">{{ "%.1f"|format(poi_distance_miles) }} mi</strong> — walking distance
+                                {% elif poi_distance_miles < 2 %}
+                                    <strong style="color:#059669;">{{ "%.1f"|format(poi_distance_miles) }} mi</strong> — very close
+                                {% elif poi_distance_miles < 5 %}
+                                    <strong style="color:#2563eb;">{{ "%.1f"|format(poi_distance_miles) }} mi</strong> — short drive
+                                {% elif poi_distance_miles < 10 %}
+                                    <strong style="color:#d97706;">{{ "%.1f"|format(poi_distance_miles) }} mi</strong> — moderate drive
+                                {% else %}
+                                    <strong style="color:#dc2626;">{{ "%.1f"|format(poi_distance_miles) }} mi</strong> — far
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="py-1" style="width:50%; vertical-align:middle;">
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar {% if poi_val >= 75 %}bg-success{% elif poi_val >= 50 %}bg-primary{% else %}bg-danger{% endif %}"
+                                     style="width: {{ poi_val }}%"></div>
+                            </div>
+                        </td>
+                        <td class="py-1 text-end text-muted" style="width:28px; vertical-align:middle;">{{ "%.0f"|format(poi_val) }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Share & Collections -->
+        <div class="card border-0 shadow-sm mb-3" style="border-left: 4px solid #667eea !important;">
+            <div class="card-header bg-transparent border-0">
+                <strong style="color: #667eea;"><i class="bi bi-share"></i> Share & Collect</strong>
+            </div>
+            <div class="card-body pt-0">
+                <button class="btn btn-sm btn-outline-primary w-100 mb-2" data-bs-toggle="modal" data-bs-target="#shareDetailModal">
+                    <i class="bi bi-send me-1"></i>Share This Listing
+                </button>
+                {% if current_user.is_authenticated %}
+                {% set user_collections = current_user.social_collections.all() %}
+                {% if user_collections %}
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary w-100 dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="bi bi-collection me-1"></i>Add to Collection
+                    </button>
+                    <ul class="dropdown-menu w-100">
+                        {% for coll in user_collections %}
+                        <li>
+                            <form method="POST" action="{{ site_url('social.collection_add_listing', collection_id=coll.id) }}" class="d-inline">
+                                <input type="hidden" name="listing_id" value="{{ listing.id }}">
+                                <button type="submit" class="dropdown-item">{{ coll.title }}</button>
+                            </form>
+                        </li>
+                        {% endfor %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ site_url('social.collection_create') }}"><i class="bi bi-plus me-1"></i>New Collection</a></li>
+                    </ul>
+                </div>
+                {% else %}
+                <a href="{{ site_url('social.collection_create') }}" class="btn btn-sm btn-outline-secondary w-100">
+                    <i class="bi bi-plus me-1"></i>Create a Collection
+                </a>
+                {% endif %}
+                {% endif %}
+                {% set share_count = listing.social_shares.count() %}
+                {% if share_count > 0 %}
+                <p class="text-muted small mt-2 mb-0">
+                    <i class="bi bi-people me-1"></i>{{ share_count }} {{ "person has" if share_count == 1 else "people have" }} shared this listing
+                </p>
+                {% endif %}
+
+                <!-- Reaction summary -->
+                {% if reaction_summary %}
+                <div class="mt-2 d-flex flex-wrap gap-1">
+                    {% for rtype, icon, label, color, count in reaction_summary %}
+                    <span class="badge rounded-pill bg-light text-dark border" style="font-size:0.72rem;">
+                        <i class="bi {{ icon }} {{ color }} me-1"></i>{{ label }} <strong>{{ count }}</strong>
+                    </span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Your Flag -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-transparent border-0"><strong>Your Flag</strong></div>
+            <div class="card-body pt-0">
+                {% if user_flag %}
+                <p class="mb-2">Currently: <strong>{{ user_flag.flag|capitalize }}</strong></p>
+                {% if user_flag.note %}<p class="text-muted small">{{ user_flag.note }}</p>{% endif %}
+                {% else %}
+                <p class="text-muted mb-2">No flag set.</p>
+                {% endif %}
+                <div class="d-flex gap-2">
+                    {% for f, icon in [('favorite','⭐'), ('maybe','🤔'), ('hidden','🙈')] %}
+                    <form method="POST" action="{{ site_url('dashboard.toggle_flag', listing_id=listing.id) }}">
+                        <input type="hidden" name="flag" value="{{ f }}">
+                        <button class="btn btn-sm {% if user_flag and user_flag.flag == f %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                            {{ icon }} {{ f|capitalize }}
+                        </button>
+                    </form>
+                    {% endfor %}
+                </div>
+                {% if not current_user.is_authenticated %}
+                <p class="text-muted small mt-2 mb-0">
+                    <i class="bi bi-info-circle"></i> Flags are saved in your browser session.
+                    <a href="{{ site_url('auth.register') }}">Create a free account</a> to keep them permanently.
+                </p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Watch This Street -->
+        {% if street_name %}
+        <div class="card border-0 shadow-sm mb-3" id="street-watch-card" style="border-left: 4px solid #8b5cf6 !important;">
+            <div class="card-header bg-transparent border-0">
+                <strong style="color: #8b5cf6;"><i class="bi bi-eye"></i> Watch This Street</strong>
+            </div>
+            <div class="card-body pt-0">
+                <p class="mb-2 small">Get alerts when new listings appear on <strong>{{ street_name }}</strong> in {{ listing.zip_code }}.</p>
+
+                <div id="sw-form" {% if street_watching %}style="display:none;"{% endif %}>
+                    {% if current_user.is_authenticated %}
+                    <button class="btn btn-sm w-100" id="sw-add-btn" onclick="addStreetWatch()"
+                            style="background: #8b5cf6; color: #fff; border: none;">
+                        <i class="bi bi-eye"></i> Watch {{ street_name }}
+                    </button>
+                    {% else %}
+                    <a href="{{ site_url('auth.register') }}" class="btn btn-sm btn-outline-secondary w-100">
+                        <i class="bi bi-person-plus"></i> Sign up to watch streets
+                    </a>
+                    {% endif %}
+                </div>
+
+                <div id="sw-success" {% if not street_watching %}style="display:none;"{% endif %}>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge rounded-pill" style="background: #8b5cf6;">
+                            <i class="bi bi-check-lg"></i> Watching
+                        </span>
+                        <span class="small text-muted">{{ street_name }}</span>
+                        {% if street_watching %}
+                        <button class="btn btn-sm btn-link text-muted p-0 ms-auto" onclick="removeStreetWatch({{ street_watching.id }})">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                        {% else %}
+                        <button class="btn btn-sm btn-link text-muted p-0 ms-auto" id="sw-remove-btn" style="display:none;" onclick="removeStreetWatch()">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if current_user.is_authenticated %}
+                <p class="text-muted mt-2 mb-0" style="font-size: 0.65rem;">
+                    <i class="bi bi-shield-check"></i> Alerts sent to {{ current_user.email }}. Unsubscribe anytime.
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Your Notes -->
+        {% if current_user.is_authenticated %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+                <strong><i class="bi bi-journal-text"></i> Your Notes</strong>
+                <span id="note-status" class="small text-muted"></span>
+            </div>
+            <div class="card-body pt-0">
+                <textarea id="note-text" class="form-control form-control-sm mb-2" rows="3"
+                          placeholder="Add your private notes about this property..."
+                          style="font-size:0.85rem;">{{ listing_note.note_text if listing_note else '' }}</textarea>
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                    {% for field, label, icon in [
+                        ('visited', 'Visited', 'bi-house-check'),
+                        ('scheduled_visit', 'Tour Scheduled', 'bi-calendar-check'),
+                        ('made_offer', 'Made Offer', 'bi-cash-coin'),
+                        ('not_interested', 'Not Interested', 'bi-x-circle'),
+                    ] %}
+                    <label class="form-check-label d-flex align-items-center gap-1"
+                           style="font-size:0.78rem; cursor:pointer;">
+                        <input type="checkbox" class="form-check-input note-check" data-field="{{ field }}"
+                               {% if listing_note and listing_note[field] %}checked{% endif %}
+                               style="margin-top:0;">
+                        <i class="bi {{ icon }}"></i> {{ label }}
+                    </label>
+                    {% endfor %}
+                </div>
+                <button class="btn btn-sm btn-primary w-100" id="save-note-btn" onclick="saveNote()">
+                    <i class="bi bi-save"></i> Save Note
+                </button>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Message Agent (principals and clients with assigned agent) -->
+        {% if current_user.is_authenticated and current_user.agent_id %}
+        {% set agent = current_user.assigned_agent %}
+        {% if agent and agent.user %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-transparent border-0">
+                <strong><i class="bi bi-envelope"></i> Message {{ agent.full_name or agent.user.username }}</strong>
+            </div>
+            <div class="card-body pt-0">
+                <form method="POST" action="{{ site_url('dashboard.contact_agent') }}">
+                    <textarea name="message" id="agent-message" class="form-control form-control-sm mb-2" rows="3"
+                              placeholder="Ask your agent about this property..."
+                              style="font-size:0.85rem;"></textarea>
+                    <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+                        <i class="bi bi-send"></i> Send to {{ agent.full_name or agent.user.username }}
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <!-- Quick info -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0"><strong>Listing Info</strong></div>
+            <div class="card-body pt-0">
+                <table class="table table-sm table-borderless mb-0 small">
+                    <tr><td class="text-muted">Source</td><td>{{ listing.source|capitalize }}</td></tr>
+                    <tr><td class="text-muted">First Seen</td><td>{{ listing.first_seen.strftime('%b %d, %Y') if listing.first_seen else '—' }}</td></tr>
+                    <tr><td class="text-muted">Last Updated</td><td>{{ listing.last_seen.strftime('%b %d, %Y') if listing.last_seen else '—' }}</td></tr>
+                    <tr><td class="text-muted">Status</td><td>{{ listing.status|capitalize }}</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Detail Enrichment (AJAX) ──────────────────────────────────────
+function fetchEnrichment() {
+    const btn = document.getElementById('enrich-btn');
+    const prompt = document.getElementById('enrich-prompt');
+    const loading = document.getElementById('enrich-loading');
+    const error = document.getElementById('enrich-error');
+    const descText = document.getElementById('description-text');
+
+    prompt.style.display = 'none';
+    loading.style.display = 'block';
+    error.style.display = 'none';
+
+    let _timeout = setTimeout(function() {
+        loading.innerHTML = '<div class="spinner-border spinner-border-sm text-primary me-2"></div>' +
+            '<span class="text-muted small">Still working... this can take up to 15 seconds.</span>';
+    }, 5000);
+
+    fetch('{{ site_url("dashboard.enrich_listing", listing_id=listing.id) }}', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    })
+    .then(r => {
+        clearTimeout(_timeout);
+        if (r.status === 429) return r.json().then(d => { throw new Error(d.error || 'Quota exceeded'); });
+        if (r.status === 503) return r.json().then(d => { throw new Error(d.error || 'Service unavailable'); });
+        if (!r.ok) return r.json().then(d => { throw new Error(d.error || 'Failed to fetch'); });
+        return r.json();
+    })
+    .then(data => {
+        loading.style.display = 'none';
+        if (data.description) {
+            descText.textContent = data.description;
+            descText.style.display = 'block';
+        } else {
+            descText.textContent = 'No description available from the source.';
+            descText.style.display = 'block';
+            descText.className = 'text-muted small mb-0';
+        }
+        // If fields were updated, show a subtle note and reload after a moment
+        // so the page reflects new data (photos, features, etc.)
+        if (data.fields_updated && data.fields_updated.length > 1) {
+            const note = document.createElement('p');
+            note.className = 'text-success small mt-2 mb-0';
+            note.innerHTML = '<i class="bi bi-check-circle me-1"></i>Details loaded. Refreshing page...';
+            descText.parentNode.appendChild(note);
+            setTimeout(() => window.location.reload(), 1500);
+        }
+    })
+    .catch(err => {
+        clearTimeout(_timeout);
+        loading.style.display = 'none';
+        error.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>' + err.message +
+            '<br><button class="btn btn-sm btn-outline-warning mt-2" onclick="fetchEnrichment()">' +
+            '<i class="bi bi-arrow-repeat me-1"></i>Try Again</button>';
+        error.style.display = 'block';
+    });
+}
+
+// ── Street Watch (AJAX) ──────────────────────────────────────────
+{% if street_name %}
+var _swWatchId = {{ street_watching.id if street_watching else 'null' }};
+
+function addStreetWatch() {
+    const btn = document.getElementById('sw-add-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+    const body = new FormData();
+    body.append('street_name', '{{ street_name_normalised }}');
+    body.append('zip_code', '{{ listing.zip_code }}');
+    {% if not current_user.is_authenticated %}
+    const emailInput = document.getElementById('sw-email');
+    body.append('email', emailInput.value);
+    {% endif %}
+
+    fetch("{{ site_url('dashboard.watch_quick_add') }}", { method: 'POST', body: body })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            if (data.ok) {
+                _swWatchId = data.watch_id;
+                document.getElementById('sw-form').style.display = 'none';
+                document.getElementById('sw-success').style.display = 'block';
+                const rmBtn = document.getElementById('sw-remove-btn');
+                if (rmBtn) rmBtn.style.display = 'inline';
+            } else {
+                btn.innerHTML = '<i class="bi bi-eye"></i> Watch {{ street_name }}';
+                alert(data.error || 'Failed to create watch.');
+            }
+        })
+        .catch(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-eye"></i> Watch {{ street_name }}';
+        });
+}
+
+function removeStreetWatch(watchId) {
+    const id = watchId || _swWatchId;
+    if (!id) return;
+    fetch("{{ site_url('dashboard.watch_remove', watch_id=0) }}".replace('/0', '/' + id), {
+        method: 'POST',
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) {
+            document.getElementById('sw-form').style.display = 'block';
+            document.getElementById('sw-success').style.display = 'none';
+            _swWatchId = null;
+        }
+    });
+}
+{% endif %}
+
+// ── Save listing note (AJAX) ──────────────────────────────────────
+{% if current_user.is_authenticated %}
+function saveNote() {
+    const btn = document.getElementById('save-note-btn');
+    const status = document.getElementById('note-status');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
+    status.textContent = '';
+
+    const body = new FormData();
+    body.append('note_text', document.getElementById('note-text').value);
+    document.querySelectorAll('.note-check').forEach(cb => {
+        body.append(cb.dataset.field, cb.checked ? 'true' : 'false');
+    });
+
+    fetch("{{ site_url('dashboard.save_note', listing_id=listing.id) }}", {
+        method: 'POST',
+        body: body,
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-save"></i> Save Note';
+        if (data.ok) {
+            status.textContent = 'Saved ' + data.updated_at;
+            status.className = 'small text-success';
+        } else {
+            status.textContent = data.error || 'Save failed';
+            status.className = 'small text-danger';
+        }
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-save"></i> Save Note';
+        status.textContent = 'Network error';
+        status.className = 'small text-danger';
+    });
+}
+{% endif %}
+
+// ── Auto-populate agent message with property address ─────────────
+{% if current_user.is_authenticated and current_user.agent_id %}
+(function() {
+    const ta = document.getElementById('agent-message');
+    if (!ta) return;
+    let prefilled = false;
+    ta.addEventListener('focus', function() {
+        if (!prefilled && !ta.value.trim()) {
+            ta.value = "Re: {{ listing.address|e }}\n\n";
+            prefilled = true;
+            // Place cursor at end
+            ta.selectionStart = ta.selectionEnd = ta.value.length;
+        }
+    });
+})();
+{% endif %}
+
+// ── Paint a cached or freshly-fetched deal brief into the DOM ──────
+function _fmtNow() {
+    return new Date().toLocaleString('en-US', {
+        hour: 'numeric', minute: '2-digit', hour12: true,
+        month: 'short', day: 'numeric', year: 'numeric'
+    });
+}
+
+function paintDealBrief(data) {
+    const resultDiv = document.getElementById('ai-result');
+    const brief     = document.getElementById('ai-brief');
+    const loading   = document.getElementById('ai-loading');
+    const error     = document.getElementById('ai-error');
+    const btn       = document.getElementById('analyze-btn');
+
+    document.getElementById('ai-summary').textContent     = data.summary     || '';
+    document.getElementById('ai-strengths').textContent   = data.strengths   || '';
+    document.getElementById('ai-concerns').textContent    = data.concerns    || '';
+    document.getElementById('ai-negotiation').textContent = data.negotiation || '';
+
+    const verdicts = {
+        'strong_buy':        {text: '🟢 Strong Buy',          bg: 'bg-success'},
+        'worth_considering': {text: '🟡 Worth Considering',   bg: 'bg-warning text-dark'},
+        'pass':              {text: '🔴 Pass',                 bg: 'bg-danger'},
+    };
+    const v = verdicts[data.verdict] || verdicts['worth_considering'];
+    const badge = document.getElementById('ai-verdict-badge');
+    badge.className  = `badge fs-6 px-3 py-2 ${v.bg}`;
+    badge.textContent = v.text;
+
+    loading.style.display  = 'none';
+    error.style.display    = 'none';
+    brief.style.display    = 'block';
+    resultDiv.style.display = 'block';
+    if (btn) {
+        btn.disabled   = false;
+        btn.innerHTML  = '<i class="bi bi-arrow-clockwise"></i> Re-analyze';
+    }
+
+    // Timestamp
+    const tsEl = document.getElementById('ai-timestamp');
+    if (tsEl) tsEl.textContent = data._analyzed_at || _fmtNow();
+}
+
+// ── Pre-populate from server-side cache on page load ───────────────
+{% if cached_deal %}
+paintDealBrief({{ cached_deal | tojson }});
+document.getElementById('ai-cached-note').style.display = 'inline';
+{% endif %}
+
+// ── Fetch fresh analysis ───────────────────────────────────────────
+function runAnalysis() {
+    const btn       = document.getElementById('analyze-btn');
+    const resultDiv = document.getElementById('ai-result');
+    const loading   = document.getElementById('ai-loading');
+    const error     = document.getElementById('ai-error');
+    const brief     = document.getElementById('ai-brief');
+
+    btn.disabled      = true;
+    btn.innerHTML     = '<span class="spinner-border spinner-border-sm"></span> Analyzing...';
+    resultDiv.style.display = 'block';
+    loading.style.display   = 'block';
+    error.style.display     = 'none';
+    brief.style.display     = 'none';
+
+    fetch("{{ site_url('dashboard.analyze_listing', listing_id=listing.id) }}", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+    })
+    .then(r => r.json().then(data => ({status: r.status, data})))
+    .then(({status, data}) => {
+        loading.style.display = 'none';
+        if (status !== 200 || data.error) {
+            error.textContent   = data.error || 'Analysis failed. Please try again.';
+            error.style.display = 'block';
+            btn.disabled  = false;
+            btn.innerHTML = '<i class="bi bi-lightning-charge"></i> Try Again';
+            return;
+        }
+        paintDealBrief(data);
+        const cn = document.getElementById('ai-cached-note');
+        if (cn) cn.style.display = 'none';
+    })
+    .catch(() => {
+        loading.style.display = 'none';
+        error.textContent   = 'Network error. Please check your connection.';
+        error.style.display = 'block';
+        btn.disabled  = false;
+        btn.innerHTML = '<i class="bi bi-lightning-charge"></i> Try Again';
+    });
+}
+</script>
+
+{% if listing.latitude and listing.longitude %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+(function() {
+    const lat = {{ listing.latitude }};
+    const lng = {{ listing.longitude }};
+    const score = {{ user_composite|int }};
+    const color = score >= 75 ? '#10b981' : score >= 50 ? '#3b82f6' : '#ef4444';
+    const defaultZoom = 14;
+
+    const map = L.map('detail-map', {
+        scrollWheelZoom: false,
+        zoomControl: true,
+    }).setView([lat, lng], defaultZoom);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap',
+        maxZoom: 19,
+    }).addTo(map);
+
+    const icon = L.divIcon({
+        className: '',
+        html: `<div style="
+            background:${color}; color:#fff; font-weight:700; font-size:12px;
+            width:36px; height:36px; border-radius:50%; border:3px solid #fff;
+            box-shadow:0 2px 6px rgba(0,0,0,0.3); display:flex;
+            align-items:center; justify-content:center;
+        ">${score}</div>`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+    });
+
+    L.marker([lat, lng], { icon: icon })
+        .addTo(map)
+        .bindPopup(`<strong>{{ listing.address|e }}</strong><br>\${{ "{:,}".format(listing.price) }}`)
+        .openPopup();
+
+    // ── Landmark markers on detail map ────────────────────────
+    {% if landmarks %}
+    {% for lm in landmarks %}
+    L.marker([{{ lm.lat }}, {{ lm.lng }}], {
+        icon: L.divIcon({
+            className: '',
+            html: '<i class="bi bi-star-fill" style="font-size:1.1rem;color:#dc2626;text-shadow:0 0 3px #fff,0 0 3px #fff;"></i>',
+            iconSize: [18, 18],
+            iconAnchor: [9, 9],
+        }),
+        zIndexOffset: 900,
+    }).addTo(map).bindTooltip('{{ lm.name }}', {
+        permanent: false, direction: 'top', offset: [0, -6],
+        className: 'lm-tooltip',
+    });
+    {% endfor %}
+    {% endif %}
+
+    // Zoom button handlers — control both Leaflet and Google Maps link
+    const gmapsLink = document.getElementById('gmaps-link');
+    const addr = encodeURIComponent('{{ listing.address|e }}');
+
+    function setZoom(z) {
+        map.setView([lat, lng], z);
+        gmapsLink.href = `https://www.google.com/maps/place/${addr}/@${lat},${lng},${z}z`;
+    }
+
+    document.querySelectorAll('.zoom-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.zoom-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            setZoom(parseInt(this.dataset.zoom));
+        });
+    });
+
+    // Sync buttons when user zooms the map manually (scroll/pinch/+- buttons)
+    map.on('zoomend', function() {
+        const z = map.getZoom();
+        gmapsLink.href = `https://www.google.com/maps/place/${addr}/@${lat},${lng},${z}z`;
+        // Highlight the closest zoom button
+        let closest = null, minDiff = 99;
+        document.querySelectorAll('.zoom-btn').forEach(btn => {
+            btn.classList.remove('active');
+            const diff = Math.abs(parseInt(btn.dataset.zoom) - z);
+            if (diff < minDiff) { minDiff = diff; closest = btn; }
+        });
+        if (closest) closest.classList.add('active');
+    });
+})();
+</script>
+{% endif %}
+
+{% if listing.has_price_changes %}
+<script>
+(function() {
+    const history = {{ listing.price_history|tojson }};
+    if (history.length < 2) return;
+
+    const canvas = document.getElementById('price-chart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const wrap = document.getElementById('price-chart-wrap');
+    canvas.width = wrap.offsetWidth;
+    canvas.height = 120;
+
+    const prices = history.map(h => h.price);
+    const minP = Math.min(...prices) * 0.995;
+    const maxP = Math.max(...prices) * 1.005;
+    const range = maxP - minP || 1;
+
+    const padL = 75, padR = 20, padT = 15, padB = 25;
+    const w = canvas.width - padL - padR;
+    const h = canvas.height - padT - padB;
+
+    // Grid lines
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 3; i++) {
+        const y = padT + (h / 3) * i;
+        ctx.beginPath();
+        ctx.moveTo(padL, y);
+        ctx.lineTo(padL + w, y);
+        ctx.stroke();
+        const price = maxP - (range / 3) * i;
+        ctx.fillStyle = '#9ca3af';
+        ctx.font = '10px -apple-system, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText('$' + Math.round(price / 1000) + 'K', padL - 8, y + 4);
+    }
+
+    // Plot points
+    const pts = history.map((entry, i) => ({
+        x: padL + (history.length === 1 ? w / 2 : (i / (history.length - 1)) * w),
+        y: padT + h - ((entry.price - minP) / range) * h,
+    }));
+
+    // Fill under line
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, padT + h);
+    pts.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.lineTo(pts[pts.length - 1].x, padT + h);
+    ctx.closePath();
+    const went_down = prices[prices.length - 1] <= prices[0];
+    const grad = ctx.createLinearGradient(0, padT, 0, padT + h);
+    grad.addColorStop(0, went_down ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Line
+    ctx.beginPath();
+    pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+    ctx.strokeStyle = went_down ? '#10b981' : '#ef4444';
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    // Dots + date labels
+    pts.forEach((p, i) => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        ctx.strokeStyle = went_down ? '#10b981' : '#ef4444';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#9ca3af';
+        ctx.font = '9px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(history[i].date.slice(5, 10), p.x, padT + h + 14);
+    });
+})();
+</script>
+{% endif %}
+
+<!-- Share Detail Modal -->
+<div class="modal fade" id="shareDetailModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-share me-2"></i>Share This Listing</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ site_url('social.share_listing') }}">
+                <div class="modal-body">
+                    <input type="hidden" name="listing_id" value="{{ listing.id }}">
+                    {% if not current_user.is_authenticated %}
+                    <div class="mb-3">
+                        <label class="form-label">Your Name</label>
+                        <input type="text" name="sharer_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Your Email</label>
+                        <input type="email" name="sharer_email" class="form-control" required>
+                    </div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <label class="form-label">Recipient's Email</label>
+                        <input type="email" name="recipient_email" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Recipient's Name <span class="text-muted">(optional)</span></label>
+                        <input type="text" name="recipient_name" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">How do you know them?</label>
+                        <select name="relationship" class="form-select">
+                            <option value="friend">Friend</option>
+                            <option value="family">Family</option>
+                            <option value="coworker">Coworker</option>
+                            <option value="neighbor">Neighbor</option>
+                            <option value="client">Client</option>
+                            <option value="agent">My Agent</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Personal Message <span class="text-muted">(optional)</span></label>
+                        <textarea name="message" class="form-control" rows="3" placeholder="Check out this listing!"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-send me-1"></i>Share</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

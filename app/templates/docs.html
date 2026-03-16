@@ -1,0 +1,353 @@
+<!--
+  File: app/templates/docs.html
+  App Version: 2026.03.15 | File Version: 2.0.0
+  Last Modified: 2026-03-15
+-->
+{% extends "base.html" %}
+
+{% block title %}Docs — HomeFinder{% endblock %}
+
+{% block head %}
+<!-- marked.js for Markdown rendering -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<style>
+  /* ── Layout ── */
+  #docs-layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 0;
+    height: calc(100vh - 120px);
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  /* ── File list panel ── */
+  #docs-sidebar {
+    border-right: 1px solid #dee2e6;
+    display: flex;
+    flex-direction: column;
+    background: #f8f9fa;
+  }
+  #docs-sidebar-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #dee2e6;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  #docs-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+  }
+  .doc-section-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #94a3b8;
+    font-weight: 700;
+    padding: 10px 14px 4px;
+  }
+  .doc-section-label:first-child { padding-top: 6px; }
+  .doc-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px 7px 22px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: background 0.1s;
+  }
+  .doc-item:hover  { background: #e9ecef; }
+  .doc-item.active { background: #e7f0ff; border-left-color: #0d6efd; }
+  .doc-item .doc-icon { font-size: 1rem; flex-shrink: 0; }
+  .doc-item .doc-name {
+    flex: 1;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: #212529;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .doc-item .doc-size { font-size: 0.68rem; color: #6c757d; flex-shrink: 0; }
+  .doc-item .btn-delete {
+    opacity: 0;
+    transition: opacity 0.15s;
+    padding: 1px 5px;
+    font-size: 0.7rem;
+    flex-shrink: 0;
+  }
+  .doc-item:hover .btn-delete { opacity: 1; }
+
+  /* ── Upload footer ── */
+  #docs-upload-area {
+    padding: 10px 14px;
+    border-top: 1px solid #dee2e6;
+    background: #fff;
+    flex-shrink: 0;
+  }
+  #docs-upload-area label { font-size: 0.8rem; color: #495057; margin-bottom: 4px; }
+
+  /* ── Viewer panel ── */
+  #docs-viewer {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #docs-viewer-header {
+    padding: 10px 20px;
+    border-bottom: 1px solid #dee2e6;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    min-height: 46px;
+  }
+  #docs-viewer-header .doc-filename { font-size: 0.9rem; font-weight: 600; color: #212529; }
+  #docs-viewer-header .doc-ext-badge { font-size: 0.7rem; padding: 2px 7px; }
+  #docs-content-area {
+    flex: 1;
+    overflow: auto;
+    padding: 28px 36px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  #docs-content-area.no-pad { padding: 0; overflow: hidden; }
+  #docs-content-area iframe {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    width: 100%; height: 100%; border: none; display: block;
+  }
+
+  /* ── Empty / loading states ── */
+  #docs-empty {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; height: 100%; color: #adb5bd; gap: 10px; user-select: none;
+  }
+  #docs-empty i { font-size: 3rem; }
+  #docs-empty p { font-size: 0.9rem; margin: 0; }
+
+  /* ── Markdown rendered output ── */
+  .md-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.7; color: #212529; }
+  .md-body h1 { font-size: 1.8rem; font-weight: 700; border-bottom: 2px solid #dee2e6; padding-bottom: 8px; margin-bottom: 16px; }
+  .md-body h2 { font-size: 1.4rem; font-weight: 600; border-bottom: 1px solid #e9ecef; padding-bottom: 6px; margin: 24px 0 12px; }
+  .md-body h3 { font-size: 1.15rem; font-weight: 600; margin: 20px 0 8px; }
+  .md-body h4, .md-body h5, .md-body h6 { font-weight: 600; margin: 16px 0 6px; }
+  .md-body p  { margin-bottom: 12px; }
+  .md-body ul, .md-body ol { padding-left: 24px; margin-bottom: 12px; }
+  .md-body li { margin-bottom: 4px; }
+  .md-body code { background: #f1f3f5; padding: 1px 5px; border-radius: 3px; font-size: 0.85em; font-family: "SFMono-Regular", Consolas, monospace; color: #c92a2a; }
+  .md-body pre  { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 14px 18px; overflow-x: auto; margin-bottom: 14px; }
+  .md-body pre code { background: none; padding: 0; color: inherit; font-size: 0.83rem; }
+  .md-body blockquote { border-left: 4px solid #0d6efd; padding: 6px 14px; margin: 12px 0; background: #f0f5ff; color: #495057; border-radius: 0 4px 4px 0; }
+  .md-body table { border-collapse: collapse; width: 100%; margin-bottom: 14px; }
+  .md-body table th, .md-body table td { border: 1px solid #dee2e6; padding: 7px 12px; font-size: 0.88rem; }
+  .md-body table th { background: #f1f3f5; font-weight: 600; }
+  .md-body table tr:nth-child(even) { background: #f8f9fa; }
+  .md-body a { color: #0d6efd; }
+  .md-body hr { border: none; border-top: 2px solid #dee2e6; margin: 20px 0; }
+  .md-body img { max-width: 100%; border-radius: 4px; }
+
+  .txt-body {
+    font-family: "SFMono-Regular", Consolas, "Courier New", monospace;
+    font-size: 0.85rem; white-space: pre-wrap; word-break: break-word;
+    color: #212529; line-height: 1.6; background: #f8f9fa;
+    padding: 20px; border-radius: 6px; border: 1px solid #dee2e6;
+  }
+
+  #no-docs-msg {
+    padding: 24px 16px; text-align: center; font-size: 0.82rem; color: #adb5bd;
+  }
+
+  @media (max-width: 768px) {
+    #docs-layout { grid-template-columns: 1fr; grid-template-rows: 260px 1fr; height: auto; }
+    #docs-sidebar { border-right: none; border-bottom: 1px solid #dee2e6; }
+    #docs-content-area { padding: 16px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-3">
+  <i class="bi bi-folder2-open text-primary fs-5"></i>
+  <h4 class="mb-0 fw-bold">Documentation</h4>
+  <span class="badge bg-secondary ms-1">{{ files|length }} file{{ 's' if files|length != 1 }}</span>
+</div>
+
+<div id="docs-layout">
+
+  <!-- ── Sidebar ── -->
+  <div id="docs-sidebar">
+    <div id="docs-sidebar-header">
+      <span class="fw-semibold text-muted" style="font-size:0.8rem; text-transform:uppercase; letter-spacing:.5px;">
+        <i class="bi bi-files me-1"></i>Files
+      </span>
+    </div>
+
+    <div id="docs-list">
+      {% if files %}
+        {% set current_section = namespace(val='') %}
+        {% for f in files %}
+          {% if f.section != current_section.val %}
+            {% set current_section.val = f.section %}
+            <div class="doc-section-label">
+              {% if f.section == 'General' %}
+                <i class="bi bi-book me-1"></i>{{ f.section }}
+              {% elif f.section == 'Agent' %}
+                <i class="bi bi-briefcase me-1"></i>{{ f.section }}
+              {% elif f.section == 'Owner' %}
+                <i class="bi bi-shield-check me-1"></i>{{ f.section }}
+              {% elif f.section == 'Master' %}
+                <i class="bi bi-gear me-1"></i>{{ f.section }}
+              {% endif %}
+            </div>
+          {% endif %}
+          <div class="doc-item" data-path="{{ f.path }}" data-ext="{{ f.ext }}"
+               onclick="loadDoc('{{ f.path }}', '{{ f.ext }}', this)">
+            <span class="doc-icon">
+              {% if f.ext == '.md' %}
+                <i class="bi bi-markdown text-primary"></i>
+              {% elif f.ext in ['.html', '.htm'] %}
+                <i class="bi bi-code-slash text-warning"></i>
+              {% else %}
+                <i class="bi bi-file-text text-secondary"></i>
+              {% endif %}
+            </span>
+            <span class="doc-name" title="{{ f.name }}">{{ f.name }}</span>
+            <span class="doc-size">{{ (f.size / 1024)|round(1) }}k</span>
+            {% if current_user.is_owner %}
+            <form method="POST" action="{{ site_url('docs.delete', filename=f.path) }}"
+                  onsubmit="return confirm('Delete {{ f.name }}?')"
+                  style="display:inline; margin:0;">
+              <button type="submit" class="btn btn-sm btn-outline-danger btn-delete" title="Delete">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        {% endfor %}
+      {% else %}
+        <div id="no-docs-msg">
+          <i class="bi bi-inbox d-block mb-1" style="font-size:1.5rem;"></i>
+          No documents available.
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Upload (owner+ only) -->
+    {% if current_user.is_owner %}
+    <div id="docs-upload-area">
+      <form method="POST" action="{{ site_url('docs.upload') }}" enctype="multipart/form-data">
+        <label class="d-block fw-semibold mb-1">
+          <i class="bi bi-upload me-1"></i>Upload document
+        </label>
+        <div class="d-flex gap-1 mb-1">
+          <select name="upload_dir" class="form-select form-select-sm" style="width:auto;">
+            <option value="">General</option>
+            <option value="agent">Agent</option>
+            <option value="owner">Owner</option>
+            {% if current_user.is_master %}
+            <option value="master">Master</option>
+            {% endif %}
+          </select>
+          <input type="file" name="file" class="form-control form-control-sm"
+                 accept=".md,.txt,.html,.htm" required>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-cloud-upload"></i>
+          </button>
+        </div>
+        <div class="text-muted" style="font-size:0.65rem;">.md .txt .html — choose a section for the upload</div>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Viewer ── -->
+  <div id="docs-viewer">
+    <div id="docs-viewer-header">
+      <span id="viewer-filename" class="doc-filename text-muted" style="font-style:italic;">
+        Select a document
+      </span>
+    </div>
+    <div id="docs-content-area">
+      <div id="docs-empty">
+        <i class="bi bi-file-earmark-text"></i>
+        <p>Click a file on the left to view it here.</p>
+      </div>
+      <div id="docs-rendered" style="display:none;"></div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let activeItem = null;
+
+  function loadDoc(filepath, ext, el) {
+    if (activeItem) activeItem.classList.remove('active');
+    el.classList.add('active');
+    activeItem = el;
+
+    const displayName = filepath.includes('/') ? filepath : filepath;
+    const extColors = { '.md': 'primary', '.html': 'warning', '.htm': 'warning', '.txt': 'secondary' };
+    const extColor  = extColors[ext] || 'secondary';
+    document.getElementById('viewer-filename').innerHTML =
+      `<span class="doc-filename">${displayName}</span>
+       <span class="badge bg-${extColor} doc-ext-badge">${ext}</span>`;
+
+    const rendered = document.getElementById('docs-rendered');
+    const empty    = document.getElementById('docs-empty');
+    empty.style.display   = 'none';
+    rendered.style.display = 'block';
+    rendered.innerHTML     = '<div class="text-center text-muted py-5"><div class="spinner-border spinner-border-sm me-2"></div>Loading...</div>';
+
+    fetch(`{{ site_url('docs.content', filename='__FNAME__') }}`.replace('__FNAME__', filepath))
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then(data => renderDoc(data.content, data.ext, rendered))
+      .catch(err => {
+        rendered.innerHTML = `<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>Failed to load: ${err.message}</div>`;
+      });
+  }
+
+  function renderDoc(content, ext, container) {
+    const contentArea = document.getElementById('docs-content-area');
+    if (ext === '.md') {
+      contentArea.classList.remove('no-pad');
+      container.className = 'md-body';
+      container.innerHTML = marked.parse(content);
+    } else if (ext === '.html' || ext === '.htm') {
+      contentArea.classList.add('no-pad');
+      container.className = '';
+      container.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;';
+      const iframe = document.createElement('iframe');
+      iframe.sandbox = 'allow-same-origin allow-scripts';
+      container.innerHTML = '';
+      container.appendChild(iframe);
+      const doc = iframe.contentDocument || iframe.contentWindow.document;
+      doc.open();
+      doc.write(content);
+      doc.close();
+    } else {
+      contentArea.classList.remove('no-pad');
+      container.className = '';
+      container.style.cssText = '';
+      const pre = document.createElement('pre');
+      pre.className = 'txt-body';
+      pre.textContent = content;
+      container.innerHTML = '';
+      container.appendChild(pre);
+    }
+  }
+</script>
+{% endblock %}

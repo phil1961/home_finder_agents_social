@@ -1,0 +1,547 @@
+<!--
+  File: app/templates/landing.html
+  App Version: 2026.03.12 | File Version: 1.2.0
+  Last Modified: 2026-03-13
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HomeFinder — Smarter Home Search</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.2/font/bootstrap-icons.min.css">
+    <style>
+    /* ── Reset & base ────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+        --ink:    #0f172a;
+        --blue:   #1d4ed8;
+        --sky:    #dbeafe;
+        --gold:   #b45309;
+        --cream:  #fafaf9;
+        --white:  #ffffff;
+        --muted:  #64748b;
+        --rule:   #e2e8f0;
+        --green:  #059669;
+        --card-r: 14px;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+        margin: 0; padding: 0;
+        font-family: 'Inter', system-ui, sans-serif;
+        background: var(--cream);
+        color: var(--ink);
+        -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* ── Topbar ──────────────────────────────────────────────── */
+    .topbar {
+        position: sticky; top: 0; z-index: 100;
+        background: rgba(15,23,42,0.97);
+        backdrop-filter: blur(8px);
+        padding: 14px 32px;
+        display: flex; align-items: center; justify-content: space-between;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .topbar-brand {
+        display: flex; align-items: center; gap: 10px;
+        color: #fff; font-weight: 600; font-size: 1.1rem;
+        letter-spacing: -0.3px;
+    }
+    .topbar-brand .icon {
+        width: 34px; height: 34px; border-radius: 8px;
+        background: var(--blue);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1rem; color: #fff;
+    }
+    .topbar-nav { display: flex; gap: 8px; align-items: center; }
+    .topbar-nav a {
+        color: rgba(255,255,255,0.7);
+        font-size: 0.88rem; font-weight: 500;
+        padding: 6px 14px; border-radius: 6px;
+        transition: background 0.15s, color 0.15s;
+    }
+    .topbar-nav a:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .topbar-nav .cta {
+        background: var(--blue); color: #fff !important;
+        padding: 7px 18px; font-weight: 600;
+    }
+    .topbar-nav .cta:hover { background: #1e40af; }
+
+    /* ── Hero ────────────────────────────────────────────────── */
+    .hero {
+        background: var(--ink);
+        color: #fff;
+        padding: 100px 32px 80px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    .hero::before {
+        content: '';
+        position: absolute; inset: 0;
+        background:
+            radial-gradient(ellipse at 20% 60%, rgba(29,78,216,0.22) 0%, transparent 55%),
+            radial-gradient(ellipse at 80% 30%, rgba(16,185,129,0.12) 0%, transparent 50%);
+        pointer-events: none;
+    }
+    .hero-eyebrow {
+        display: inline-block;
+        font-size: 0.68rem; font-weight: 600;
+        letter-spacing: 3.5px; text-transform: uppercase;
+        color: #93c5fd;
+        border: 1px solid rgba(147,197,253,0.25);
+        border-radius: 20px; padding: 4px 14px;
+        margin-bottom: 28px;
+    }
+    .hero h1 {
+        font-family: 'Playfair Display', Georgia, serif;
+        font-size: clamp(2.4rem, 6vw, 4.2rem);
+        font-weight: 900;
+        line-height: 1.08;
+        margin: 0 auto 24px;
+        max-width: 780px;
+        letter-spacing: -1px;
+    }
+    .hero h1 em { font-style: normal; color: #60a5fa; }
+    .hero .sub {
+        font-size: clamp(1rem, 2vw, 1.18rem);
+        font-weight: 300;
+        color: rgba(255,255,255,0.72);
+        max-width: 600px;
+        margin: 0 auto 40px;
+        line-height: 1.75;
+    }
+    .hero-scroll-hint {
+        position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+        color: rgba(255,255,255,0.3); font-size: 0.75rem; letter-spacing: 1px;
+        display: flex; flex-direction: column; align-items: center; gap: 4px;
+        text-transform: uppercase;
+    }
+    .hero-scroll-hint i { animation: bounce 2s infinite; }
+    @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(5px)} }
+
+    /* ── Section wrapper ─────────────────────────────────────── */
+    .section { padding: 80px 32px; max-width: 1100px; margin: 0 auto; }
+    .section-sm { padding: 56px 32px; max-width: 1100px; margin: 0 auto; }
+    .section-eyebrow {
+        font-size: 0.65rem; font-weight: 700; letter-spacing: 3px;
+        text-transform: uppercase; color: var(--blue);
+        margin-bottom: 10px;
+    }
+    .section-title {
+        font-family: 'Playfair Display', serif;
+        font-size: clamp(1.7rem, 3.5vw, 2.6rem);
+        font-weight: 700; line-height: 1.18;
+        letter-spacing: -0.5px;
+        margin-bottom: 16px;
+    }
+    .section-lead {
+        color: var(--muted); font-size: 1.05rem; line-height: 1.75;
+        max-width: 640px;
+    }
+    hr.rule { border: none; border-top: 1px solid var(--rule); margin: 0; }
+
+    /* ── Why cards ───────────────────────────────────────────── */
+    .why-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px; margin-top: 40px;
+    }
+    .why-card {
+        background: var(--white); border: 1px solid var(--rule);
+        border-radius: var(--card-r); padding: 28px 24px;
+    }
+    .why-card .wc-icon {
+        width: 42px; height: 42px; border-radius: 10px;
+        background: var(--sky); color: var(--blue);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.15rem; margin-bottom: 16px;
+    }
+    .why-card h4 {
+        font-size: 0.98rem; font-weight: 600; margin-bottom: 8px;
+    }
+    .why-card p {
+        font-size: 0.88rem; color: var(--muted); line-height: 1.65; margin: 0;
+    }
+
+    /* ── Sites section ───────────────────────────────────────── */
+    .sites-section {
+        background: var(--ink);
+        padding: 80px 32px;
+    }
+    .sites-inner { max-width: 1100px; margin: 0 auto; }
+    .sites-eyebrow {
+        font-size: 0.65rem; font-weight: 700; letter-spacing: 3px;
+        text-transform: uppercase; color: #60a5fa; margin-bottom: 10px;
+    }
+    .sites-title {
+        font-family: 'Playfair Display', serif;
+        color: #fff;
+        font-size: clamp(1.7rem, 3.5vw, 2.4rem);
+        font-weight: 700; margin-bottom: 12px;
+    }
+    .sites-lead { color: rgba(255,255,255,0.6); font-size: 1rem; margin-bottom: 48px; line-height: 1.7; }
+
+    .sites-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+    }
+    .site-card {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: var(--card-r);
+        padding: 28px 24px 24px;
+        display: flex; flex-direction: column;
+        transition: background 0.2s, border-color 0.2s, transform 0.2s;
+        cursor: pointer;
+        position: relative; overflow: hidden;
+    }
+    .site-card::before {
+        content: '';
+        position: absolute; top: 0; left: 0; right: 0; height: 3px;
+        background: linear-gradient(90deg, var(--blue), #06b6d4);
+        transform: scaleX(0); transform-origin: left;
+        transition: transform 0.25s ease;
+    }
+    .site-card:hover {
+        background: rgba(255,255,255,0.09);
+        border-color: rgba(147,197,253,0.3);
+        transform: translateY(-2px);
+    }
+    .site-card:hover::before { transform: scaleX(1); }
+
+    .sc-region {
+        font-size: 0.65rem; font-weight: 700; letter-spacing: 2.5px;
+        text-transform: uppercase; color: #60a5fa; margin-bottom: 8px;
+    }
+    .sc-name {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.55rem; font-weight: 700; color: #fff;
+        margin-bottom: 10px; line-height: 1.2;
+    }
+    .sc-desc {
+        font-size: 0.88rem; color: rgba(255,255,255,0.55);
+        line-height: 1.6; margin-bottom: 20px; flex: 1;
+    }
+    .sc-meta {
+        display: flex; gap: 10px; flex-wrap: wrap;
+        margin-bottom: 20px;
+    }
+    .sc-pill {
+        font-size: 0.7rem; font-weight: 500;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 20px; padding: 3px 12px;
+        color: rgba(255,255,255,0.65);
+        display: flex; align-items: center; gap: 5px;
+    }
+    .sc-pill i { font-size: 0.75rem; }
+    .sc-btn {
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        background: var(--blue); color: #fff !important;
+        padding: 11px 20px; border-radius: 8px;
+        font-size: 0.9rem; font-weight: 600;
+        transition: background 0.15s;
+        text-decoration: none;
+    }
+    .sc-btn:hover { background: #1e40af; }
+    .sc-btn-ghost {
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        background: transparent; color: rgba(255,255,255,0.6) !important;
+        padding: 10px 20px; border-radius: 8px;
+        font-size: 0.88rem; font-weight: 500; margin-top: 8px;
+        border: 1px solid rgba(255,255,255,0.15);
+        transition: background 0.15s, color 0.15s;
+        text-decoration: none;
+    }
+    .sc-btn-ghost:hover { background: rgba(255,255,255,0.07); color: #fff !important; }
+
+    .no-sites {
+        text-align: center; color: rgba(255,255,255,0.45);
+        padding: 60px 20px; font-size: 1rem;
+    }
+
+    /* ── How it works ────────────────────────────────────────── */
+    .steps-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 0; margin-top: 48px;
+        border: 1px solid var(--rule); border-radius: var(--card-r);
+        overflow: hidden;
+    }
+    .step {
+        padding: 32px 28px;
+        border-right: 1px solid var(--rule);
+        background: var(--white);
+    }
+    .step:last-child { border-right: none; }
+    @media (max-width: 767px) {
+        .step { border-right: none; border-bottom: 1px solid var(--rule); }
+        .step:last-child { border-bottom: none; }
+    }
+    .step-num {
+        font-family: 'Playfair Display', serif;
+        font-size: 2.8rem; font-weight: 900;
+        color: var(--rule); line-height: 1; margin-bottom: 12px;
+    }
+    .step h4 { font-size: 0.95rem; font-weight: 600; margin-bottom: 8px; }
+    .step p { font-size: 0.85rem; color: var(--muted); line-height: 1.6; margin: 0; }
+
+    /* ── Stats band ──────────────────────────────────────────── */
+    .stats-band {
+        background: var(--blue);
+        padding: 52px 32px;
+    }
+    .stats-inner {
+        max-width: 900px; margin: 0 auto;
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 24px; text-align: center;
+    }
+    .stat-item { color: #fff; }
+    .stat-num {
+        font-family: 'Playfair Display', serif;
+        font-size: 2.8rem; font-weight: 900;
+        line-height: 1; margin-bottom: 6px;
+    }
+    .stat-label { font-size: 0.8rem; opacity: 0.75; font-weight: 500; letter-spacing: 0.5px; }
+
+    /* ── Footer ──────────────────────────────────────────────── */
+    .footer {
+        background: var(--ink);
+        color: rgba(255,255,255,0.45);
+        padding: 32px;
+        text-align: center;
+        font-size: 0.82rem;
+    }
+    .footer a { color: rgba(255,255,255,0.45); text-decoration: underline; }
+    .footer a:hover { color: rgba(255,255,255,0.7); }
+
+    /* ── Responsive ──────────────────────────────────────────── */
+    @media (max-width: 600px) {
+        .topbar { padding: 12px 18px; }
+        .topbar-nav a:not(.cta) { display: none; }
+        .hero { padding: 72px 20px 60px; }
+        .section, .section-sm { padding: 56px 20px; }
+        .sites-section { padding: 60px 20px; }
+    }
+    </style>
+</head>
+<body>
+
+<!-- ── Top bar ───────────────────────────────────────────────── -->
+<header class="topbar">
+    <div class="topbar-brand">
+        <div class="icon"><i class="bi bi-house-heart-fill"></i></div>
+        HomeFinder
+    </div>
+    <nav class="topbar-nav">
+        <a href="#how-it-works">How It Works</a>
+        <a href="#markets">Markets</a>
+        <a href="#markets" class="cta">Get Started →</a>
+    </nav>
+</header>
+
+<!-- ── Hero ─────────────────────────────────────────────────── -->
+<section class="hero">
+    <div class="hero-eyebrow">Buyer-first real estate intelligence</div>
+    <h1>Find your home with a tool that works <em>for you</em>,<br>not the listing agent.</h1>
+    <p class="sub">
+        HomeFinder scores every listing on your priorities, surfaces negotiating leverage,
+        and gives you AI-powered deal analysis that no real estate portal will ever offer —
+        because they're paid by sellers, not buyers.
+    </p>
+    <a href="#markets" class="sc-btn d-inline-flex" style="font-size:1rem; padding:14px 32px;">
+        <i class="bi bi-geo-alt-fill"></i> Choose Your Market
+    </a>
+    <div class="hero-scroll-hint">
+        <span>scroll</span>
+        <i class="bi bi-chevron-down"></i>
+    </div>
+</section>
+
+<!-- ── Why section ──────────────────────────────────────────── -->
+<div style="background:#fff;">
+<div class="section">
+    <div class="section-eyebrow">The Difference</div>
+    <h2 class="section-title">Zillow works for Zillow.<br>HomeFinder works for you.</h2>
+    <p class="section-lead">
+        Every major listing portal makes money from agents and sellers. That shapes
+        every feature they build — and every feature they refuse to build.
+    </p>
+    <div class="why-grid">
+        <div class="why-card">
+            <div class="wc-icon"><i class="bi bi-sliders"></i></div>
+            <h4>17-Factor Scoring</h4>
+            <p>Price, yard size, flood risk, HOA cost, walkability, days on market — every
+               listing scored against criteria you set. Change a slider, every score updates.</p>
+        </div>
+        <div class="why-card">
+            <div class="wc-icon"><i class="bi bi-robot"></i></div>
+            <h4>AI Deal Analysis</h4>
+            <p>One click. Get concrete strengths, real concerns, negotiation strategy, and
+               a specific opening offer dollar amount for any listing.</p>
+        </div>
+        <div class="why-card">
+            <div class="wc-icon"><i class="bi bi-shield-check"></i></div>
+            <h4>Flood &amp; Risk Filters</h4>
+            <p>FEMA flood zone data on every listing. Filter out flood-prone properties
+               entirely, or weight flood risk however matters to you.</p>
+        </div>
+        <div class="why-card">
+            <div class="wc-icon"><i class="bi bi-graph-down-arrow"></i></div>
+            <h4>Price History &amp; Motivation</h4>
+            <p>Full price reduction history. Days on market. HomeFinder flags motivated sellers
+               and tells you exactly when a listing has been sitting too long.</p>
+        </div>
+        <div class="why-card">
+            <div class="wc-icon"><i class="bi bi-map"></i></div>
+            <h4>Tour Planner</h4>
+            <p>Check the houses you want to visit and hit one button. Google Maps opens with
+               an optimized multi-stop route ready for the day you're out driving.</p>
+        </div>
+        <div class="why-card">
+            <div class="wc-icon"><i class="bi bi-person-badge"></i></div>
+            <h4>Optional Agent Pairing</h4>
+            <p>Want help from a local agent? Your agent can view your favorites, set your
+               search criteria, and communicate with you directly through HomeFinder.</p>
+        </div>
+    </div>
+</div>
+</div>
+
+<hr class="rule">
+
+<!-- ── How it works ─────────────────────────────────────────── -->
+<div id="how-it-works">
+<div class="section-sm">
+    <div class="section-eyebrow">How It Works</div>
+    <h2 class="section-title">Up and running in four steps.</h2>
+    <div class="steps-grid">
+        <div class="step">
+            <div class="step-num">01</div>
+            <h4>Choose your market</h4>
+            <p>Select the city or region below. HomeFinder fetches live listings from Zillow
+               and Realtor.com for your area every night.</p>
+        </div>
+        <div class="step">
+            <div class="step-num">02</div>
+            <h4>Set your priorities</h4>
+            <p>Use the Preferences page to weight what matters: price, yard, flood risk,
+               school proximity, single story — whatever your situation calls for.</p>
+        </div>
+        <div class="step">
+            <div class="step-num">03</div>
+            <h4>Browse scored listings</h4>
+            <p>Every active listing gets a composite score tailored to your weights.
+               Sort, filter, star favorites, and take notes on any property.</p>
+        </div>
+        <div class="step">
+            <div class="step-num">04</div>
+            <h4>Get AI deal advice</h4>
+            <p>Open any listing and request a Deal Brief — strengths, concerns, negotiation
+               strategy, and a suggested opening offer, generated in seconds.</p>
+        </div>
+    </div>
+</div>
+</div>
+
+<hr class="rule">
+
+<!-- ── Stats ────────────────────────────────────────────────── -->
+<div class="stats-band">
+    <div class="stats-inner">
+        <div class="stat-item">
+            <div class="stat-num">17</div>
+            <div class="stat-label">Scoring factors per listing</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-num">100%</div>
+            <div class="stat-label">Buyer-side only — no seller ads</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-num">Free</div>
+            <div class="stat-label">Browse, filter &amp; score with no account</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-num">Daily</div>
+            <div class="stat-label">Listings refreshed from Zillow &amp; Realtor.com</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Markets / Sites ───────────────────────────────────────── -->
+<section class="sites-section" id="markets">
+    <div class="sites-inner">
+        <div class="sites-eyebrow">Available Markets</div>
+        <h2 class="sites-title">Choose your market to start searching.</h2>
+        <p class="sites-lead">
+            Each market is a fully independent HomeFinder instance with its own listings,
+            scoring data, and user accounts. Select your area to browse or create a free account.
+        </p>
+
+        {% if sites %}
+        <div class="sites-grid">
+            {% for site in sites %}
+            <div class="site-card">
+                <div class="sc-region">
+                    <i class="bi bi-geo-alt me-1"></i>Active Market
+                </div>
+                <div class="sc-name">{{ site.display_name }}</div>
+                <p class="sc-desc">
+                    Live listings scored daily across the {{ site.display_name }} metro area.
+                    Browse, filter, and get AI-powered deal analysis — free, no account required.
+                </p>
+                <div class="sc-meta">
+                    {% if site.listing_count %}
+                    <span class="sc-pill">
+                        <i class="bi bi-house"></i> {{ site.listing_count }} listings
+                    </span>
+                    {% endif %}
+                    {% if site.pipeline_last_run %}
+                    <span class="sc-pill">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        Updated {{ site.pipeline_last_run[:10] }}
+                    </span>
+                    {% endif %}
+                    <span class="sc-pill">
+                        <i class="bi bi-shield-check"></i> Buyer-only
+                    </span>
+                </div>
+                <a href="{{ site_url('dashboard.go_to_site', site_key=site.site_key) }}"
+                   class="sc-btn">
+                    <i class="bi bi-box-arrow-in-right"></i>
+                    Browse {{ site.display_name }}
+                </a>
+                <a href="{{ site_url('dashboard.go_to_site', site_key=site.site_key) }}"
+                   class="sc-btn-ghost">
+                    <i class="bi bi-person-plus"></i>
+                    Create Free Account
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-sites">
+            <i class="bi bi-map" style="font-size:2.5rem; display:block; margin-bottom:12px;"></i>
+            <p style="margin:0;">We're setting up new markets right now.</p>
+            <p class="small" style="opacity:0.7; margin-top:8px;">Create a free account and we'll let you know when listings go live in your area.</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- ── Footer ───────────────────────────────────────────────── -->
+<footer class="footer">
+    <p style="margin:0;">
+        &copy; {{ 2025 }} HomeFinder &mdash; Built for buyers, not for brokers.
+        &nbsp;·&nbsp;
+        <a href="{{ site_url('dashboard.why_user') }}">Why HomeFinder?</a>
+    </p>
+</footer>
+
+</body>
+</html>

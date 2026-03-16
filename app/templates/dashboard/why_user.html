@@ -1,0 +1,303 @@
+<!--
+  File: app/templates/dashboard/why_user.html
+  App Version: 2026.03.12 | File Version: 1.1.0
+  Last Modified: 2026-03-12
+-->
+{% extends "base.html" %}
+{% block title %}Why HomeFinder — For Buyers{% endblock %}
+
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+    --ink:    #1a1a2e;
+    --gold:   #c9a84c;
+    --cream:  #faf8f2;
+    --slate:  #4a5568;
+    --rule:   #e2d9c5;
+}
+body { background: var(--cream); font-family: 'Source Sans 3', sans-serif; color: var(--ink); }
+
+.hero {
+    background: var(--ink);
+    color: #fff;
+    padding: 80px 0 60px;
+    position: relative;
+    overflow: hidden;
+}
+.hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 70% 50%, rgba(201,168,76,0.18) 0%, transparent 65%);
+}
+.hero-label {
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+.hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.2rem, 5vw, 3.8rem);
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 24px;
+}
+.hero h1 em { color: var(--gold); font-style: normal; }
+.hero .lead {
+    font-size: 1.15rem;
+    font-weight: 300;
+    color: rgba(255,255,255,0.78);
+    max-width: 580px;
+    line-height: 1.7;
+}
+.hero-rule {
+    width: 48px; height: 3px;
+    background: var(--gold);
+    margin: 32px 0;
+}
+
+.section { padding: 64px 0; }
+.section-label {
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+.section h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+    font-weight: 700;
+    margin-bottom: 16px;
+    line-height: 1.2;
+}
+.section p { color: var(--slate); line-height: 1.75; font-size: 1.02rem; }
+
+.divider { border: none; border-top: 1px solid var(--rule); margin: 0; }
+
+/* Problem / solution split */
+.split-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
+@media (max-width: 768px) { .split-grid { grid-template-columns: 1fr; gap: 32px; } }
+
+.problem-box {
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-left: 4px solid #dc3545;
+    border-radius: 4px;
+    padding: 28px 28px 24px;
+}
+.solution-box {
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-left: 4px solid #28a745;
+    border-radius: 4px;
+    padding: 28px 28px 24px;
+}
+.box-label {
+    font-size: 0.65rem; letter-spacing: 2.5px; text-transform: uppercase;
+    font-weight: 700; margin-bottom: 16px;
+}
+.problem-box .box-label { color: #dc3545; }
+.solution-box .box-label { color: #28a745; }
+.box-item {
+    display: flex; gap: 12px; margin-bottom: 14px;
+    font-size: 0.95rem; color: var(--slate); line-height: 1.5;
+}
+.box-icon { flex-shrink: 0; margin-top: 2px; font-size: 1rem; }
+
+/* Feature cards */
+.feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; }
+.feature-card {
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 28px 24px;
+    position: relative;
+}
+.feature-card .f-number {
+    font-family: 'Playfair Display', serif;
+    font-size: 3.5rem;
+    font-weight: 900;
+    color: var(--rule);
+    line-height: 1;
+    margin-bottom: 4px;
+}
+.feature-card h5 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+.feature-card p { font-size: 0.9rem; color: var(--slate); line-height: 1.6; margin: 0; }
+
+/* Scenario */
+.scenario {
+    background: var(--ink);
+    color: #fff;
+    border-radius: 10px;
+    padding: 40px;
+}
+.scenario h4 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    color: var(--gold);
+    margin-bottom: 20px;
+}
+.scenario p { color: rgba(255,255,255,0.8); line-height: 1.75; }
+
+/* CTA */
+.cta-band {
+    background: var(--gold);
+    color: var(--ink);
+    padding: 56px 0;
+    text-align: center;
+}
+.cta-band h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    font-weight: 900;
+    margin-bottom: 12px;
+}
+.cta-band p { font-size: 1.05rem; margin-bottom: 28px; opacity: 0.85; }
+.btn-dark-ink {
+    background: var(--ink); color: #fff; border: none;
+    padding: 14px 36px; font-size: 1rem; font-weight: 600;
+    border-radius: 4px; text-decoration: none; display: inline-block;
+    transition: opacity 0.2s;
+}
+.btn-dark-ink:hover { opacity: 0.85; color: #fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ── Hero ──────────────────────────────────────────────── -->
+<div class="hero">
+    <div class="container">
+        <div class="hero-label">HomeFinder &mdash; For Buyers</div>
+        <h1>The home search tool<br>that works <em>for you</em>,<br>not the seller.</h1>
+        <div class="hero-rule"></div>
+        <p class="lead">
+            Every major real estate portal serves both buyers and sellers.
+            That means they will never tell you when a listing is overpriced,
+            when a seller is desperate, or what opening offer to make.
+            HomeFinder will.
+        </p>
+    </div>
+</div>
+
+<!-- ── The problem ───────────────────────────────────────── -->
+<div class="section" style="background:#fff;">
+    <div class="container">
+        <div class="section-label">The Problem</div>
+        <h2>Zillow works for Zillow.<br>HomeFinder works for you.</h2>
+        <p class="mb-5" style="max-width:620px;">
+            When you search for homes on Zillow or Realtor.com, you're using a platform
+            that makes money from listing agents — not from you. That conflict of interest
+            shapes every feature they build.
+        </p>
+        <div class="split-grid">
+            <div class="problem-box">
+                <div class="box-label">What the big portals do</div>
+                <div class="box-item"><span class="box-icon">✗</span> Hide price reduction history to protect sellers</div>
+                <div class="box-item"><span class="box-icon">✗</span> Show "Zestimate" as authoritative — it benefits agents, not buyers</div>
+                <div class="box-item"><span class="box-icon">✗</span> Never tell you a house has been sitting for 120 days</div>
+                <div class="box-item"><span class="box-icon">✗</span> No negotiation advice — ever</div>
+                <div class="box-item"><span class="box-icon">✗</span> Score every house as desirable to maximize clicks</div>
+            </div>
+            <div class="solution-box">
+                <div class="box-label">What HomeFinder does</div>
+                <div class="box-item"><span class="box-icon">✓</span> Shows full price history and every price reduction</div>
+                <div class="box-item"><span class="box-icon">✓</span> Scores listings on <em>your</em> priorities — 17 factors you control</div>
+                <div class="box-item"><span class="box-icon">✓</span> Flags motivated sellers: high days-on-market, repeated price cuts</div>
+                <div class="box-item"><span class="box-icon">✓</span> AI suggests a specific opening offer with reasoning</div>
+                <div class="box-item"><span class="box-icon">✓</span> Tells you honestly when a listing is a pass</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr class="divider">
+
+<!-- ── Features ──────────────────────────────────────────── -->
+<div class="section">
+    <div class="container">
+        <div class="section-label">What You Get</div>
+        <h2>Six tools no other<br>search portal offers.</h2>
+        <div class="feature-grid mt-4">
+            <div class="feature-card">
+                <div class="f-number">01</div>
+                <h5>17-Factor Scoring</h5>
+                <p>Every listing is scored across price, size, yard, flood risk, walkability, proximity to hospitals, HOA costs, and more. You set how much each factor matters. Change a slider and every score updates instantly.</p>
+            </div>
+            <div class="feature-card">
+                <div class="f-number">02</div>
+                <h5>AI Deal Analyst</h5>
+                <p>One click gets you a buyer's-agent-style analysis of any listing: concrete strengths, real concerns, negotiation strategy, and a specific dollar amount to open with.</p>
+            </div>
+            <div class="feature-card">
+                <div class="f-number">03</div>
+                <h5>Portfolio Comparison</h5>
+                <p>Star your favorites, then ask for a big-picture comparison. The AI ranks them, finds patterns, flags red flags across the set, and picks a "dark horse" you may have undervalued.</p>
+            </div>
+            <div class="feature-card">
+                <div class="f-number">04</div>
+                <h5>Tour Planner</h5>
+                <p>Check the houses you want to visit, hit one button, and Google Maps opens with a optimized multi-stop route ready to navigate — built for the day you're driving around with your phone.</p>
+            </div>
+            <div class="feature-card">
+                <div class="f-number">05</div>
+                <h5>Notes &amp; Visit Tracking</h5>
+                <p>Write private notes on any listing. Track whether you've visited, scheduled a visit, lost interest, or made an offer. Everything is saved to your account permanently.</p>
+            </div>
+            <div class="feature-card">
+                <div class="f-number">06</div>
+                <h5>Flood &amp; Area Filters</h5>
+                <p>Charleston's flood zone risk is real. HomeFinder checks every listing against FEMA data and lets you filter out flood-zone properties entirely. Define your target areas down to the zip code.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr class="divider">
+
+<!-- ── Scenario ──────────────────────────────────────────── -->
+<div class="section" style="background:#fff;">
+    <div class="container">
+        <div class="section-label">Real-World Example</div>
+        <h2 class="mb-4">What a typical session looks like.</h2>
+        <div class="scenario">
+            <h4>Saturday morning, coffee in hand.</h4>
+            <p>
+                You open HomeFinder and see 8 new listings since yesterday's fetch. Two are in
+                West Ashley — your target area. You click the first one. It scores 71/100 on your
+                preferences. The AI flags that it's been on the market 94 days with two price reductions,
+                and suggests opening at $412,000 against the $449,000 ask. The second listing scores 83.
+                No price changes, newer construction, above flood plain. You star both as favorites.
+            </p>
+            <p class="mt-3">
+                On your phone, you open the Tour Planner, check both addresses plus two from last week,
+                and tap "Open in Google Maps." By noon you've walked through four houses. That evening
+                you add notes to each — what you liked, what bothered you — and check "Visited."
+                Next morning you hit Portfolio Analysis on your favorites. The AI tells you the 94-day
+                listing is your best negotiating opportunity, and the 83-scorer is the one to move on quickly.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- ── CTA ───────────────────────────────────────────────── -->
+<div class="cta-band">
+    <div class="container">
+        <h3>Start your search today.</h3>
+        <p>Free to browse. No credit card. Full scoring and filtering from the first visit.</p>
+        <a href="{{ site_url('auth.register') }}" class="btn-dark-ink">Create Free Account</a>
+        &nbsp;&nbsp;
+        <a href="{{ site_url('dashboard.index') }}" class="btn-dark-ink" style="background:rgba(26,26,46,0.15); color:var(--ink);">Browse Listings</a>
+    </div>
+</div>
+{% endblock %}

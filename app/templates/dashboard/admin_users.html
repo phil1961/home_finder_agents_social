@@ -1,0 +1,137 @@
+<!--
+  File: app/templates/dashboard/admin_users.html
+  App Version: 2026.03.14 | File Version: 1.0.0
+  Last Modified: 2026-03-14
+-->
+{% extends "base.html" %}
+{% block title %}User Management — HomeFinder{% endblock %}
+
+{% block head %}
+<style>
+    .user-row:hover { background: #f8fafc; }
+    .user-suspended { opacity: 0.6; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0"><i class="bi bi-people-fill me-2 text-primary"></i>User Management</h4>
+        <small class="text-muted">{{ users|length }} accounts</small>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Last Login</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr class="user-row {% if u.is_suspended %}user-suspended{% endif %}">
+                        <td>
+                            <div class="fw-semibold">{{ u.username }}</div>
+                            <div class="text-muted small">{{ u.email }}</div>
+                        </td>
+                        <td>
+                            {% if u.role == 'master' %}
+                            <span class="badge bg-dark">Master</span>
+                            {% elif u.role == 'owner' %}
+                            <span class="badge bg-primary">Owner</span>
+                            {% elif u.role == 'agent' %}
+                            <span class="badge bg-info text-dark">Agent</span>
+                            {% elif u.role == 'principal' %}
+                            <span class="badge bg-secondary">Principal</span>
+                            {% else %}
+                            <span class="badge bg-light text-dark border">User</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if u.is_suspended %}
+                            <span class="badge bg-danger">Suspended</span>
+                            {% if u.suspended_reason %}
+                            <div class="text-muted" style="font-size:0.7rem;">{{ u.suspended_reason }}</div>
+                            {% endif %}
+                            {% elif u.password_hash == 'ACCOUNT_CLOSED' %}
+                            <span class="badge bg-secondary">Closed</span>
+                            {% elif not u.is_verified %}
+                            <span class="badge bg-warning text-dark">Unverified</span>
+                            {% else %}
+                            <span class="badge bg-success">Active</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted small">{{ u.created_at.strftime('%b %d, %Y') if u.created_at else '—' }}</td>
+                        <td class="text-muted small">{{ u.last_login.strftime('%b %d, %Y') if u.last_login else 'Never' }}</td>
+                        <td class="text-end">
+                            {% if u.id != current_user.id and u.role != 'master' %}
+                            <div class="d-flex gap-1 justify-content-end">
+                                {% if u.is_suspended %}
+                                <form method="POST" action="{{ site_url('dashboard.admin_user_action', user_id=u.id) }}" class="d-inline">
+                                    <input type="hidden" name="action" value="reactivate">
+                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Reactivate">
+                                        <i class="bi bi-check-circle"></i>
+                                    </button>
+                                </form>
+                                {% else %}
+                                <button type="button" class="btn btn-sm btn-outline-warning" title="Suspend"
+                                        data-bs-toggle="modal" data-bs-target="#suspendModal{{ u.id }}">
+                                    <i class="bi bi-pause-circle"></i>
+                                </button>
+                                {% endif %}
+                                {% if u.role not in ('owner', 'master') %}
+                                <form method="POST" action="{{ site_url('dashboard.admin_user_action', user_id=u.id) }}" class="d-inline">
+                                    <input type="hidden" name="action" value="delete">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"
+                                            onclick="return confirm('Permanently delete {{ u.username }}? This cannot be undone.')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+
+                            <!-- Suspend Modal -->
+                            <div class="modal fade" id="suspendModal{{ u.id }}" tabindex="-1">
+                                <div class="modal-dialog modal-sm">
+                                    <div class="modal-content">
+                                        <form method="POST" action="{{ site_url('dashboard.admin_user_action', user_id=u.id) }}">
+                                            <div class="modal-header py-2">
+                                                <h6 class="modal-title"><i class="bi bi-pause-circle me-1 text-warning"></i>Suspend {{ u.username }}</h6>
+                                                <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <div class="modal-body py-2 text-start">
+                                                <input type="hidden" name="action" value="suspend">
+                                                <label class="form-label small">Reason (optional)</label>
+                                                <textarea name="reason" class="form-control form-control-sm" rows="2"
+                                                          placeholder="e.g., Violation of terms, billing issue..."></textarea>
+                                            </div>
+                                            <div class="modal-footer py-2">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-sm btn-warning">Suspend</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% elif u.id == current_user.id %}
+                            <span class="text-muted small">You</span>
+                            {% else %}
+                            <span class="text-muted small">Protected</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

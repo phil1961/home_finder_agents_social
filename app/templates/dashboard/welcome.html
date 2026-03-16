@@ -1,0 +1,623 @@
+<!--
+  File: app/templates/dashboard/welcome.html
+  App Version: 2026.03.14 | File Version: 2.1.0
+  Last Modified: 2026-03-14
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="HomeFinder">
+    <meta name="description" content="AI-powered home discovery with 18-factor deal scoring, social sharing, and community listings">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+    <title>HomeFinder Social — AI-Powered Home Discovery</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.2/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --ink:   #1a1a2e;
+            --gold:  #c9a84c;
+            --cream: #faf8f2;
+            --rule:  #e2d9c5;
+            --slate: #4a5568;
+            --social: #f093fb;
+            --green:  #22c55e;
+        }
+        body {
+            background: var(--cream);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            color: var(--ink);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .hf-nav {
+            background: var(--ink);
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .hf-nav .brand {
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .hf-nav .brand i { color: var(--gold); font-size: 1.25rem; }
+        .hf-nav .nav-links a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 0.85rem;
+            margin-left: 18px;
+        }
+        .hf-nav .nav-links a:hover { color: var(--gold); }
+
+        .hero {
+            background: var(--ink);
+            color: #fff;
+            padding: 56px 24px 44px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at 60% 40%, rgba(201,168,76,0.15) 0%, transparent 60%);
+        }
+        .hero-label {
+            font-size: 0.68rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--gold);
+            font-weight: 600;
+            margin-bottom: 14px;
+            position: relative;
+        }
+        .hero h1 {
+            font-size: clamp(1.8rem, 4vw, 2.8rem);
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 16px;
+            position: relative;
+        }
+        .hero h1 em { color: var(--gold); font-style: normal; }
+        .hero .hero-sub {
+            color: rgba(255,255,255,0.72);
+            font-size: 1.05rem;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.65;
+            position: relative;
+        }
+        .hero-rule {
+            width: 40px; height: 3px;
+            background: var(--gold);
+            margin: 24px auto;
+            position: relative;
+        }
+
+        /* Powers grid */
+        .powers {
+            background: #fff;
+            border-top: 1px solid var(--rule);
+            border-bottom: 1px solid var(--rule);
+            padding: 48px 24px;
+        }
+        .powers-label {
+            text-align: center;
+            font-size: 0.68rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--gold);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .powers-heading {
+            text-align: center;
+            font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+            font-weight: 700;
+            margin-bottom: 36px;
+            color: var(--ink);
+        }
+        .power-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+            max-width: 960px;
+            margin: 0 auto;
+        }
+        .power-card {
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid var(--rule);
+            background: var(--cream);
+        }
+        .power-card .icon {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            margin-bottom: 12px;
+        }
+        .power-card h6 { font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; }
+        .power-card p { font-size: 0.78rem; color: var(--slate); margin: 0; line-height: 1.5; }
+        .power-card .learn-toggle {
+            font-size: 0.72rem;
+            color: var(--gold);
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            border: none;
+            background: none;
+            padding: 0;
+        }
+        .power-card .learn-toggle:hover { color: var(--ink); }
+        .power-card .learn-detail {
+            display: none;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--rule);
+            font-size: 0.73rem;
+            color: var(--slate);
+            line-height: 1.6;
+        }
+        .power-card .learn-detail.show { display: block; }
+        .power-card .learn-detail ul {
+            margin: 6px 0 0 0;
+            padding-left: 16px;
+        }
+        .power-card .learn-detail li { margin-bottom: 3px; }
+
+        .skip-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.8rem;
+            text-decoration: none;
+            margin-top: 20px;
+            position: relative;
+            transition: color 0.15s;
+        }
+        .skip-link:hover { color: var(--gold); }
+
+        /* Roles strip */
+        .roles-strip {
+            padding: 40px 24px;
+            text-align: center;
+        }
+        .roles-strip .roles-heading {
+            font-size: 0.68rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--gold);
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .role-pills {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            max-width: 800px;
+            margin: 0 auto 16px;
+        }
+        .role-pill {
+            background: #fff;
+            border: 1px solid var(--rule);
+            border-radius: 50px;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--ink);
+        }
+        .role-pill i { font-size: 1rem; }
+        .role-pill .role-desc {
+            font-weight: 400;
+            color: var(--slate);
+            font-size: 0.75rem;
+        }
+
+        /* Site picker */
+        .picker-section {
+            flex: 1;
+            padding: 48px 24px;
+        }
+        .picker-label {
+            text-align: center;
+            font-size: 0.7rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--gold);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .picker-heading {
+            text-align: center;
+            font-size: clamp(1.3rem, 2.5vw, 1.8rem);
+            font-weight: 700;
+            margin-bottom: 36px;
+            color: var(--ink);
+        }
+        .site-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 20px;
+            max-width: 900px;
+            margin: 0 auto 48px;
+        }
+        .site-card {
+            background: #fff;
+            border: 1px solid var(--rule);
+            border-radius: 10px;
+            padding: 28px 24px 22px;
+            text-decoration: none;
+            color: var(--ink);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
+            position: relative;
+            overflow: hidden;
+        }
+        .site-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: var(--gold);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.2s;
+        }
+        .site-card:hover {
+            box-shadow: 0 6px 24px rgba(26,26,46,0.12);
+            transform: translateY(-2px);
+            border-color: var(--gold);
+            color: var(--ink);
+        }
+        .site-card:hover::before { transform: scaleX(1); }
+        .site-card .city-icon { font-size: 2rem; line-height: 1; margin-bottom: 6px; color: var(--gold); }
+        .site-card .city-name { font-size: 1.15rem; font-weight: 700; line-height: 1.2; }
+        .site-card .listing-count { font-size: 0.8rem; color: var(--slate); }
+        .site-card .listing-count span { font-weight: 600; color: var(--ink); }
+        .site-card .features { font-size: 0.72rem; color: var(--slate); margin-top: 4px; }
+        .site-card .arrow {
+            margin-top: auto;
+            padding-top: 14px;
+            font-size: 0.8rem;
+            color: var(--gold);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .no-sites {
+            text-align: center;
+            padding: 60px 0;
+            color: var(--slate);
+        }
+
+        .footer-strip {
+            background: var(--ink);
+            color: rgba(255,255,255,0.45);
+            text-align: center;
+            font-size: 0.78rem;
+            padding: 18px;
+        }
+        .footer-strip a {
+            color: rgba(255,255,255,0.55);
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .footer-strip a:hover { color: var(--gold); }
+    </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="hf-nav">
+    <a href="#" class="brand">
+        <i class="bi bi-house-heart-fill"></i>
+        HomeFinder Social
+    </a>
+    <div class="nav-links">
+        <a href="#markets"><i class="bi bi-geo-alt me-1"></i>Jump to Markets</a>
+        <a href="#markets"><i class="bi bi-geo-alt me-1"></i>Choose a Market</a>
+    </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+    <div class="hero-label">AI-Powered Home Discovery</div>
+    <h1>Find your next home.<br><em>Share</em> the journey.</h1>
+    <div class="hero-rule"></div>
+    <p class="hero-sub">
+        17-factor deal scoring. AI negotiation advice. Social sharing with friends and family.
+        Community-sourced listings. Points and leaderboards. All free to start.
+    </p>
+    <a href="#markets" class="skip-link">
+        <i class="bi bi-arrow-down-circle"></i> Skip to markets
+    </a>
+</div>
+
+<!-- Powers Section -->
+<div class="powers">
+    <div class="powers-label">What You Can Do</div>
+    <h2 class="powers-heading">More than a listing search. A home-finding platform.</h2>
+
+    <div class="power-grid">
+        <div class="power-card">
+            <div class="icon" style="background: #eff6ff; color: #2563eb;">
+                <i class="bi bi-robot"></i>
+            </div>
+            <h6>AI Deal Analysis</h6>
+            <p>Claude AI scores every listing on 17 factors, writes negotiation briefs, and ranks your favorites side by side.</p>
+            <button class="learn-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
+                How it works <i class="bi bi-chevron-down"></i>
+            </button>
+            <div class="learn-detail">
+                Every listing gets a composite deal score (0-100) based on price, size, yard, features, flood risk, HOA, taxes, and more.
+                You set the weights -- care more about yard size than price? Slide it up. The AI then writes a plain-English brief:
+                <ul>
+                    <li><strong>Single listing:</strong> negotiation strategy, suggested offer range, red flags</li>
+                    <li><strong>Portfolio:</strong> compare all your favorites, find patterns, pick the dark horse</li>
+                    <li><strong>Preference coaching:</strong> AI reviews your scoring weights and suggests adjustments</li>
+                </ul>
+                No account needed to see scores. Free account unlocks AI analysis.
+            </div>
+        </div>
+
+        <div class="power-card">
+            <div class="icon" style="background: #fdf2f8; color: #ec4899;">
+                <i class="bi bi-share"></i>
+            </div>
+            <h6>Share With Anyone</h6>
+            <p>Send listings to friends and family with a personal note. They can react, comment, and start their own search.</p>
+            <button class="learn-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
+                How sharing works <i class="bi bi-chevron-down"></i>
+            </button>
+            <div class="learn-detail">
+                Click the share button on any listing card or detail page. Add a recipient email, pick a relationship
+                (friend, family, coworker, neighbor), and write a personal message.
+                <ul>
+                    <li>Recipients get an email with the listing photo, price, and your note</li>
+                    <li>They can react: Love It, Interested, Great Location, Too Pricey, Not For Me</li>
+                    <li>You see all reactions on your "My Shares" page</li>
+                    <li>Or just copy a shareable link -- no email required</li>
+                </ul>
+                Guests can share too -- no account needed.
+            </div>
+        </div>
+
+        <div class="power-card">
+            <div class="icon" style="background: #f0fdf4; color: #16a34a;">
+                <i class="bi bi-house-add"></i>
+            </div>
+            <h6>Add a Home</h6>
+            <p>Know a home for sale that isn't on Zillow? Submit it as a Neighborhood Tip. Agents review and score it.</p>
+            <button class="learn-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
+                The full flow <i class="bi bi-chevron-down"></i>
+            </button>
+            <div class="learn-detail">
+                Under Social > Neighborhood Tips > Add a Home, fill in what you know:
+                <ul>
+                    <li>Address, zip, price, beds/baths/sqft, photos (up to 5), and a description</li>
+                    <li>Pick the relationship: your home, friend, neighbor, or family</li>
+                    <li>Confirm you have permission to share the listing</li>
+                </ul>
+                Your submission appears as a "Neighborhood Tip" with a green badge. If you have an assigned agent,
+                they see it in their dashboard and can enrich it with details (year built, lot size, features, lat/lng),
+                then approve it. Approved tips become real scored listings alongside Zillow and Realtor data.
+                Submissions expire after 90 days if not approved. You earn <strong>5 points</strong> for each submission.
+            </div>
+        </div>
+
+        <div class="power-card">
+            <div class="icon" style="background: #faf5ff; color: #9333ea;">
+                <i class="bi bi-gem"></i>
+            </div>
+            <h6>Earn Points</h6>
+            <p>Share listings, invite friends, add homes, get reactions. Earn points and climb the monthly leaderboard.</p>
+            <button class="learn-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
+                Point values <i class="bi bi-chevron-down"></i>
+            </button>
+            <div class="learn-detail">
+                <ul>
+                    <li><strong>+1</strong> -- Share a listing with someone</li>
+                    <li><strong>+2</strong> -- Create a collection</li>
+                    <li><strong>+3</strong> -- Someone reacts to your share</li>
+                    <li><strong>+3</strong> -- Agent approves a community listing</li>
+                    <li><strong>+5</strong> -- Submit a Neighborhood Tip</li>
+                    <li><strong>+5</strong> -- Agent creates a listing directly</li>
+                    <li><strong>+10</strong> -- Your referral signs up</li>
+                </ul>
+                Daily cap: 50 points. Check your balance in the Social dropdown (gem icon).
+                View full history at Social > My Points. Top earners appear on the monthly Leaderboard.
+            </div>
+        </div>
+
+        <div class="power-card">
+            <div class="icon" style="background: #fefce8; color: #ca8a04;">
+                <i class="bi bi-collection"></i>
+            </div>
+            <h6>Build Collections</h6>
+            <p>Group your top picks into shareable collections. Perfect for comparing options with your partner or family.</p>
+            <button class="learn-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
+                Using collections <i class="bi bi-chevron-down"></i>
+            </button>
+            <div class="learn-detail">
+                Create a collection from Social > My Collections. Give it a title and description, then add listings
+                from any listing card or detail page using the "Add to Collection" dropdown.
+                <ul>
+                    <li>Share an entire collection with one email -- recipients see all listings at once</li>
+                    <li>Make collections public for anyone with the link, or keep them private</li>
+                    <li>Reorder listings by position to tell a story (e.g., "Best to Worst")</li>
+                    <li>Earn <strong>2 points</strong> for each collection you create</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="power-card">
+            <div class="icon" style="background: #fff7ed; color: #ea580c;">
+                <i class="bi bi-map"></i>
+            </div>
+            <h6>Plan Tours</h6>
+            <p>Flag favorites, plot them on a map, and build a driving itinerary. Your agent sees everything you pick.</p>
+            <button class="learn-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
+                Tour planning <i class="bi bi-chevron-down"></i>
+            </button>
+            <div class="learn-detail">
+                Star listings you want to visit. The Tour page plots all your favorites on an interactive map
+                and builds a driving route.
+                <ul>
+                    <li>Add notes and mark listings as visited, scheduled, or "made offer"</li>
+                    <li>If you have an agent, they see your flagged listings and notes in real time</li>
+                    <li>Export your favorites as CSV from the Digest page for offline use</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="power-card">
+            <div class="icon" style="background: #f0f9ff; color: #0284c7;">
+                <i class="bi bi-eye"></i>
+            </div>
+            <h6>Street Watch</h6>
+            <p>Watch a street you love. Get emailed the moment a new listing, price drop, or status change appears.</p>
+            <button class="learn-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
+                How alerts work <i class="bi bi-chevron-down"></i>
+            </button>
+            <div class="learn-detail">
+                On any listing detail page, click "Watch This Street." Enter your email (or sign in) and you'll
+                get notified whenever something changes on that street:
+                <ul>
+                    <li>New listing appears matching the street name and zip</li>
+                    <li>Price drops on an existing listing</li>
+                    <li>Status changes (e.g., pending, sold, back on market)</li>
+                </ul>
+                Manage all your watches from the Watch page. Unsubscribe anytime via email link.
+                Works for guests too -- no account needed.
+            </div>
+        </div>
+
+        <div class="power-card">
+            <div class="icon" style="background: #fef2f2; color: #dc2626;">
+                <i class="bi bi-fire"></i>
+            </div>
+            <h6>Social Proof</h6>
+            <p>See which listings are trending. "Most Shared This Week" and share counts show you what others love.</p>
+            <button class="learn-toggle" onclick="this.nextElementSibling.classList.toggle('show')">
+                What you'll see <i class="bi bi-chevron-down"></i>
+            </button>
+            <div class="learn-detail">
+                The dashboard surfaces community activity so you can spot trends:
+                <ul>
+                    <li><strong>Most Shared This Week:</strong> horizontal scroll row of the top 5 listings people are sharing</li>
+                    <li><strong>Share count badges:</strong> each listing card shows how many times it's been shared</li>
+                    <li><strong>Reaction summary:</strong> on the detail page, see grouped reactions (Love It x3, Interested x5, etc.)</li>
+                    <li><strong>Monthly Leaderboard:</strong> top 10 sharers and top 10 referrers for the current month</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Roles strip -->
+<div class="roles-strip">
+    <div class="roles-heading">Built for Everyone in the Home Search</div>
+    <div class="role-pills">
+        <div class="role-pill">
+            <i class="bi bi-search" style="color: #2563eb;"></i>
+            Buyers
+            <span class="role-desc">Browse, score, share, and decide</span>
+        </div>
+        <div class="role-pill">
+            <i class="bi bi-briefcase" style="color: #16a34a;"></i>
+            Agents
+            <span class="role-desc">Manage clients, add listings, approve tips</span>
+        </div>
+        <div class="role-pill">
+            <i class="bi bi-shield-check" style="color: #9333ea;"></i>
+            Owners
+            <span class="role-desc">Run the site, control billing, manage users</span>
+        </div>
+        <div class="role-pill">
+            <i class="bi bi-incognito" style="color: var(--slate);"></i>
+            Guests
+            <span class="role-desc">Everything works without an account</span>
+        </div>
+    </div>
+    <p style="font-size: 0.82rem; color: var(--slate); max-width: 500px; margin: 0 auto;">
+        No credit card. No sign-up wall. Browse listings, view scores, check the map, and customize your scoring weights — all free, instantly.
+    </p>
+</div>
+
+<!-- Site Picker -->
+<div class="picker-section" id="markets">
+    <div class="picker-label">Available Markets</div>
+    <h2 class="picker-heading">Where are you searching?</h2>
+    <p style="text-align:center; color:var(--slate); font-size:0.85rem; margin-top:-20px; margin-bottom:24px;">
+        Pick your market to browse listings, create an account, or sign in.
+    </p>
+
+    {% if sites %}
+    <div class="site-grid">
+        {% for site in sites %}
+        <a href="{{ script_root }}/site/{{ site.site_key }}/" class="site-card">
+            <div class="city-icon"><i class="bi bi-geo-alt-fill"></i></div>
+            <div class="city-name">{{ site.display_name }}</div>
+            <div class="listing-count">
+                <span>{{ site.listing_count or '---' }}</span> active listings
+            </div>
+            <div class="features">
+                AI scoring + social sharing + community tips
+            </div>
+            <div class="arrow">
+                Start exploring <i class="bi bi-arrow-right"></i>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="no-sites">
+        <i class="bi bi-building" style="font-size:3rem; opacity:0.3;"></i>
+        <p class="mt-3 mb-1">No active markets are available right now.</p>
+        <p class="small" style="opacity:0.6;">We're adding new markets regularly — check back soon or create a free account to be notified when your area goes live.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Footer -->
+<div class="footer-strip">
+    <a href="#markets">Choose a Market to Sign In</a>
+    <a href="{{ script_root }}/auth/agent-signup">Agent Sign Up</a>
+</div>
+
+<script>
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/home_finder_agents_social/sw.js', {
+        scope: '/home_finder_agents_social/'
+    }).catch(() => {});
+}
+</script>
+</body>
+</html>

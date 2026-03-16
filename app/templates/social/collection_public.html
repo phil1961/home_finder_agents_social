@@ -1,0 +1,76 @@
+<!--
+  File: app/templates/social/collection_public.html
+  App Version: 2026.03.13 | File Version: 1.0.0
+  Last Modified: 2026-03-13
+-->
+{% extends "base.html" %}
+{% block title %}{{ collection.title }} — HomeFinder{% endblock %}
+
+{% block head %}
+<style>
+    .collection-hero {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        color: #1a1a2e;
+        padding: 2rem;
+        border-radius: 16px;
+        margin-bottom: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="collection-hero text-center">
+    <h3><i class="bi bi-collection me-2"></i>{{ collection.title }}</h3>
+    {% if collection.description %}
+    <p class="mb-0 opacity-75">{{ collection.description }}</p>
+    {% endif %}
+    <div class="mt-2">
+        <span class="badge bg-dark bg-opacity-25">{{ collection.listing_count }} listings</span>
+        <span class="badge bg-dark bg-opacity-25">by {{ collection.creator.username }}</span>
+    </div>
+</div>
+
+{% set items = collection.items.all() %}
+{% if items %}
+<div class="row g-3">
+    {% for item in items %}
+    {% set listing = item.listing %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm">
+            {% if listing.primary_photo_large %}
+            <img src="{{ listing.primary_photo_large }}" class="card-img-top"
+                 alt="{{ listing.address }}" style="height:180px;object-fit:cover;">
+            {% endif %}
+            <div class="card-body">
+                <h6 class="mb-1">${{ "{:,}".format(listing.price) }}</h6>
+                <p class="text-muted small mb-2">
+                    <i class="bi bi-geo-alt me-1"></i>{{ listing.address }}
+                    {% if listing.city %}, {{ listing.city }}{% endif %}
+                </p>
+                <div class="d-flex gap-2 mb-2" style="font-size:0.8rem;">
+                    {% if listing.beds %}<span><strong>{{ listing.beds }}</strong> bd</span>{% endif %}
+                    {% if listing.baths %}<span><strong>{{ listing.baths|round(1) }}</strong> ba</span>{% endif %}
+                    {% if listing.sqft %}<span><strong>{{ "{:,}".format(listing.sqft) }}</strong> sqft</span>{% endif %}
+                </div>
+                {% if item.note %}
+                <p class="fst-italic small text-muted mb-0">"{{ item.note }}"</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if not current_user.is_authenticated %}
+<div class="card mt-4 border-primary shadow-sm">
+    <div class="card-body text-center p-4">
+        <h5><i class="bi bi-house-heart me-2"></i>Discover more great deals</h5>
+        <p class="text-muted">Create a free account to save favorites, build your own collections, and get AI deal analysis.</p>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-primary">
+            <i class="bi bi-person-plus me-1"></i>Create Free Account
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

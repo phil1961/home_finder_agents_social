@@ -1,0 +1,104 @@
+<!--
+  File: app/templates/social/points.html
+  App Version: 2026.03.14 | File Version: 1.0.0
+  Last Modified: 2026-03-14
+-->
+{% extends "base.html" %}
+{% block title %}My Points — HomeFinder{% endblock %}
+
+{% block content %}
+<h4 class="mb-4"><i class="bi bi-gem me-2" style="color: #f093fb;"></i>My Points</h4>
+
+<!-- Balance card -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-4">
+        <div class="card text-center shadow-sm h-100" style="border-top: 3px solid #f093fb;">
+            <div class="card-body">
+                <div style="font-size: 2.5rem; font-weight: 700; color: #f093fb;">{{ balance }}</div>
+                <div class="text-muted small">Current Balance</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <div class="card text-center shadow-sm h-100">
+            <div class="card-body">
+                <div style="font-size: 2.5rem; font-weight: 700; color: #667eea;">{{ account.lifetime_earned if account else 0 }}</div>
+                <div class="text-muted small">Lifetime Earned</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h6 class="card-title"><i class="bi bi-info-circle me-1"></i>How to Earn</h6>
+                <ul class="list-unstyled mb-0 small">
+                    <li><span class="badge bg-light text-dark me-1">+1</span> Share a listing</li>
+                    <li><span class="badge bg-light text-dark me-1">+3</span> Someone reacts to your share</li>
+                    <li><span class="badge bg-light text-dark me-1">+2</span> Create a collection</li>
+                    <li><span class="badge bg-light text-dark me-1">+5</span> Add a home (Neighborhood Tip)</li>
+                    <li><span class="badge bg-light text-dark me-1">+5</span> Create a listing (Agent)</li>
+                    <li><span class="badge bg-light text-dark me-1">+3</span> Approve a community listing (Agent)</li>
+                    <li><span class="badge bg-light text-dark me-1">+10</span> Referral signs up</li>
+                </ul>
+                <p class="text-muted mb-0 mt-2" style="font-size: 0.7rem;">Max 50 points per day</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Points history -->
+<div class="card shadow-sm">
+    <div class="card-header"><i class="bi bi-clock-history me-2"></i>Recent Activity</div>
+    <div class="card-body p-0">
+        {% if logs %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Points</th>
+                        <th>Reason</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in logs %}
+                    <tr>
+                        <td>
+                            <span class="badge {% if entry.delta > 0 %}bg-success{% else %}bg-secondary{% endif %}">
+                                +{{ entry.delta }}
+                            </span>
+                        </td>
+                        <td style="font-size: 0.85rem;">
+                            {% if entry.reason == 'share_listing' %}
+                                <i class="bi bi-send me-1 text-primary"></i>Shared a listing
+                            {% elif entry.reason == 'reaction_received' %}
+                                <i class="bi bi-heart me-1 text-danger"></i>Reaction received
+                            {% elif entry.reason == 'collection_created' %}
+                                <i class="bi bi-collection me-1 text-info"></i>Created a collection
+                            {% elif entry.reason == 'referral_registered' %}
+                                <i class="bi bi-people me-1 text-success"></i>Referral signed up
+                            {% elif entry.reason == 'friend_listing' %}
+                                <i class="bi bi-house-add me-1 text-warning"></i>Added a home
+                            {% elif entry.reason == 'listing_created' %}
+                                <i class="bi bi-plus-circle me-1 text-primary"></i>Created a listing
+                            {% elif entry.reason == 'listing_approved' %}
+                                <i class="bi bi-clipboard-check me-1 text-success"></i>Approved a community listing
+                            {% else %}
+                                {{ entry.reason }}
+                            {% endif %}
+                        </td>
+                        <td class="text-muted" style="font-size: 0.8rem;">{{ entry.created_at.strftime('%b %d, %H:%M') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4">
+            <i class="bi bi-gem" style="font-size: 2rem; opacity: 0.3;"></i>
+            <p class="mt-2 mb-0">No points earned yet. Start by sharing a listing!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

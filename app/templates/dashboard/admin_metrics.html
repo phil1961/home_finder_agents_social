@@ -1,0 +1,439 @@
+<!--
+  File: app/templates/dashboard/admin_metrics.html
+  App Version: 2026.03.12 | File Version: 1.4.0
+  Last Modified: 2026-03-13
+-->
+{% extends "base.html" %}
+{% block title %}API Metrics — HomeFinder{% endblock %}
+
+{% block head %}
+<style>
+    .metric-card { border-radius: 10px; }
+    .cost-cell { font-family: monospace; font-size: 0.82rem; }
+    .call-type-badge {
+        font-size: 0.68rem; padding: 2px 7px; border-radius: 20px; white-space: nowrap;
+    }
+    .ct-zillow            { background: #dbeafe; color: #1e40af; }
+    .ct-realtor           { background: #fee2e2; color: #991b1b; }
+    .ct-anthropic_deal    { background: #ede9fe; color: #5b21b6; }
+    .ct-anthropic_portfolio { background: #f3e8ff; color: #7e22ce; }
+    .ct-anthropic_prefs   { background: #fae8ff; color: #86198f; }
+    .ct-google_places     { background: #dcfce7; color: #166534; }
+    .ct-google_geocode    { background: #d1fae5; color: #065f46; }
+    .summary-stat { text-align: center; padding: 16px 8px; }
+    .summary-stat .val { font-size: 1.8rem; font-weight: 700; line-height: 1.1; }
+    .summary-stat .lbl { font-size: 0.68rem; text-transform: uppercase;
+                         letter-spacing: 0.8px; color: #9ca3af; margin-top: 2px; }
+    th.sortable { cursor: pointer; user-select: none; }
+    th.sortable:hover { background: #f1f5f9; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0"><i class="bi bi-bar-chart-line me-2 text-primary"></i>API Usage Metrics</h4>
+        <small class="text-muted">All-time and 30-day breakdown by user and call type</small>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        {% if current_user.is_owner %}
+        <button type="button" class="btn btn-success btn-sm" id="fetch-now-btn" onclick="doFetchNow()">
+            <i class="bi bi-arrow-repeat"></i> Fetch Now
+        </button>
+        <button type="button" class="btn btn-sm" id="scheduler-toggle-btn" onclick="toggleScheduler()"
+                title="Toggle nightly scheduled fetch">
+            {% if current_site.scheduler_paused %}
+            <i class="bi bi-pause-circle text-danger"></i> <span class="d-none d-md-inline">Scheduler Paused</span>
+            {% else %}
+            <i class="bi bi-clock text-success"></i> <span class="d-none d-md-inline">Scheduler Active</span>
+            {% endif %}
+        </button>
+        {% endif %}
+        <a href="{{ site_url('dashboard.admin_diagnostics') }}" class="btn btn-sm btn-outline-info">
+            <i class="bi bi-activity me-1"></i>Diagnostics
+        </a>
+        <a href="{{ site_url('dashboard.admin_agents') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Agent Admin
+        </a>
+    </div>
+</div>
+
+<!-- Fetch Log Panel -->
+{% if current_user.is_owner %}
+<div id="fetch-log-panel" class="card border-0 shadow-sm mb-3" style="display:none;">
+    <div class="card-header d-flex justify-content-between align-items-center py-2"
+         style="background: #313244; color: #cdd6f4; border-radius: 8px 8px 0 0;">
+        <span><i class="bi bi-terminal"></i> <strong>Pipeline Log</strong>
+            <span id="fetch-log-status" class="ms-2 small"></span>
+        </span>
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-light py-0 px-2" onclick="copyFetchLog()" title="Copy log">
+                <i class="bi bi-clipboard"></i> Copy
+            </button>
+            <button class="btn btn-sm btn-outline-light py-0 px-2" onclick="closeFetchLog()" title="Close">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+    </div>
+    <div class="log-body" id="fetch-log-body"
+         style="max-height:400px; overflow-y:auto; font-family:monospace; font-size:0.78rem;
+                background:#1e1e2e; color:#cdd6f4; padding:10px 14px; border-radius:0 0 8px 8px;">
+    </div>
+</div>
+{% endif %}
+
+{# ── Summary cards ──────────────────────────────────────────── #}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm metric-card">
+            <div class="summary-stat">
+                <div class="val text-primary" id="card-ai">{{ summary.alltime_ai }}</div>
+                <div class="lbl">AI Calls (all time)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm metric-card">
+            <div class="summary-stat">
+                <div class="val text-success" id="card-fetches">{{ summary.alltime_fetches }}</div>
+                <div class="lbl">Fetches (all time)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm metric-card">
+            <div class="summary-stat">
+                <div class="val text-warning" id="card-cost-alltime">${{ "%.2f"|format(grand_alltime) }}</div>
+                <div class="lbl">Est. Cost (all time)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card border-0 shadow-sm metric-card">
+            <div class="summary-stat">
+                <div class="val text-danger" id="card-cost-recent">${{ "%.2f"|format(grand_recent) }}</div>
+                <div class="lbl">Est. Cost (30 days)</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Per-user breakdown ─────────────────────────────────────── #}
+{% set all_user_ids = alltime_data.keys() | list %}
+{% if all_user_ids %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+        <strong><i class="bi bi-people me-1"></i> Per-User Breakdown</strong>
+        <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-outline-secondary active" id="btn-alltime"
+                    onclick="showTable('alltime')">All Time</button>
+            <button type="button" class="btn btn-outline-secondary" id="btn-30d"
+                    onclick="showTable('30d')">Last 30 Days</button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% for period, data in [('alltime', alltime_data), ('30d', recent_data)] %}
+        <div id="table-{{ period }}" {% if period == '30d' %}style="display:none;"{% endif %}>
+        <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0" style="font-size:0.82rem;">
+            <thead class="table-light">
+                <tr>
+                    <th>User</th>
+                    <th class="text-center">Zillow</th>
+                    <th class="text-center">Realtor</th>
+                    <th class="text-center">AI Deal</th>
+                    <th class="text-center">AI Portfolio</th>
+                    <th class="text-center">AI Prefs</th>
+                    <th class="text-center">G.Places</th>
+                    <th class="text-center">G.Geocode</th>
+                    <th class="text-end cost-cell">Est. Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for uid in data.keys() | sort %}
+            {% set row = data[uid] %}
+            {% set u = users.get(uid) %}
+            <tr>
+                <td>
+                    {% if u %}
+                    <span class="fw-semibold">{{ u.username }}</span>
+                    <span class="text-muted ms-1" style="font-size:0.75rem;">{{ u.email }}</span>
+                    {% if u.is_owner %}<span class="badge bg-dark ms-1" style="font-size:0.6rem;">owner</span>{% endif %}
+                    {% if u.is_agent %}<span class="badge bg-primary ms-1" style="font-size:0.6rem;">agent</span>{% endif %}
+                    {% else %}
+                    <span class="text-muted fst-italic">System / Scheduler</span>
+                    <span class="badge bg-secondary" style="font-size:0.6rem;">scheduled</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">{{ row.get('zillow', 0) or '—' }}</td>
+                <td class="text-center">{{ row.get('realtor', 0) or '—' }}</td>
+                <td class="text-center">{{ row.get('anthropic_deal', 0) or '—' }}</td>
+                <td class="text-center">{{ row.get('anthropic_portfolio', 0) or '—' }}</td>
+                <td class="text-center">{{ row.get('anthropic_prefs', 0) or '—' }}</td>
+                <td class="text-center">{{ row.get('google_places', 0) or '—' }}</td>
+                <td class="text-center">{{ row.get('google_geocode', 0) or '—' }}</td>
+                <td class="text-end cost-cell text-warning fw-semibold">
+                    ${{ "%.3f"|format(row.get('_total_cost', 0)) }}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+            <tfoot class="table-light fw-semibold">
+                <tr>
+                    <td>Total</td>
+                    {% set col_totals = summary.alltime_col_totals if period == 'alltime' else summary.recent_col_totals %}
+                    {% for ct in call_types %}
+                    <td class="text-center">{{ col_totals[ct] or '—' }}</td>
+                    {% endfor %}
+                    <td class="text-end cost-cell text-danger">
+                        ${{ "%.3f"|format(grand_alltime if period == 'alltime' else grand_recent) }}
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+        </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div class="alert alert-light border">
+    <i class="bi bi-activity me-1"></i>No API calls logged yet. Costs will appear here once users request AI deal analyses or the pipeline runs.
+</div>
+{% endif %}
+
+{# ── Cost reference ─────────────────────────────────────────── #}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent border-0">
+        <strong><i class="bi bi-calculator me-1"></i> Cost Estimates Per Call</strong>
+        <small class="text-muted ms-2">(update in ApiCallLog.COST_MAP as pricing changes)</small>
+    </div>
+    <div class="card-body py-2">
+        <div class="d-flex flex-wrap gap-3">
+            {% for ct, cost in cost_map.items() %}
+            <div class="text-center px-3 py-2 rounded" style="background:#f8fafc; min-width:100px;">
+                <span class="call-type-badge ct-{{ ct }} d-block mb-1">{{ ct.replace('_',' ') }}</span>
+                <span class="fw-semibold" style="font-size:0.85rem;">${{ "%.3f"|format(cost) }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{# ── Recent activity log ────────────────────────────────────── #}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent border-0">
+        <strong><i class="bi bi-clock-history me-1"></i> Recent Activity</strong>
+        <small class="text-muted ms-2">(last 50 calls)</small>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0" style="font-size:0.8rem;">
+            <thead class="table-light">
+                <tr>
+                    <th>When</th>
+                    <th>User</th>
+                    <th>Site</th>
+                    <th>Zip</th>
+                    <th>Type</th>
+                    <th class="text-center">Results</th>
+                    <th class="text-end">Time</th>
+                    <th>Detail</th>
+                    <th class="text-center">Status</th>
+                </tr>
+            </thead>
+            <tbody id="activity-tbody">
+            {% for c in recent_calls %}
+            {% set u = users.get(c.user_id) %}
+            <tr class="{% if not c.success %}table-danger{% endif %}">
+                <td class="text-muted" style="white-space:nowrap;">
+                    {{ c.called_at.strftime('%b %d %H:%M') if c.called_at else '—' }}
+                </td>
+                <td>
+                    {% if u %}{{ u.username }}{% else %}<span class="text-muted">system</span>{% endif %}
+                    {% if c.trigger == 'scheduled' %}
+                    <span class="badge bg-secondary" style="font-size:0.6rem;">scheduled</span>
+                    {% elif u %}
+                    <span class="badge bg-info text-dark" style="font-size:0.6rem;">manual</span>
+                    {% endif %}
+                </td>
+                <td class="text-muted" style="font-size:0.75rem;">{{ c.site_key or '—' }}</td>
+                <td class="text-muted" style="font-size:0.75rem;">{{ c.zip_code or '—' }}</td>
+                <td><span class="call-type-badge ct-{{ c.call_type }}">{{ c.call_type.replace('_',' ') }}</span></td>
+                <td class="text-center">{{ c.results_count if c.results_count is not none else '—' }}</td>
+                <td class="text-end text-muted" style="font-size:0.75rem;">
+                    {% if c.response_time_ms is not none %}
+                    <span class="{% if c.response_time_ms > 5000 %}text-danger fw-semibold{% elif c.response_time_ms > 2000 %}text-warning{% endif %}">
+                        {{ "%.1f"|format(c.response_time_ms / 1000) }}s
+                    </span>
+                    {% else %}—{% endif %}
+                </td>
+                <td class="text-muted">{{ c.detail or '—' }}</td>
+                <td class="text-center">
+                    {% if c.success %}
+                    <i class="bi bi-check-circle-fill text-success"></i>
+                    {% else %}
+                    <i class="bi bi-x-circle-fill text-danger"></i>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showTable(period) {
+    document.getElementById('table-alltime').style.display = period === 'alltime' ? '' : 'none';
+    document.getElementById('table-30d').style.display     = period === '30d'     ? '' : 'none';
+    document.getElementById('btn-alltime').classList.toggle('active', period === 'alltime');
+    document.getElementById('btn-30d').classList.toggle('active',     period === '30d');
+}
+
+/* ── Refresh metrics data via AJAX ────────────────────────────── */
+function refreshMetrics() {
+    fetch('{{ site_url("dashboard.admin_metrics_refresh") }}')
+        .then(r => r.json())
+        .then(data => {
+            /* Update summary cards */
+            const s = data.summary;
+            const el = id => document.getElementById(id);
+            if (el('card-ai'))           el('card-ai').textContent = s.alltime_ai;
+            if (el('card-fetches'))      el('card-fetches').textContent = s.alltime_fetches;
+            if (el('card-cost-alltime')) el('card-cost-alltime').textContent = '$' + s.grand_alltime;
+            if (el('card-cost-recent'))  el('card-cost-recent').textContent = '$' + s.grand_recent;
+
+            /* Rebuild Recent Activity tbody */
+            const tbody = el('activity-tbody');
+            if (tbody && data.activity) {
+                tbody.innerHTML = '';
+                data.activity.forEach(c => {
+                    const tr = document.createElement('tr');
+                    if (!c.success) tr.className = 'table-danger';
+
+                    let triggerBadge = '';
+                    if (c.trigger === 'scheduled')
+                        triggerBadge = ' <span class="badge bg-secondary" style="font-size:0.6rem;">scheduled</span>';
+                    else if (c.user !== 'system')
+                        triggerBadge = ' <span class="badge bg-info text-dark" style="font-size:0.6rem;">manual</span>';
+
+                    const statusIcon = c.success
+                        ? '<i class="bi bi-check-circle-fill text-success"></i>'
+                        : '<i class="bi bi-x-circle-fill text-danger"></i>';
+
+                    const ctClass = 'ct-' + c.call_type;
+                    const results = c.results_count != null ? c.results_count : '—';
+                    let timeCell = '—';
+                    if (c.response_time_ms != null) {
+                        const secs = (c.response_time_ms / 1000).toFixed(1) + 's';
+                        const cls = c.response_time_ms > 5000 ? 'text-danger fw-semibold'
+                                  : c.response_time_ms > 2000 ? 'text-warning' : '';
+                        timeCell = '<span class="' + cls + '">' + secs + '</span>';
+                    }
+                    tr.innerHTML =
+                        '<td class="text-muted" style="white-space:nowrap;">' + esc(c.when) + '</td>' +
+                        '<td>' + esc(c.user) + triggerBadge + '</td>' +
+                        '<td class="text-muted" style="font-size:0.75rem;">' + esc(c.site_key) + '</td>' +
+                        '<td class="text-muted" style="font-size:0.75rem;">' + esc(c.zip_code) + '</td>' +
+                        '<td><span class="call-type-badge ' + ctClass + '">' + esc(c.call_type.replace(/_/g, ' ')) + '</span></td>' +
+                        '<td class="text-center">' + results + '</td>' +
+                        '<td class="text-end text-muted" style="font-size:0.75rem;">' + timeCell + '</td>' +
+                        '<td class="text-muted">' + esc(c.detail) + '</td>' +
+                        '<td class="text-center">' + statusIcon + '</td>';
+                    tbody.appendChild(tr);
+                });
+            }
+        })
+        .catch(err => console.warn('Metrics refresh failed:', err));
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s || '—'; return d.innerHTML; }
+
+/* Refresh on page load */
+document.addEventListener('DOMContentLoaded', refreshMetrics);
+
+{% if current_user.is_owner %}
+function doFetchNow() {
+    const btn = document.getElementById('fetch-now-btn');
+    const panel = document.getElementById('fetch-log-panel');
+    const body = document.getElementById('fetch-log-body');
+    const status = document.getElementById('fetch-log-status');
+    panel.style.display = 'block';
+    body.innerHTML = '';
+    status.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Running pipeline...';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Fetching...'; }
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    fetch('{{ site_url("dashboard.fetch_now") }}', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.log && data.log.length) {
+                data.log.forEach(entry => {
+                    const div = document.createElement('div');
+                    div.className = 'log-line level-' + (entry.level || 'INFO');
+                    div.innerHTML = '<span class="ts" style="color:#6c7086;margin-right:6px;">[' + entry.time + ']</span>' +
+                                    entry.message.replace(/</g, '&lt;');
+                    body.appendChild(div);
+                });
+            }
+            const summaryDiv = document.createElement('div');
+            const cls = data.status === 'success' ? 'level-INFO' : data.status === 'warning' ? 'level-WARNING' : 'level-ERROR';
+            summaryDiv.className = 'log-line ' + cls;
+            summaryDiv.innerHTML = '<span class="ts" style="color:#6c7086;margin-right:6px;">[' + data.elapsed + ']</span><strong>' +
+                                   data.summary.replace(/</g, '&lt;') + '</strong>';
+            body.appendChild(summaryDiv);
+            const badge = data.status === 'success' ? 'bg-success' : data.status === 'warning' ? 'bg-warning text-dark' : 'bg-danger';
+            status.innerHTML = '<span class="badge ' + badge + '">' + data.status.toUpperCase() +
+                               '</span> <span class="small text-light">' + data.elapsed + '</span>';
+            body.scrollTop = body.scrollHeight;
+
+            /* Refresh metrics tables after fetch completes */
+            refreshMetrics();
+        })
+        .catch(err => {
+            status.innerHTML = '<span class="badge bg-danger">NETWORK ERROR</span>';
+            const div = document.createElement('div');
+            div.className = 'log-line level-ERROR';
+            div.textContent = 'Network error: ' + err.message;
+            body.appendChild(div);
+        })
+        .finally(() => {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Fetch Now'; }
+        });
+}
+
+function toggleScheduler() {
+    const btn = document.getElementById('scheduler-toggle-btn');
+    fetch('{{ site_url("dashboard.toggle_scheduler") }}', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) { alert(data.error); return; }
+            if (data.paused) {
+                btn.innerHTML = '<i class="bi bi-pause-circle text-danger"></i> <span class="d-none d-md-inline">Scheduler Paused</span>';
+            } else {
+                btn.innerHTML = '<i class="bi bi-clock text-success"></i> <span class="d-none d-md-inline">Scheduler Active</span>';
+            }
+        })
+        .catch(err => alert('Network error: ' + err.message));
+}
+
+function closeFetchLog() { document.getElementById('fetch-log-panel').style.display = 'none'; }
+
+function copyFetchLog() {
+    const body = document.getElementById('fetch-log-body');
+    const lines = Array.from(body.querySelectorAll('.log-line')).map(el => el.textContent).join('\n');
+    navigator.clipboard.writeText(lines).then(() => {
+        const copyBtn = body.closest('#fetch-log-panel').querySelector('[onclick*="copyFetchLog"]');
+        const orig = copyBtn.innerHTML;
+        copyBtn.innerHTML = '<i class="bi bi-check"></i> Copied!';
+        setTimeout(() => { copyBtn.innerHTML = orig; }, 1500);
+    });
+}
+{% endif %}
+</script>
+{% endblock %}

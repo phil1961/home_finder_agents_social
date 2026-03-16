@@ -1,0 +1,401 @@
+<!--
+  File: app/templates/dashboard/_prefs_scoring.html
+  App Version: 2026.03.14 | File Version: 1.0.0
+  Last Modified: 2026-03-15
+-->
+<!-- ══════════════════════════════════════════════════════════════
+     SECTION 1: SCORING & SEARCH (sliders + criteria)
+     ══════════════════════════════════════════════════════════════ -->
+<div style="border: 2px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 24px; background: #fefefe;">
+<div class="d-flex align-items-center gap-2 mb-3">
+    <i class="bi bi-speedometer2 text-primary" style="font-size:1.1rem;"></i>
+    <h6 class="mb-0">Scoring & Search Preferences</h6>
+</div>
+<form method="POST" id="scoringForm" onsubmit="return saveFormAjax(event, this, 'scoring-save-status')">
+<input type="hidden" name="_section" value="scoring">
+<div class="row">
+<!-- ════════════════════ LEFT COLUMN ════════════════════ -->
+<div class="col-lg-6">
+
+    <!-- Price Range -->
+    <div class="card pref-section shadow-sm mb-3">
+        <div class="card-header"><i class="bi bi-currency-dollar"></i> Price Range</div>
+        <div class="card-body">
+            <div class="d-flex justify-content-between mb-1">
+                <span class="price-display" id="minPriceLabel">${{ "{:,}".format(prefs.min_price) }}</span>
+                <span class="text-muted">to</span>
+                <span class="price-display" id="maxPriceLabel">${{ "{:,}".format(prefs.max_price) }}</span>
+            </div>
+            <div class="range-track">
+                <div class="range-bg"></div>
+                <div class="range-bar" id="priceBar"></div>
+                <input type="range" id="minPriceSlider" name="min_price"
+                       min="100000" max="1500000" step="25000" value="{{ prefs.min_price }}"
+                       oninput="updatePriceRange(this)">
+                <input type="range" id="maxPriceSlider" name="max_price"
+                       min="100000" max="1500000" step="25000" value="{{ prefs.max_price }}"
+                       oninput="updatePriceRange(this)">
+            </div>
+            <div class="d-flex justify-content-between mt-1">
+                <small class="text-muted">$100K</small>
+                <small class="text-muted">$1.5M</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Criteria -->
+    <div class="card pref-section shadow-sm mb-3">
+        <div class="card-header"><i class="bi bi-search"></i> Search Criteria</div>
+        <div class="card-body">
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label small">Min Bedrooms</label>
+                    <select name="min_beds" class="form-select">
+                        {% for n in range(1, 7) %}
+                        <option value="{{ n }}" {% if prefs.min_beds == n %}selected{% endif %}>{{ n }}+</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small">Min Bathrooms</label>
+                    <select name="min_baths" class="form-select">
+                        {% for n in [1, 1.5, 2, 2.5, 3, 3.5, 4] %}
+                        <option value="{{ n }}" {% if prefs.min_baths == n %}selected{% endif %}>{{ n }}+</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <label class="form-label small">Must-Have Features</label>
+            <div class="d-flex gap-4">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="must_garage"
+                           name="must_have_garage" {% if prefs.must_have_garage %}checked{% endif %}>
+                    <label class="form-check-label" for="must_garage">Garage</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="must_porch"
+                           name="must_have_porch" {% if prefs.must_have_porch %}checked{% endif %}>
+                    <label class="form-check-label" for="must_porch">Porch</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="must_patio"
+                           name="must_have_patio" {% if prefs.must_have_patio %}checked{% endif %}>
+                    <label class="form-check-label" for="must_patio">Patio</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Target Areas (summary — full editor below) -->
+    <div class="card pref-section shadow-sm mb-3">
+        <div class="card-header"><i class="bi bi-geo-alt"></i> Target Areas</div>
+        <div class="card-body py-2">
+            <div id="areas-summary" class="mb-2">
+                {% if prefs.target_areas %}
+                    {% for area_name, zips in prefs.target_areas.items() %}
+                    <div class="small mb-1">
+                        <span class="fw-semibold">{{ area_name }}</span>
+                        <span class="text-muted ms-1">{{ zips|join(', ') }}</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <span class="text-muted small">No target areas set.</span>
+                {% endif %}
+            </div>
+            {% if current_user.is_authenticated and current_user.is_master %}
+            <a href="#area-map-section" class="btn btn-sm btn-outline-primary w-100">
+                <i class="bi bi-map me-1"></i> Edit on Map ↓
+            </a>
+            {% else %}
+            <a href="#area-map-section" class="btn btn-sm btn-outline-secondary w-100">
+                <i class="bi bi-map me-1"></i> View on Map ↓
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Display -->
+    <div class="card pref-section shadow-sm mb-3">
+        <div class="card-header"><i class="bi bi-display"></i> Display Settings</div>
+        <div class="card-body">
+            <label class="form-label small">Great Deal Threshold</label>
+            <div class="d-flex align-items-center gap-3">
+                <input type="range" class="form-range flex-grow-1" name="great_deal_threshold"
+                       id="threshold-slider" min="50" max="95" step="5"
+                       value="{{ prefs.great_deal_threshold }}"
+                       oninput="document.getElementById('threshold-val').textContent = this.value">
+                <span class="badge bg-success" id="threshold-val">{{ prefs.great_deal_threshold }}</span>
+            </div>
+            <div class="form-text">Listings scoring above this get a green highlight.</div>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════ RIGHT COLUMN ════════════════════ -->
+<div class="col-lg-6">
+    <div class="card pref-section shadow-sm mb-3">
+        <div class="card-header">
+            <i class="bi bi-speedometer2"></i> Scoring Importance
+            <span class="float-end">
+                <small class="text-muted">0 = off, 10 = critical</small>
+            </span>
+        </div>
+        <div class="card-body">
+
+            <!-- Core factors -->
+            <div class="category-label mt-1">CORE FACTORS</div>
+            {% set core = [
+                ("imp_price", "Price", "Lower price = higher score"),
+                ("imp_size", "House Size", "Bigger = better"),
+                ("imp_yard", "Yard Size", "Larger lot = better"),
+                ("imp_features", "Features", "Garage, porch, patio, beds, baths"),
+                ("imp_flood", "Flood Risk", "Above flood plain = best"),
+            ] %}
+            {% for key, label, desc in core %}
+            <div class="imp-row d-flex align-items-center gap-2">
+                <div style="width:130px;">
+                    <div class="small fw-semibold">{{ label }}</div>
+                    <div style="font-size:0.65rem; color:#9ca3af;">{{ desc }}</div>
+                </div>
+                <input type="range" class="form-range flex-grow-1 imp-slider" name="{{ key }}" id="{{ key }}"
+                       min="0" max="10" step="1" value="{{ prefs[key] }}"
+                       oninput="updateImpDisplay(this)">
+                <span class="imp-val {% if prefs[key] >= 7 %}high{% elif prefs[key] >= 4 %}mid{% elif prefs[key] >= 1 %}low{% else %}off{% endif %}"
+                      id="{{ key }}-val">{{ prefs[key] }}</span>
+            </div>
+            {% endfor %}
+
+            <!-- Property condition -->
+            <div class="category-label mt-3">PROPERTY CONDITION</div>
+            {% set condition = [
+                ("imp_year_built", "Year Built", "Newer = less maintenance"),
+                ("imp_single_story", "Single Story", "One-level retirement living"),
+                ("imp_price_per_sqft", "Price / Sqft", "Value for money metric"),
+            ] %}
+            {% for key, label, desc in condition %}
+            <div class="imp-row d-flex align-items-center gap-2">
+                <div style="width:130px;">
+                    <div class="small fw-semibold">{{ label }}</div>
+                    <div style="font-size:0.65rem; color:#9ca3af;">{{ desc }}</div>
+                </div>
+                <input type="range" class="form-range flex-grow-1 imp-slider" name="{{ key }}" id="{{ key }}"
+                       min="0" max="10" step="1" value="{{ prefs[key] }}"
+                       oninput="updateImpDisplay(this)">
+                <span class="imp-val {% if prefs[key] >= 7 %}high{% elif prefs[key] >= 4 %}mid{% elif prefs[key] >= 1 %}low{% else %}off{% endif %}"
+                      id="{{ key }}-val">{{ prefs[key] }}</span>
+            </div>
+            {% endfor %}
+
+            <!-- Deal opportunity -->
+            <div class="category-label mt-3">DEAL OPPORTUNITY</div>
+            {% set deal = [
+                ("imp_days_on_market", "Days on Market", "Longer = more negotiation room"),
+                ("imp_price_trend", "Price Trend", "Dropping price = opportunity"),
+                ("imp_hoa", "HOA Fee", "Lower or no HOA = better"),
+                ("imp_property_tax", "Property Tax", "Lower tax rate = better"),
+            ] %}
+            {% for key, label, desc in deal %}
+            <div class="imp-row d-flex align-items-center gap-2">
+                <div style="width:130px;">
+                    <div class="small fw-semibold">{{ label }}</div>
+                    <div style="font-size:0.65rem; color:#9ca3af;">{{ desc }}</div>
+                </div>
+                <input type="range" class="form-range flex-grow-1 imp-slider" name="{{ key }}" id="{{ key }}"
+                       min="0" max="10" step="1" value="{{ prefs[key] }}"
+                       oninput="updateImpDisplay(this)">
+                <span class="imp-val {% if prefs[key] >= 7 %}high{% elif prefs[key] >= 4 %}mid{% elif prefs[key] >= 1 %}low{% else %}off{% endif %}"
+                      id="{{ key }}-val">{{ prefs[key] }}</span>
+            </div>
+            {% endfor %}
+
+            <!-- Location & lifestyle -->
+            <div class="category-label mt-3">LOCATION & LIFESTYLE</div>
+
+            <!-- Proximity to Point of Interest -->
+            <div class="imp-row d-flex align-items-start gap-2 pb-2" style="border-bottom:2px solid #e5e7eb;">
+                <div style="width:130px;">
+                    <div class="small fw-semibold">Near Landmark</div>
+                    <div style="font-size:0.65rem; color:#9ca3af;">Distance to a point of interest</div>
+                </div>
+                <div class="flex-grow-1">
+                    {% set user_lms = prefs.get('user_landmarks', []) %}
+                    <select class="form-select form-select-sm mb-1" id="proximity_poi_select"
+                            onchange="onPoiSelect(this)">
+                        <option value="">-- None (disabled) --</option>
+                        {% if landmarks %}
+                        <optgroup label="Site Landmarks">
+                            {% for lm in landmarks %}
+                            <option value="{{ lm.name }}"
+                                    data-lat="{{ lm.lat }}" data-lng="{{ lm.lng }}"
+                                    {% if prefs.get('proximity_poi_name', '') == lm.name %}selected{% endif %}>
+                                {{ lm.name }}
+                            </option>
+                            {% endfor %}
+                        </optgroup>
+                        {% endif %}
+                        {% if user_lms %}
+                        <optgroup label="My Landmarks" id="poi-user-optgroup">
+                            {% for lm in user_lms %}
+                            <option value="{{ lm.name }}"
+                                    data-lat="{{ lm.lat }}" data-lng="{{ lm.lng }}"
+                                    {% if prefs.get('proximity_poi_name', '') == lm.name %}selected{% endif %}>
+                                {{ lm.name }}
+                            </option>
+                            {% endfor %}
+                        </optgroup>
+                        {% endif %}
+                    </select>
+                    <input type="hidden" name="proximity_poi_name" id="proximity_poi_name"
+                           value="{{ prefs.get('proximity_poi_name', '') }}">
+                    <input type="hidden" name="proximity_poi_lat" id="proximity_poi_lat"
+                           value="{{ prefs.get('proximity_poi_lat', 0) }}">
+                    <input type="hidden" name="proximity_poi_lng" id="proximity_poi_lng"
+                           value="{{ prefs.get('proximity_poi_lng', 0) }}">
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="range" class="form-range flex-grow-1 imp-slider" name="imp_proximity_poi"
+                               id="imp_proximity_poi" min="0" max="10" step="1"
+                               value="{{ prefs.get('imp_proximity_poi', 0) }}"
+                               oninput="updateImpDisplay(this)">
+                        <span class="imp-val {% if prefs.get('imp_proximity_poi', 0) >= 7 %}high{% elif prefs.get('imp_proximity_poi', 0) >= 4 %}mid{% elif prefs.get('imp_proximity_poi', 0) >= 1 %}low{% else %}off{% endif %}"
+                              id="imp_proximity_poi-val">{{ prefs.get('imp_proximity_poi', 0) }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- My Landmarks (user-defined, up to 3) -->
+            {% if current_user.is_authenticated %}
+            <div class="mt-2 mb-3 p-2 rounded" style="background:#f8fafc; border:1px solid #e2e8f0;">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <button type="button" class="btn btn-sm btn-link text-decoration-none p-0" style="font-size:0.78rem;"
+                            onclick="document.getElementById('my-landmarks-panel').classList.toggle('d-none')">
+                        <i class="bi bi-pin-map me-1" style="color:#dc2626;"></i>
+                        <strong>My Landmarks</strong>
+                        <span class="text-muted ms-1" id="ul-count">({{ user_lms|length }}/3)</span>
+                        <i class="bi bi-chevron-down ms-1" style="font-size:0.6rem;"></i>
+                    </button>
+                </div>
+                <div id="my-landmarks-panel" class="d-none">
+                    <!-- User's current landmarks -->
+                    <div id="ul-list" class="mb-2">
+                        {% if user_lms %}
+                        {% for lm in user_lms %}
+                        <div class="d-flex align-items-center justify-content-between py-1 {% if not loop.last %}border-bottom{% endif %} ul-row">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="text-muted fw-bold" style="font-size:0.68rem;">{{ loop.index }}.</span>
+                                <span class="small">{{ lm.name }}</span>
+                                <span class="text-muted" style="font-size:0.6rem;">{{ "%.4f"|format(lm.lat) }}, {{ "%.4f"|format(lm.lng) }}</span>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" style="font-size:0.6rem;"
+                                    onclick="ulDelete('{{ lm.name|e }}')">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <p class="small text-muted mb-0" id="ul-empty">No personal landmarks yet.</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Add form -->
+                    <div id="ul-add-section" {% if user_lms|length >= 3 %}class="d-none"{% endif %}>
+                        <div class="row g-1 mb-1">
+                            <div class="col-8">
+                                <label class="form-label small mb-0 text-muted" style="font-size:0.65rem;">Search address or place</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control" id="ul-search"
+                                           placeholder="e.g. 1223 Pebworth Rd, or Walmart..."
+                                           autocomplete="off"
+                                           oninput="ulTypeahead()"
+                                           onkeydown="ulSearchKeydown(event)">
+                                    <span class="input-group-text" id="ul-search-spinner" style="display:none;">
+                                        <span class="spinner-border spinner-border-sm text-muted" style="width:14px;height:14px;"></span>
+                                    </span>
+                                </div>
+                                <div id="ul-search-results" class="list-group position-absolute shadow-sm"
+                                     style="z-index:999;max-height:180px;overflow-y:auto;display:none;font-size:0.75rem;"></div>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label small mb-0 text-muted" style="font-size:0.65rem;">Your name for it</label>
+                                <input type="text" class="form-control form-control-sm" id="ul-name"
+                                       placeholder="e.g. Grandma's house" maxlength="60">
+                            </div>
+                        </div>
+                        <!-- Mini map picker -->
+                        <div style="position:relative;">
+                            <div id="ul-map" style="height:150px;border-radius:6px;border:1px solid #dee2e6;margin:6px 0;transition:height 0.2s;"></div>
+                            <button type="button" id="ul-map-expand" class="btn btn-sm btn-light border shadow-sm"
+                                    style="position:absolute;top:12px;right:12px;z-index:500;font-size:0.7rem;padding:2px 8px;"
+                                    onclick="ulToggleMapSize()">
+                                <i class="bi bi-arrows-fullscreen"></i>
+                            </button>
+                        </div>
+                        <div class="text-muted mb-1" style="font-size:0.6rem;" id="ul-map-hint">
+                            Type an address or business name. Can't find it?
+                            <a href="#" onclick="ulOpenGoogleMaps(); return false;" style="font-size:0.6rem;">
+                                Open Google Maps</a> — find the place, copy its address, and paste it back here.
+                        </div>
+                        <div class="d-flex gap-1 align-items-center">
+                            <input type="text" class="form-control form-control-sm" id="ul-lat"
+                                   placeholder="lat" readonly style="width:80px;background:#f1f5f9;font-size:0.7rem;">
+                            <input type="text" class="form-control form-control-sm" id="ul-lng"
+                                   placeholder="lng" readonly style="width:80px;background:#f1f5f9;font-size:0.7rem;">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="ulAdd()" id="ul-add-btn">
+                                <i class="bi bi-plus-lg me-1"></i>Add
+                            </button>
+                        </div>
+                    </div>
+                    <div id="ul-maxed" class="small text-muted {% if user_lms|length < 3 %}d-none{% endif %}">
+                        Maximum 3 personal landmarks reached. Delete one to add another.
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% set location = [
+                ("imp_proximity_medical", "Near Medical", "Hospitals & urgent care"),
+                ("imp_proximity_grocery", "Near Grocery", "Shopping convenience"),
+                ("imp_community_pool", "Community Pool", "Pool / clubhouse access"),
+                ("imp_lot_ratio", "Lot-to-House Ratio", "More yard vs house footprint"),
+                ("imp_walkability", "Walkability", "Sidewalks & walkable area"),
+            ] %}
+            {% for key, label, desc in location %}
+            <div class="imp-row d-flex align-items-center gap-2">
+                <div style="width:130px;">
+                    <div class="small fw-semibold">{{ label }}</div>
+                    <div style="font-size:0.65rem; color:#9ca3af;">{{ desc }}</div>
+                </div>
+                <input type="range" class="form-range flex-grow-1 imp-slider" name="{{ key }}" id="{{ key }}"
+                       min="0" max="10" step="1" value="{{ prefs[key] }}"
+                       oninput="updateImpDisplay(this)">
+                <span class="imp-val {% if prefs[key] >= 7 %}high{% elif prefs[key] >= 4 %}mid{% elif prefs[key] >= 1 %}low{% else %}off{% endif %}"
+                      id="{{ key }}-val">{{ prefs[key] }}</span>
+            </div>
+            {% endfor %}
+
+            <div class="text-center mt-3">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetImportance()">
+                    <i class="bi bi-arrow-counterclockwise"></i> Reset to Defaults
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<div class="d-flex justify-content-end align-items-center gap-2 mt-2">
+    <span id="scoring-save-status" class="small"></span>
+    <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-check-lg me-1"></i>Save Scoring Preferences
+    </button>
+</div>
+
+{% if not current_user.is_authenticated %}
+<div class="alert alert-light border small mt-2 mb-0">
+    <i class="bi bi-info-circle text-primary"></i>
+    <strong>Guest mode.</strong> Preferences are session-only.
+    <a href="{{ site_url('auth.register') }}">Create a free account</a> to save permanently.
+</div>
+{% endif %}
+
+</form>
+</div>

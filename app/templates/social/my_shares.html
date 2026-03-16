@@ -1,0 +1,87 @@
+<!--
+  File: app/templates/social/my_shares.html
+  App Version: 2026.03.13 | File Version: 1.0.0
+  Last Modified: 2026-03-13
+-->
+{% extends "base.html" %}
+{% block title %}My Shares — HomeFinder{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="bi bi-send me-2 text-primary"></i>My Shares</h4>
+    <span class="badge bg-primary">{{ shares|length }} shared</span>
+</div>
+
+{% if not shares %}
+<div class="text-center py-5">
+    <i class="bi bi-send" style="font-size:3rem;color:#94a3b8;"></i>
+    <p class="text-muted mt-3">You haven't shared any listings yet.</p>
+    <p class="text-muted">Click the <i class="bi bi-share"></i> share button on any listing to get started!</p>
+</div>
+{% else %}
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Listing</th>
+                <th>Shared With</th>
+                <th>Status</th>
+                <th>Reactions</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for share in shares %}
+            <tr>
+                <td>
+                    {% if share.listing %}
+                    <div class="d-flex align-items-center gap-2">
+                        {% if share.listing.primary_photo %}
+                        <img src="{{ share.listing.primary_photo }}" alt="" style="width:50px;height:35px;object-fit:cover;border-radius:4px;">
+                        {% endif %}
+                        <div>
+                            <div class="fw-semibold" style="font-size:0.85rem;">${{ "{:,}".format(share.listing.price) }}</div>
+                            <div class="text-muted" style="font-size:0.75rem;">{{ share.listing.address[:30] }}</div>
+                        </div>
+                    </div>
+                    {% elif share.collection %}
+                    <i class="bi bi-collection me-1"></i>{{ share.collection.title }}
+                    {% endif %}
+                </td>
+                <td>
+                    <div style="font-size:0.85rem;">{{ share.recipient_name or share.recipient_email }}</div>
+                    {% if share.relationship %}
+                    <small class="text-muted">{{ share.relationship }}</small>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if share.status == 'sent' %}
+                    <span class="badge bg-secondary">Sent</span>
+                    {% elif share.status == 'viewed' %}
+                    <span class="badge bg-info">Viewed</span>
+                    {% elif share.status == 'clicked' %}
+                    <span class="badge bg-primary">Clicked</span>
+                    {% elif share.status == 'replied' %}
+                    <span class="badge bg-success">Replied</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% set reaction_count = share.reactions.count() %}
+                    {% if reaction_count > 0 %}
+                    <span class="badge bg-light text-dark border">
+                        <i class="bi bi-heart-fill text-danger me-1"></i>{{ reaction_count }}
+                    </span>
+                    {% else %}
+                    <span class="text-muted">—</span>
+                    {% endif %}
+                </td>
+                <td class="text-muted" style="font-size:0.8rem;">
+                    {{ share.created_at.strftime('%b %d') }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+{% endblock %}

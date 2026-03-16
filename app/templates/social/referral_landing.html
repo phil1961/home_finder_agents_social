@@ -1,0 +1,64 @@
+<!--
+  File: app/templates/social/referral_landing.html
+  App Version: 2026.03.13 | File Version: 1.0.0
+  Last Modified: 2026-03-13
+-->
+{% extends "base.html" %}
+{% block title %}You're Invited! — HomeFinder{% endblock %}
+
+{% block head %}
+<style>
+    .referral-hero {
+        background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+        color: #1a1a2e;
+        padding: 3rem 2rem;
+        border-radius: 20px;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="referral-hero mb-4">
+            <h2><i class="bi bi-gift me-2"></i>You're Invited!</h2>
+            <p class="lead mb-0">
+                <strong>{{ referral.referrer.username }}</strong> thinks you'd love HomeFinder
+            </p>
+        </div>
+
+        <div class="card shadow-sm mb-4" style="border-radius:16px;">
+            <div class="card-body p-4">
+                <h4 class="mb-3">What is HomeFinder?</h4>
+                <div class="row g-4">
+                    <div class="col-md-4 text-center">
+                        <i class="bi bi-search" style="font-size:2rem;color:#667eea;"></i>
+                        <h6 class="mt-2">Smart Discovery</h6>
+                        <p class="text-muted small">AI-powered deal scoring across 17 factors helps you find the best homes.</p>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <i class="bi bi-share" style="font-size:2rem;color:#f093fb;"></i>
+                        <h6 class="mt-2">Social Sharing</h6>
+                        <p class="text-muted small">Share listings with friends and family, build collections, and get reactions.</p>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <i class="bi bi-robot" style="font-size:2rem;color:#43e97b;"></i>
+                        <h6 class="mt-2">AI Analysis</h6>
+                        <p class="text-muted small">Get Claude-powered deal briefs and portfolio analysis on any listing.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center">
+            <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">
+                <i class="bi bi-person-plus me-2"></i>Create Your Free Account
+            </a>
+            <p class="text-muted mt-3 small">
+                Your referral from {{ referral.referrer.username }} has been recorded.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

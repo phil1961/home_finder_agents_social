@@ -1,0 +1,222 @@
+<!--
+  File: app/templates/dashboard/agent_review_friend_listing.html
+  App Version: 2026.03.14 | File Version: 1.0.0
+  Last Modified: 2026-03-14
+-->
+{% extends "base.html" %}
+{% block title %}Review: {{ fl.address }} — HomeFinder{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ site_url('dashboard.agent_dashboard') }}">Agent Dashboard</a></li>
+        <li class="breadcrumb-item active">Review Listing</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <h4 class="mb-1"><i class="bi bi-clipboard-check me-2 text-success"></i>Review Friend Listing</h4>
+        <p class="text-muted small mb-0">
+            Submitted by <strong>{{ submitter.username if submitter else fl.submitter_email }}</strong>
+            on {{ fl.created_at.strftime('%b %d, %Y') }}
+            · Relationship: <strong>{{ fl.relationship|replace('_', ' ')|title }}</strong>
+        </p>
+    </div>
+    <span class="badge rounded-pill" style="background: #dcfce7; color: #166534;">
+        <i class="bi bi-check-circle me-1"></i>Permission Confirmed
+    </span>
+</div>
+
+<div class="row g-4">
+    <!-- Left: Edit & Approve Form -->
+    <div class="col-lg-8">
+        <form method="POST" action="{{ site_url('dashboard.agent_approve_friend_listing', fl_id=fl.id) }}">
+            <!-- Basic info (editable) -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white"><strong>Property Details</strong>
+                    <span class="text-muted small ms-2">Edit as needed before approving</span>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label small">Address</label>
+                            <input type="text" class="form-control form-control-sm" name="address"
+                                   value="{{ fl.address }}" form="editForm">
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label small">City</label>
+                            <input type="text" class="form-control form-control-sm" name="city"
+                                   value="{{ fl.city or '' }}" form="editForm">
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label small">Zip Code</label>
+                            <input type="text" class="form-control form-control-sm" name="zip_code"
+                                   value="{{ fl.zip_code or '' }}" form="editForm">
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label small">Price</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" name="price"
+                                       value="{{ fl.price or '' }}" form="editForm">
+                            </div>
+                        </div>
+                        <div class="col-sm-3">
+                            <label class="form-label small">Beds</label>
+                            <input type="number" class="form-control form-control-sm" name="bedrooms"
+                                   value="{{ fl.bedrooms or '' }}" form="editForm">
+                        </div>
+                        <div class="col-sm-3">
+                            <label class="form-label small">Baths</label>
+                            <input type="number" class="form-control form-control-sm" name="bathrooms"
+                                   value="{{ fl.bathrooms or '' }}" step="0.5" form="editForm">
+                        </div>
+                        <div class="col-sm-3">
+                            <label class="form-label small">Sqft</label>
+                            <input type="number" class="form-control form-control-sm" name="sqft"
+                                   value="{{ fl.sqft or '' }}" form="editForm">
+                        </div>
+                        <div class="col-sm-3">
+                            <label class="form-label small">Lot Sqft</label>
+                            <input type="number" class="form-control form-control-sm" name="lot_sqft">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small">Description</label>
+                            <textarea class="form-control form-control-sm" name="description" rows="3"
+                                      form="editForm">{{ fl.description or '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Agent enrichment (new fields) -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white"><strong>Agent Enrichment</strong>
+                    <span class="text-muted small ms-2">Add details to improve deal scoring</span>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-sm-4">
+                            <label class="form-label small">Year Built</label>
+                            <input type="number" class="form-control form-control-sm" name="year_built"
+                                   min="1800" max="2030">
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label small">Stories</label>
+                            <input type="number" class="form-control form-control-sm" name="stories" min="1" max="5">
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label small">HOA Monthly</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" name="hoa_monthly" step="0.01">
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label small">Property Tax (Annual)</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" name="property_tax_annual" step="0.01">
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label small">Latitude</label>
+                            <input type="number" class="form-control form-control-sm" name="latitude" step="0.000001">
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label small">Longitude</label>
+                            <input type="number" class="form-control form-control-sm" name="longitude" step="0.000001">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small">Features</label>
+                            <div class="d-flex flex-wrap gap-3">
+                                {% for field, label in [
+                                    ('has_garage', 'Garage'),
+                                    ('has_porch', 'Porch'),
+                                    ('has_patio', 'Patio'),
+                                    ('is_single_story', 'Single Story'),
+                                    ('has_community_pool', 'Community Pool'),
+                                ] %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="{{ field }}" id="chk_{{ field }}">
+                                    <label class="form-check-label small" for="chk_{{ field }}">{{ label }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-success px-4"
+                        onclick="return confirm('Approve this listing? It will appear in the main grid and be scored.')">
+                    <i class="bi bi-check-circle me-1"></i>Approve & Create Listing
+                </button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="collapse"
+                        data-bs-target="#rejectSection">
+                    <i class="bi bi-x-circle me-1"></i>Reject
+                </button>
+            </div>
+        </form>
+
+        <!-- Save edits form (separate, for updating the FriendListing without approving) -->
+        <form method="POST" action="{{ site_url('dashboard.agent_review_friend_listing', fl_id=fl.id) }}" id="editForm" class="mt-2">
+            <button type="submit" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-floppy me-1"></i>Save Edits Only
+            </button>
+        </form>
+
+        <!-- Reject section (collapsed) -->
+        <div class="collapse mt-3" id="rejectSection">
+            <div class="card border-danger">
+                <div class="card-body">
+                    <form method="POST" action="{{ site_url('dashboard.agent_reject_friend_listing', fl_id=fl.id) }}">
+                        <label class="form-label small">Reason for rejection (optional)</label>
+                        <textarea name="reason" class="form-control form-control-sm mb-2" rows="2"
+                                  placeholder="e.g., Incomplete information, not in service area..."></textarea>
+                        <button type="submit" class="btn btn-danger btn-sm"
+                                onclick="return confirm('Reject this listing?')">
+                            <i class="bi bi-x-circle me-1"></i>Confirm Rejection
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Photos & Submitter Info -->
+    <div class="col-lg-4">
+        <!-- Photos -->
+        {% set photos = fl.photos %}
+        {% if photos %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white"><strong>Photos</strong></div>
+            <div class="card-body p-2">
+                {% for photo in photos %}
+                <img src="{{ url_for('static', filename='uploads/' + photo) }}" alt="Photo {{ loop.index }}"
+                     class="img-fluid rounded mb-2" style="width: 100%; max-height: 200px; object-fit: cover;">
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Submitter info -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white"><strong>Submission Info</strong></div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0 small">
+                    <tr><td class="text-muted">Submitted by</td><td>{{ submitter.username if submitter else fl.submitter_email }}</td></tr>
+                    <tr><td class="text-muted">Email</td><td>{{ fl.submitter_email }}</td></tr>
+                    <tr><td class="text-muted">Relationship</td><td>{{ fl.relationship|replace('_', ' ')|title }}</td></tr>
+                    <tr><td class="text-muted">Submitted</td><td>{{ fl.created_at.strftime('%b %d, %Y at %H:%M') }}</td></tr>
+                    <tr><td class="text-muted">Expires</td><td>{{ fl.expires_at.strftime('%b %d, %Y') if fl.expires_at else 'N/A' }}</td></tr>
+                    <tr><td class="text-muted">Permission</td><td><span class="text-success"><i class="bi bi-check-circle"></i> Confirmed</span></td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

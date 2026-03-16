@@ -1,0 +1,112 @@
+{# v20260309-1 #}
+{% extends "base.html" %}
+{% block title %}Agent Signup – HomeFinder{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="col-md-8 col-lg-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <div class="text-center mb-3">
+                    <i class="bi bi-briefcase text-primary" style="font-size:2.5rem;"></i>
+                    <h4 class="fw-bold mt-2">Agent Registration</h4>
+                    <p class="text-muted small">
+                        Join HomeFinder as an independent real estate agent.
+                        Offer this tool to your clients and help them find their perfect home.
+                    </p>
+                </div>
+
+                <form method="POST">
+                    <!-- Account info -->
+                    <h6 class="text-muted text-uppercase small fw-bold mt-3 mb-2">
+                        <i class="bi bi-person"></i> Account
+                    </h6>
+                    <div class="row g-2 mb-2">
+                        <div class="col-sm-6">
+                            <label for="username" class="form-label small">Username</label>
+                            <input type="text" class="form-control" id="username" name="username"
+                                   value="{{ username|default('') }}" required minlength="3">
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="email" class="form-label small">Email</label>
+                            <input type="email" class="form-control" id="email" name="email"
+                                   value="{{ email|default('') }}" required>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-sm-6">
+                            <label for="password" class="form-label small">Password</label>
+                            <input type="password" class="form-control" id="password" name="password"
+                                   required minlength="8">
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="confirm_password" class="form-label small">Confirm Password</label>
+                            <input type="password" class="form-control" id="confirm_password"
+                                   name="confirm_password" required>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Agent profile info -->
+                    <h6 class="text-muted text-uppercase small fw-bold mb-2">
+                        <i class="bi bi-briefcase"></i> Professional Info
+                    </h6>
+                    <div class="mb-2">
+                        <label for="full_name" class="form-label small">Full Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="full_name" name="full_name"
+                               value="{{ full_name|default('') }}" required>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-sm-6">
+                            <label for="license_number" class="form-label small">License Number</label>
+                            <input type="text" class="form-control" id="license_number" name="license_number"
+                                   value="{{ license_number|default('') }}" placeholder="e.g., SC-12345">
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="brokerage" class="form-label small">Brokerage</label>
+                            <input type="text" class="form-control" id="brokerage" name="brokerage"
+                                   value="{{ brokerage|default('') }}">
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-sm-6">
+                            <label for="phone" class="form-label small">Phone</label>
+                            <input type="tel" class="form-control" id="phone" name="phone"
+                                   value="{{ phone|default('') }}">
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="service_areas" class="form-label small">Service Areas</label>
+                            <input type="text" class="form-control" id="service_areas" name="service_areas"
+                                   value="{{ service_areas|default('') }}"
+                                   placeholder="e.g., West Ashley, James Island">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="bio" class="form-label small">Short Bio</label>
+                        <textarea class="form-control" id="bio" name="bio" rows="3"
+                                  placeholder="Tell us a bit about your experience and specialties...">{{ bio|default('') }}</textarea>
+                    </div>
+
+                    <div class="alert alert-light border small mb-3">
+                        <i class="bi bi-info-circle text-primary"></i>
+                        After signing up, you'll need to verify your email. Then the site owner
+                        will review and approve your agent account. You'll be notified by email
+                        once approved.
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-briefcase"></i> Apply as Agent
+                    </button>
+                </form>
+
+                <p class="text-center mt-3 mb-0 small text-muted">
+                    Already have an account? <a href="{{ site_url('auth.login') }}">Sign in</a>
+                    &nbsp;·&nbsp;
+                    Looking for a home? <a href="{{ site_url('auth.register') }}">Regular signup</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,67 @@
+﻿# ===================================================================
+# Charleston Home Finder — .gitignore
+# ===================================================================
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# --- Virtual Environment ---
+.venv/
+venv/
+ENV/
+
+# --- Environment / Secrets ---
+.env
+*.env
+!.env.example
+
+# --- SQLite Database ---
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+
+# --- Logs ---
+logs/
+*.log
+
+# --- IDE / Editor ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# --- OS Files ---
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# --- Distribution / Build ---
+dist/
+build/
+*.egg-info/
+*.egg
+
+# --- IIS ---
+logs/python-stdout*.log
+
+# --- My Concerns ---
+	.git/
+
+# --- User uploads (keep .gitkeep only) ---
+app/static/uploads/*
+!app/static/uploads/.gitkeep
+
+# --- My Concerns ---
+
+temp/
+_temp/
+data/
+instance/

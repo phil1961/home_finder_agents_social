@@ -1,0 +1,59 @@
+{# v20260309-1 #}
+{% extends "base.html" %}
+{% block title %}Create Account – HomeFinder{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow-sm mt-4">
+            <div class="card-body p-4">
+                <h3 class="card-title text-center mb-4">
+                    <i class="bi bi-house-heart-fill text-primary"></i><br>
+                    Create Account
+                </h3>
+
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username"
+                               value="{{ username|default('') }}" minlength="3" required autofocus>
+                        <div class="form-text">At least 3 characters.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email Address</label>
+                        <input type="email" class="form-control" id="email" name="email"
+                               value="{{ email|default('') }}" required>
+                        <div class="form-text">We'll send a verification link to this address.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password"
+                               minlength="8" required>
+                        <div class="form-text">At least 8 characters.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">Confirm Password</label>
+                        <input type="password" class="form-control" id="confirm_password"
+                               name="confirm_password" minlength="8" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">Create Account</button>
+                </form>
+
+                <hr>
+                <p class="text-center mb-1">
+                    Already have an account?
+                    <a href="{{ site_url('auth.login') }}">Sign in</a>
+                </p>
+                <p class="text-center mb-0 small text-muted">
+                    Real estate agent?
+                    <a href="{{ site_url('auth.agent_signup') }}">Apply as an operator</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
