@@ -294,6 +294,35 @@ def logout():
     return _site_redirect("auth.login")
 
 
+@auth_bp.route("/change-password", methods=["GET", "POST"])
+@login_required
+def change_password():
+    """User changes their own password."""
+    if request.method == "POST":
+        current_pw = request.form.get("current_password", "")
+        new_pw = request.form.get("new_password", "")
+        confirm_pw = request.form.get("confirm_password", "")
+
+        if not current_user.check_password(current_pw):
+            flash("Current password is incorrect.", "danger")
+            return render_template("auth/change_password.html")
+
+        if len(new_pw) < 8:
+            flash("New password must be at least 8 characters.", "warning")
+            return render_template("auth/change_password.html")
+
+        if new_pw != confirm_pw:
+            flash("New passwords don't match.", "warning")
+            return render_template("auth/change_password.html")
+
+        current_user.set_password(new_pw)
+        db.session.commit()
+        flash("Password changed successfully.", "success")
+        return _site_redirect("dashboard.index")
+
+    return render_template("auth/change_password.html")
+
+
 @auth_bp.route("/close-account", methods=["GET", "POST"])
 @login_required
 def close_account():

@@ -724,6 +724,32 @@ def admin_user_action(user_id):
         db.session.commit()
         flash(f"Account '{username}' has been deleted.", "info")
 
+    elif action == "edit_credentials":
+        # Owner+ — change email and/or password for users (not master accounts)
+        if not current_user.is_owner:
+            flash("Only master can edit credentials.", "danger")
+            return _site_redirect("dashboard.admin_users")
+
+        new_email = request.form.get("new_email", "").strip()
+        new_password = request.form.get("new_password", "").strip()
+
+        changes = []
+        if new_email and new_email != target.email:
+            target.email = new_email
+            changes.append("email")
+        if new_password and len(new_password) >= 8:
+            target.set_password(new_password)
+            changes.append("password")
+        elif new_password and len(new_password) < 8:
+            flash("Password must be at least 8 characters.", "warning")
+            return _site_redirect("dashboard.admin_users")
+
+        if changes:
+            db.session.commit()
+            flash(f"{target.username}: {' and '.join(changes)} updated.", "success")
+        else:
+            flash("No changes made.", "info")
+
     else:
         flash("Unknown action.", "danger")
 
