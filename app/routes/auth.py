@@ -238,9 +238,13 @@ def login():
         remember = request.form.get("remember") == "on"
 
         # Allow login by email OR username
-        user = User.query.filter(
+        # When multiple accounts share the same email, prefer the highest role
+        _role_priority = {"master": 0, "owner": 1, "agent": 2, "principal": 3, "client": 4, "user": 5}
+        candidates = User.query.filter(
             (User.email == login_id.lower()) | (User.username == login_id)
-        ).first()
+        ).all()
+        candidates.sort(key=lambda u: _role_priority.get(u.role, 99))
+        user = candidates[0] if candidates else None
 
         if user is None or not user.check_password(password):
             flash("Invalid credentials.", "danger")
@@ -465,8 +469,35 @@ def agent_signup():
 @auth_bp.route("/masquerade/<int:user_id>", methods=["POST"])
 @login_required
 def masquerade(user_id):
-    """Agent logs in as one of their clients to view/act on their behalf."""
+    """Agent/master logs in as another user to view/act on their behalf."""
     from flask import session
+
+    # Master (or someone masquerading from master) can masquerade as anyone
+    # Check if the real original user is master (supports chaining: master→agent→principal)
+    original_id = session.get("masquerade_original_id")
+    real_master = False
+    if current_user.is_master:
+        real_master = True
+    elif original_id:
+        original = db.session.get(User, original_id)
+        if original and original.is_master:
+            real_master = True
+
+    if real_master:
+        target = db.session.get(User, user_id)
+        if not target:
+            flash("User not found.", "danger")
+            return _site_redirect("dashboard.index")
+        # Always store the TRUE original (master), not intermediate hops
+        if not original_id:
+            session["masquerade_original_id"] = current_user.id
+        login_user(target)
+        flash(
+            f"Previewing as <strong>{target.username}</strong> ({target.role}). "
+            f'<a href="{_site_url("auth.end_masquerade")}" class="alert-link">End Preview</a>',
+            "info",
+        )
+        return _site_redirect("dashboard.index")
 
     if not current_user.is_agent:
         flash("Access denied.", "danger")
@@ -482,8 +513,9 @@ def masquerade(user_id):
         flash("You can only preview your own clients.", "danger")
         return _site_redirect("dashboard.agent_dashboard")
 
-    # Store original agent id so we can return
-    session["masquerade_original_id"] = current_user.id
+    # Store original id so we can return — don't overwrite if already chaining
+    if "masquerade_original_id" not in session:
+        session["masquerade_original_id"] = current_user.id
     login_user(client)
     flash(
         f"Previewing as <strong>{client.username}</strong>. "
@@ -503,11 +535,14 @@ def end_masquerade():
     if not original_id:
         return _site_redirect("dashboard.index")
 
-    agent = db.session.get(User, original_id)
-    if not agent:
+    original = db.session.get(User, original_id)
+    if not original:
         logout_user()
         return _site_redirect("auth.login")
 
-    login_user(agent)
+    login_user(original)
+    if original.is_master:
+        flash("Returned to your master account.", "success")
+        return _site_redirect("dashboard.index")
     flash("Returned to your agent account.", "success")
     return _site_redirect("dashboard.agent_dashboard")

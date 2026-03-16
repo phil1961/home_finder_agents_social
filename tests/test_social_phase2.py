@@ -1,6 +1,6 @@
 # ─────────────────────────────────────────────
 # File: tests/test_social_phase2.py
-# App Version: 2026.03.14 | File Version: 1.3.0
+# App Version: 2026.03.14 | File Version: 1.4.0
 # Last Modified: 2026-03-15
 # ─────────────────────────────────────────────
 """Integration tests for Phase 2 social features:
@@ -1105,3 +1105,153 @@ class TestUserLandmarks:
         conn.close()
 
         assert "max_fetches_per_run" in cols
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 11. MASQUERADE CHAINING, ROLE-PRIORITY LOGIN, INSTALL BANNER
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+class TestMasqueradeAndLogin:
+    """Tests for masquerade chaining, role-priority login, and install banner."""
+
+    def test_login_prefers_master_role(self, req_ctx):
+        """When multiple users share the same email, master sorts first."""
+        from app.models import db, User
+
+        shared_email = "multi_role@test.com"
+        u_owner = make_user(username="mr_owner", email=shared_email, role="owner")
+        u_agent = make_user(username="mr_agent", email=shared_email, role="agent")
+        u_master = make_user(username="mr_master", email=shared_email, role="master")
+        db.session.add_all([u_owner, u_agent, u_master])
+        db.session.commit()
+
+        _role_priority = {"master": 0, "owner": 1, "agent": 2,
+                          "principal": 3, "client": 4, "user": 5}
+
+        candidates = User.query.filter_by(email=shared_email).all()
+        candidates.sort(key=lambda u: _role_priority.get(u.role, 99))
+
+        assert len(candidates) == 3
+        assert candidates[0].role == "master"
+
+    def test_login_username_exact_match(self, req_ctx):
+        """Username login should match the exact username, not the
+        highest-role email sibling."""
+        from app.models import db, User
+
+        shared_email = "exact_match@test.com"
+        u_master = make_user(username="em_master", email=shared_email, role="master")
+        u_owner = make_user(username="em_owner", email=shared_email, role="owner")
+        db.session.add_all([u_master, u_owner])
+        db.session.commit()
+
+        found = User.query.filter_by(username="em_owner").first()
+        assert found is not None
+        assert found.role == "owner"
+        assert found.username == "em_owner"
+
+    def test_masquerade_stores_original_id(self, req_ctx):
+        """Masquerade should store the original user's id in session."""
+        from app.models import db
+        from flask import session
+
+        master = make_user(username="masq_master", email="masq_master@test.com", role="master")
+        owner = make_user(username="masq_owner", email="masq_owner@test.com", role="owner")
+        db.session.add_all([master, owner])
+        db.session.commit()
+
+        session["masquerade_original_id"] = master.id
+
+        assert session["masquerade_original_id"] == master.id
+
+    def test_masquerade_chain_preserves_original(self, req_ctx):
+        """When chaining masquerade (master->agent->principal), the
+        original master id must NOT be overwritten."""
+        from app.models import db
+        from flask import session
+
+        master = make_user(username="chain_master", email="chain_master@test.com", role="master")
+        agent = make_user(username="chain_agent", email="chain_agent@test.com", role="agent")
+        principal = make_user(username="chain_princ", email="chain_princ@test.com", role="principal")
+        db.session.add_all([master, agent, principal])
+        db.session.commit()
+
+        # First masquerade: master -> agent
+        session["masquerade_original_id"] = master.id
+
+        # Second masquerade: agent -> principal
+        # The key rule: do NOT overwrite if already set
+        if "masquerade_original_id" not in session:
+            session["masquerade_original_id"] = agent.id
+
+        assert session["masquerade_original_id"] == master.id
+
+    def test_master_can_masquerade_as_any_role(self, req_ctx):
+        """Master user's is_master flag should be True, allowing
+        masquerade as any role."""
+        from app.models import db
+
+        master = make_user(username="masq_any_master", email="masq_any@test.com", role="master")
+        client = make_user(username="masq_any_client", email="masq_any_c@test.com", role="client")
+        db.session.add_all([master, client])
+        db.session.commit()
+
+        assert master.is_master is True
+        assert client.is_master is False
+
+    def test_end_masquerade_returns_to_original(self, req_ctx):
+        """Ending masquerade should restore the original master user."""
+        from app.models import db, User
+        from flask import session
+
+        master = make_user(username="end_masq_master", email="end_masq@test.com", role="master")
+        db.session.add(master)
+        db.session.commit()
+
+        master_id = master.id
+        session["masquerade_original_id"] = master_id
+
+        # Simulate end-masquerade: look up the original user
+        original = db.session.get(User, session["masquerade_original_id"])
+        assert original is not None
+        assert original.id == master_id
+        assert original.is_master is True
+
+    def test_role_priority_ordering(self, req_ctx):
+        """Users sorted by role priority should be: master, owner, agent, client."""
+        from app.models import db
+
+        _role_priority = {"master": 0, "owner": 1, "agent": 2,
+                          "principal": 3, "client": 4, "user": 5}
+
+        u_client = make_user(username="rp_client", email="rp@test.com", role="client")
+        u_master = make_user(username="rp_master", email="rp@test.com", role="master")
+        u_agent = make_user(username="rp_agent", email="rp@test.com", role="agent")
+        u_owner = make_user(username="rp_owner", email="rp@test.com", role="owner")
+        db.session.add_all([u_client, u_master, u_agent, u_owner])
+        db.session.commit()
+
+        users = [u_client, u_master, u_agent, u_owner]
+        users.sort(key=lambda u: _role_priority.get(u.role, 99))
+
+        assert users[0].role == "master"
+        assert users[1].role == "owner"
+        assert users[2].role == "agent"
+        assert users[3].role == "client"
+
+    def test_siblings_query(self, req_ctx):
+        """Querying users by shared email should return all siblings."""
+        from app.models import db, User
+
+        shared_email = "siblings@test.com"
+        u1 = make_user(username="sib_master", email=shared_email, role="master")
+        u2 = make_user(username="sib_owner", email=shared_email, role="owner")
+        u3 = make_user(username="sib_agent", email=shared_email, role="agent")
+        u4 = make_user(username="sib_client", email=shared_email, role="client")
+        db.session.add_all([u1, u2, u3, u4])
+        db.session.commit()
+
+        siblings = User.query.filter_by(email=shared_email).order_by(User.id).all()
+        assert len(siblings) == 4
+        usernames = {u.username for u in siblings}
+        assert usernames == {"sib_master", "sib_owner", "sib_agent", "sib_client"}

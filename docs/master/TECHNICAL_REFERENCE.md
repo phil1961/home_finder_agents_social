@@ -1,6 +1,6 @@
 # HomeFinder — Technical Reference
 
-**Version:** 2026.03.15
+**Version:** 2026.03.15b
 **Last Updated:** 2026-03-15
 
 ---
@@ -422,7 +422,7 @@ Browser hard-refresh: **Ctrl+Shift+R** (for template/static changes)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET, POST | `/auth/register` | Account registration with email verification |
-| GET, POST | `/auth/login` | Login with remember-me |
+| GET, POST | `/auth/login` | Login with role-priority resolution |
 | GET | `/auth/logout` | Session destruction |
 | GET | `/auth/verify/<token>` | Email verification |
 | GET, POST | `/auth/resend-verification` | Resend verification email |
@@ -491,6 +491,39 @@ Browser hard-refresh: **Ctrl+Shift+R** (for template/static changes)
 | POST | `/admin/sites/<key>/edit` | Update market config |
 | POST | `/admin/sites/<key>/toggle` | Activate/deactivate |
 | POST | `/admin/sites/<key>/delete` | Delete market |
+
+---
+
+## Authentication & Masquerade
+
+### Role-Priority Login
+
+When a user logs in with an email address (rather than a username), the login route queries all accounts sharing that email and selects the one with the highest role. Priority order: `master` > `owner` > `agent` > `principal` > `client` > `user`. If the user types a specific username, that exact account is used regardless of role priority.
+
+### Context Processor: `inject_siblings`
+
+A context processor registered in `create_app()` that makes `sibling_accounts` available in all templates. For master users who are not currently masquerading, it queries all accounts sharing the same email and returns them sorted by role priority. The navbar user dropdown uses this to render the "Switch Role" section with role badges and colored icons.
+
+### Chained Masquerade
+
+The masquerade system supports one level of chaining: master -> agent -> principal.
+
+- `POST /auth/masquerade/<user_id>` sets `session['masquerade_original_id']` only on the first hop. If the key already exists (i.e., this is a second hop), it is not overwritten.
+- `GET /auth/end-masquerade` always restores `session['masquerade_original_id']` (the true original user) and clears the key -- regardless of how many hops occurred.
+- This means a master masquerading as an agent can use the agent's "Preview" button to masquerade as a principal, and "End Preview" returns directly to the master.
+
+### Nearest-to-Me Sort
+
+The dashboard sort dropdown includes a "Nearest to Me" option. When selected:
+
+1. JavaScript calls `navigator.geolocation.getCurrentPosition()` with `maximumAge: 300000` (5-minute cache)
+2. Browser prompts the user for location permission
+3. A spinner appears on the filter button during GPS acquisition
+4. On success, hidden form fields `user_lat` and `user_lng` are populated and the filter form is submitted
+5. The server sorts listings by Haversine distance from the user's coordinates
+6. Each listing card receives a walking-person distance badge, color-coded by proximity
+7. `user_lat`/`user_lng` are preserved as hidden inputs across subsequent filter changes
+8. On denial or timeout, the sort falls back to Deal Score
 
 ---
 

@@ -73,6 +73,8 @@ def index():
     source_filter = request.args.get("source", "all")
     min_score = request.args.get("min_score", 0, type=int)
     max_distance = request.args.get("max_distance", 0, type=float)
+    user_lat = request.args.get("user_lat", 0, type=float)
+    user_lng = request.args.get("user_lng", 0, type=float)
 
     # Compute user prefs early — needed for avoid_areas filter and scoring
     user_prefs = current_user.get_prefs() if is_auth else _guest_prefs()
@@ -172,6 +174,13 @@ def index():
         listings.sort(key=lambda l: l.first_seen or l.last_seen or l.id, reverse=True)
     elif sort_by == "yard":
         listings.sort(key=lambda l: l.lot_sqft or 0, reverse=True)
+    elif sort_by == "nearest" and user_lat and user_lng:
+        from app.scraper.scorer import _haversine_miles
+        def _user_dist(l):
+            if l.latitude and l.longitude:
+                return _haversine_miles(l.latitude, l.longitude, user_lat, user_lng)
+            return 9999
+        listings.sort(key=_user_dist)
     else:
         listings.sort(key=lambda l: user_composites.get(l.id, 0), reverse=True)
 
@@ -319,6 +328,8 @@ def index():
         poi_distances=poi_distances,
         poi_filter_name=poi_filter_name,
         current_max_distance=max_distance,
+        user_lat=user_lat,
+        user_lng=user_lng,
         user=current_user,
     )
 

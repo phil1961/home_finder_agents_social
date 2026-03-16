@@ -1,6 +1,6 @@
 # HomeFinder — Market Owner Guide
 
-**Version:** 2026.03.15
+**Version:** 2026.03.15b
 **Last Updated:** 2026-03-15
 
 ---

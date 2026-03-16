@@ -288,6 +288,15 @@ def create_app(config_class=None):
     def inject_version():
         return {"app_version": app.config.get("APP_VERSION", "")}
 
+    @app.context_processor
+    def inject_siblings():
+        """For master users: inject sibling accounts (same email) for role switching."""
+        from flask_login import current_user as _cu
+        if _cu.is_authenticated and _cu.is_master:
+            siblings = User.query.filter_by(email=_cu.email).order_by(User.id).all()
+            return {"siblings": siblings}
+        return {"siblings": []}
+
     # ── Request logger ────────────────────────────────────────────
     @app.before_request
     def log_request():

@@ -1,4 +1,4 @@
-<!-- v20260315 -->
+<!-- v20260315b -->
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -57,7 +57,10 @@ python pipeline.py --site charleston --rescore # re-score only
 - **Relative imports** in route files: `from .. import db` to avoid circular imports with the factory pattern.
 - **Guest support:** Flags/prefs/analyses stored in `session["guest_flags"]`, `session["guest_prefs"]`, `session["guest_analyses"]` — no login required.
 - **User landmarks:** Up to 3 personal POI per user stored in `preferences_json` under `user_landmarks` key; managed via `POST /my-landmarks` (AJAX); appear in POI dropdown under "My Landmarks" optgroup.
+- **Role-priority login:** When multiple accounts share the same email, login prefers the highest role (master > owner > agent > principal > client > user). Typing a specific username still logs in as that exact account.
+- **Role switcher:** Master users see a "Switch Role" section in their username dropdown listing sibling accounts (same email) with role badges. One-click masquerade to any sibling; injected via `inject_siblings` context processor. Only visible to master and not during masquerade.
 - **Masquerade:** Agents can impersonate own clients; master can impersonate anyone. Original user stored in `session['masquerade_original_id']`.
+- **Chained masquerade:** Master can masquerade as agent, then agent can masquerade as principal (master -> agent -> principal). `masquerade_original_id` is set only on the first hop and never overwritten, so "End Preview" always returns straight to the true original user regardless of chain depth.
 - **Never touch master accounts in migrations** — never write UPDATE/seed that sets a role on `role='master'` users. Only promote FROM `role='user'`.
 
 ## Core Modules

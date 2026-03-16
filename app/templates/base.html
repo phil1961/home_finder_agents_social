@@ -260,6 +260,24 @@
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><span class="dropdown-item-text text-muted small">{{ current_user.email }}</span></li>
+                            {% if current_user.is_master and not session.get('masquerade_original_id') %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><span class="dropdown-item-text text-muted small fw-semibold">Switch Role</span></li>
+                            {% set role_icons = {'master': 'bi-gear', 'owner': 'bi-shield-check', 'agent': 'bi-briefcase', 'principal': 'bi-person'} %}
+                            {% set role_colors = {'master': '#1e293b', 'owner': '#2563eb', 'agent': '#16a34a', 'principal': '#6b7280'} %}
+                            {% for sibling in siblings %}
+                            {% if sibling.id != current_user.id %}
+                            <li>
+                                <form method="POST" action="{{ site_url('auth.masquerade', user_id=sibling.id) }}" class="d-inline">
+                                    <button type="submit" class="dropdown-item">
+                                        <i class="bi {{ role_icons.get(sibling.role, 'bi-person') }} me-2" style="color:{{ role_colors.get(sibling.role, '#6b7280') }};"></i>
+                                        {{ sibling.username }} <span class="badge bg-light text-dark border ms-1" style="font-size:0.6rem;">{{ sibling.role }}</span>
+                                    </button>
+                                </form>
+                            </li>
+                            {% endif %}
+                            {% endfor %}
+                            {% endif %}
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <a class="dropdown-item" href="{{ site_url('auth.close_account') }}">

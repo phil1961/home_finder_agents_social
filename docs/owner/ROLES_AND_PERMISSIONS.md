@@ -1,7 +1,7 @@
 # HomeFinder — Roles & Permissions Matrix
 
-**Version:** 2026.03.14
-**Last Updated:** 2026-03-14
+**Version:** 2026.03.15
+**Last Updated:** 2026-03-15
 
 ---
 
@@ -141,6 +141,10 @@ Masquerade sessions:
 - Store original user in `session['masquerade_original_id']`
 - Display a visible banner with "End Masquerade" link
 - Are audited (original + target user IDs)
+
+**Chained masquerade (master only):** A master can masquerade as an agent, and then the agent can masquerade as one of their principals (via the Preview button on the agent dashboard). The chain is master -> agent -> principal. The session always stores the TRUE original user (master) in `masquerade_original_id` -- intermediate hops never overwrite it. "End Preview" returns straight to the master regardless of chain depth.
+
+**Role switcher (master only):** Master users see a "Switch Role" section in the username dropdown listing all sibling accounts that share the same email address. Each sibling shows a role badge with a colored icon. Clicking a sibling triggers a one-click masquerade without logout/login. The switcher is hidden during an active masquerade session.
 
 ---
 

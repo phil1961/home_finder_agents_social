@@ -111,6 +111,7 @@
                     <option value="price_desc" {% if current_sort == 'price_desc' %}selected{% endif %}>Price ↓</option>
                     <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>Newest</option>
                     <option value="yard" {% if current_sort == 'yard' %}selected{% endif %}>Yard Size</option>
+                    <option value="nearest" {% if current_sort == 'nearest' %}selected{% endif %}>Nearest to Me</option>
                 </select>
             </div>
             <div class="col">
@@ -424,6 +425,13 @@
                         <i class="bi bi-pin-map-fill" style="font-size:0.6rem;"></i> {{ "%.1f"|format(_d) }} mi
                     </span>
                     {% endif %}
+                    {% if current_sort == 'nearest' and user_lat and listing.latitude %}
+                    {% set _ud = ((listing.latitude - user_lat)**2 + (listing.longitude - user_lng)**2)**0.5 * 69.0 %}
+                    <span class="badge feature-tag {% if _ud <= 2 %}bg-success{% elif _ud <= 5 %}bg-primary{% elif _ud <= 10 %}bg-warning text-dark{% else %}bg-danger{% endif %}"
+                          title="Distance from you">
+                        <i class="bi bi-person-walking" style="font-size:0.6rem;"></i> {{ "%.1f"|format(_ud) }} mi
+                    </span>
+                    {% endif %}
                 </div>
 
                 <!-- Source badge + cross-reference links + flag buttons -->
@@ -673,5 +681,149 @@ function copyShareLink(listingId) {
             }
         });
 }
+
+// ── "Nearest to Me" geolocation sort ────────────────────────
+(function() {
+    const sortSelect = document.querySelector('select[name="sort"]');
+    if (!sortSelect) return;
+
+    sortSelect.addEventListener('change', function(e) {
+        if (this.value !== 'nearest') return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!navigator.geolocation) {
+            alert('Your browser does not support geolocation.');
+            this.value = 'score';
+            return;
+        }
+
+        // Show a brief status
+        const btn = document.querySelector('button[type="submit"]');
+        const origHtml = btn ? btn.innerHTML : '';
+        if (btn) btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        navigator.geolocation.getCurrentPosition(
+            function(pos) {
+                // Add lat/lng to the form and submit
+                const form = sortSelect.closest('form');
+                let latInput = form.querySelector('input[name="user_lat"]');
+                let lngInput = form.querySelector('input[name="user_lng"]');
+                if (!latInput) {
+                    latInput = document.createElement('input');
+                    latInput.type = 'hidden'; latInput.name = 'user_lat';
+                    form.appendChild(latInput);
+                }
+                if (!lngInput) {
+                    lngInput = document.createElement('input');
+                    lngInput.type = 'hidden'; lngInput.name = 'user_lng';
+                    form.appendChild(lngInput);
+                }
+                latInput.value = pos.coords.latitude;
+                lngInput.value = pos.coords.longitude;
+                form.submit();
+            },
+            function(err) {
+                if (btn) btn.innerHTML = origHtml;
+                if (err.code === 1) {
+                    alert('Location access denied. Please allow location access in your browser settings to use "Nearest to Me".');
+                } else {
+                    alert('Could not determine your location. Please try again.');
+                }
+                sortSelect.value = 'score';
+            },
+            { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+        );
+    });
+
+    // If already sorted by nearest, preserve the hidden inputs
+    {% if current_sort == 'nearest' and user_lat %}
+    const form = sortSelect.closest('form');
+    const li = document.createElement('input');
+    li.type='hidden'; li.name='user_lat'; li.value='{{ user_lat }}';
+    form.appendChild(li);
+    const lg = document.createElement('input');
+    lg.type='hidden'; lg.name='user_lng'; lg.value='{{ user_lng }}';
+    form.appendChild(lg);
+    {% endif %}
+})();
+
+// ── PWA Install Prompt Banner ───────────────────────────────
+(function() {
+    // Don't show if already installed or dismissed
+    if (window.matchMedia('(display-mode: standalone)').matches) return;
+    if (document.cookie.includes('hf_install_dismissed=1')) return;
+
+    // Detect mobile — check screen width as fallback since UA sniffing misses some browsers
+    const isMobile = /Mobi|Android|iPhone|iPad|Opera Mini|OPR\//i.test(navigator.userAgent)
+                     || window.innerWidth <= 768;
+    if (!isMobile) return;
+
+    let deferredPrompt = null;
+
+    // Capture the native install prompt if the browser fires it
+    window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        deferredPrompt = e;
+    });
+
+    // Show banner after a short delay so the page loads first
+    setTimeout(function() {
+        if (document.getElementById('install-banner')) return;
+
+        const isIOS = /iPhone|iPad/i.test(navigator.userAgent);
+        const hasNativePrompt = !!deferredPrompt;
+
+        // Build instruction text based on browser
+        let instruction;
+        if (hasNativePrompt) {
+            instruction = 'Quick access, full-screen experience';
+        } else if (isIOS) {
+            instruction = 'Tap <i class="bi bi-box-arrow-up"></i> then "Add to Home Screen"';
+        } else {
+            instruction = 'Tap your browser menu <i class="bi bi-three-dots-vertical"></i> then "Add to Home Screen"';
+        }
+
+        const banner = document.createElement('div');
+        banner.id = 'install-banner';
+        banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:9999;' +
+            'background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;' +
+            'padding:12px 16px;display:flex;align-items:center;gap:12px;' +
+            'box-shadow:0 -2px 12px rgba(0,0,0,0.3);';
+
+        let btnHtml = '';
+        if (hasNativePrompt) {
+            btnHtml = '<button id="install-btn" style="background:#c9a84c;color:#1a1a2e;border:none;' +
+                'border-radius:6px;padding:8px 16px;font-weight:700;font-size:0.8rem;' +
+                'white-space:nowrap;cursor:pointer;flex-shrink:0;">Install</button>';
+        }
+
+        banner.innerHTML =
+            '<i class="bi bi-phone" style="font-size:1.5rem;color:#c9a84c;flex-shrink:0;"></i>' +
+            '<div style="flex:1;font-size:0.85rem;">' +
+            '<strong>Add HomeFinder to your home screen</strong><br>' +
+            '<span style="opacity:0.7;font-size:0.75rem;">' + instruction + '</span>' +
+            '</div>' + btnHtml +
+            '<button id="install-dismiss" style="background:none;border:none;color:rgba(255,255,255,0.5);' +
+            'font-size:1.2rem;cursor:pointer;padding:4px 8px;flex-shrink:0;">&times;</button>';
+
+        document.body.appendChild(banner);
+
+        if (hasNativePrompt) {
+            document.getElementById('install-btn').addEventListener('click', function() {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(function() { deferredPrompt = null; });
+                banner.remove();
+                document.cookie = 'hf_install_dismissed=1;path=/;max-age=31536000';
+            });
+        }
+
+        document.getElementById('install-dismiss').addEventListener('click', function() {
+            banner.remove();
+            document.cookie = 'hf_install_dismissed=1;path=/;max-age=2592000'; // 30 days
+        });
+    }, 2000);  // 2 second delay so the page renders first
+})();
 </script>
 {% endblock %}

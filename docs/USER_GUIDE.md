@@ -1,6 +1,6 @@
 # HomeFinder — User Guide
 
-**Version:** 2026.03.15
+**Version:** 2026.03.15b
 **Last Updated:** 2026-03-15
 
 ---
@@ -36,10 +36,14 @@ This card appears automatically — no setup required.
 
 **Filter bar:**
 - **Area** — Filter by neighborhood or submarket
+- **Sort** — Deal Score (default), Price asc/desc, Newest, Yard Size, or **Nearest to Me**
 - **Min Score** — Only show listings above a certain deal score
 - **Flags** — Show only your Favorites, Maybes, or Hidden listings
 - **Source** — Filter by Zillow or Realtor data source
 - **Max Mi** — Maximum distance from your selected landmark (0.5 / 1 / 2 / 3 / 5 / 10 / 15 / 25 mi; only appears when a landmark is selected in Preferences)
+
+**"Nearest to Me" sort:**
+When you select "Nearest to Me" from the Sort dropdown, your browser asks for location permission. Once granted, listings are sorted by distance from your current position (calculated using the Haversine formula). Each listing card shows a walking-person distance badge, color-coded by proximity. Your location is cached for 5 minutes so subsequent filter changes do not re-prompt. If you deny the location prompt or it times out, the sort falls back to Deal Score. A spinner appears on the filter button while the GPS fix is in progress.
 
 **Each listing card shows:**
 - Photo, address, price
@@ -381,6 +385,20 @@ Visit the monthly leaderboard to see how the community is engaging:
 - **Top 10 Referrers** -- users who brought the most new members
 
 The leaderboard resets monthly.
+
+---
+
+## Installing HomeFinder as an App
+
+On mobile devices, a banner appears at the bottom of the dashboard inviting you to install HomeFinder as a standalone app on your home screen.
+
+- **Android (Chrome, Edge, Samsung Internet):** Tap the "Install" button in the banner. Your browser's native install prompt appears -- confirm to add HomeFinder to your home screen.
+- **iOS (Safari):** The banner shows manual instructions: tap the Share button in Safari, then select "Add to Home Screen."
+- **Other browsers (Opera, Firefox, etc.):** The banner shows instructions to use the browser menu to add HomeFinder to your home screen.
+
+Once installed, HomeFinder opens full-screen without browser chrome, just like a native app.
+
+The banner appears after a 2-second delay and can be dismissed for 30 days. It does not appear if you have already installed the app or if you are browsing on a desktop.
 
 ---
 

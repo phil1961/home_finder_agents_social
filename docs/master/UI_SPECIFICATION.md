@@ -1,6 +1,6 @@
 <!--
   File: docs/master/UI_SPECIFICATION.md
-  App Version: 2026.03.14 | File Version: 1.0.0
+  App Version: 2026.03.15 | File Version: 1.1.0
   Last Modified: 2026-03-15
 -->
 
@@ -228,6 +228,8 @@ These items are always visible regardless of authentication state:
 **User dropdown** (always visible when authenticated):
 - User email (muted text)
 - ---
+- **Switch Role** section (master only, not during masquerade): lists all sibling accounts sharing the same email, each with a role badge and colored icon. Clicking a sibling triggers one-click masquerade via `auth.masquerade`. Populated by the `inject_siblings` context processor.
+- ---
 - Close Account (`bi-x-circle`) -- `auth.close_account`
 - Sign Out (`bi-box-arrow-right`) -- `auth.logout`
 
@@ -425,7 +427,7 @@ At >= 992px, nav links use `flex-direction: column` with icon (`1.1rem`) above t
 4. **Filter bar** (card with shadow)
    - Row of filter controls, each with label + select/input:
      - **Area:** dropdown of target area names + "All Areas", auto-submit on change
-     - **Sort:** Deal Score (default), Price asc, Price desc, Newest, Yard Size, auto-submit
+     - **Sort:** Deal Score (default), Price asc, Price desc, Newest, Yard Size, Nearest to Me, auto-submit
      - **Flag:** All, Favorites, Maybe, Hidden, auto-submit
      - **Source:** All Sources, Zillow, Realtor.com, auto-submit
      - **Min Score:** number input (0-100)
@@ -494,6 +496,7 @@ At >= 992px, nav links use `flex-direction: column` with icon (`1.1rem`) above t
 
 **AJAX behaviors:**
 - Filter selects auto-submit form (page reload)
+- **Nearest to Me sort:** Selecting this option triggers `navigator.geolocation.getCurrentPosition()` (cached 5 min). A spinner replaces the filter button text while waiting for GPS. On success, hidden `user_lat`/`user_lng` fields are set and the form submits. On denial or timeout, sort falls back to Deal Score. Hidden fields are preserved across subsequent filter changes. Listings display a walking-person distance badge (green <= 2 mi, blue <= 5 mi, amber <= 10 mi, red > 10 mi).
 - Share link copy: AJAX GET to `social.copy_link`, copies to clipboard, shows toast notification
 - Portfolio analysis: AJAX POST, results painted into DOM without reload
 - Flag toggle: form POST, full page reload
@@ -1432,6 +1435,7 @@ Not a modal but a persistent alert bar:
 - **Condition:** `{% if session.get('masquerade_original_id') %}`
 - **Style:** `alert-warning`, no rounded corners, gold bottom border
 - **Content:** "Agent Preview Mode -- You are viewing the site as [username]. End Preview & Return to Your Account"
+- **Chained masquerade:** Supports master -> agent -> principal chains. `masquerade_original_id` is set on the first hop only and never overwritten. "End Preview" always returns to the true original user (master) regardless of chain depth.
 
 ---
 
@@ -1561,9 +1565,27 @@ Not a modal but a persistent alert bar:
 }
 ```
 
-### 11.4 PWA Install Prompt
+### 11.4 PWA Install Banner
 
-No custom install prompt is implemented. The browser's native install banner appears when PWA criteria are met (manifest + service worker + HTTPS).
+A custom fixed banner appears at the bottom of the dashboard on mobile devices after a 2-second delay.
+
+**Detection:** Mobile is detected via user-agent string (Android, iPhone, iPad, iPod, Opera Mini, IEMobile, etc.) combined with screen width <= 768px.
+
+**Banner design:**
+- Fixed bottom, dark gradient background matching site theme (`--ink`), gold accent border-top
+- Contains app icon, "Install HomeFinder" heading, brief description, and action button(s)
+
+**Platform-specific behavior:**
+- **Android with native prompt:** Intercepts the `beforeinstallprompt` event. "Install" button triggers the browser's native install dialog. On successful install, sets a 1-year cookie.
+- **iOS (Safari):** Shows manual instructions: "Tap the Share button, then 'Add to Home Screen'."
+- **Other browsers (Opera, Firefox, etc.):** Shows instructions: "Tap browser menu, then 'Add to Home Screen'."
+
+**Dismiss logic:**
+- "Dismiss" sets a 30-day cookie (`pwa_dismissed`)
+- "Install" (successful) sets a 1-year cookie (`pwa_installed`)
+- Not shown if `display-mode: standalone` (already installed), if dismissed cookie exists, or on desktop
+
+**Cookie names:** `pwa_dismissed` (30 days), `pwa_installed` (365 days)
 
 ---
 
