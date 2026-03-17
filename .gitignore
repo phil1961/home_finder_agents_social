@@ -55,6 +55,11 @@ logs/python-stdout*.log
 # --- My Concerns ---
 	.git/
 
+# -- claude.ai
+
+.claude
+.claude/
+
 # --- User uploads (keep .gitkeep only) ---
 app/static/uploads/*
 !app/static/uploads/.gitkeep
