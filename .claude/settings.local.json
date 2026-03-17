@@ -22,7 +22,10 @@
       "Bash(powershell -Command \"icacls*)",
       "WebSearch",
       "WebFetch",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(.venv/Scripts/python -c \"from app import create_app; app = create_app\\(\\); print\\(''''OK''''\\)\")",
+      "Bash(.venv/Scripts/python -m pytest tests/ --tb=no -q)",
+      "Bash(.venv/Scripts/python -c \"from wsgi import app; print\\(''''OK''''\\)\")"
     ]
   }
 }
