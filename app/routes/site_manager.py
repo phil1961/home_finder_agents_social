@@ -112,7 +112,7 @@ def sites_create():
 
     # Build DB path relative to project root
     project_root = Path(current_app.root_path).parent
-    db_path = str(Path("instance") / db_filename)
+    db_path = f"instance/{db_filename}"  # always forward slashes for cross-platform
     abs_db_path = str(project_root / db_path)
 
     try:
