@@ -95,7 +95,7 @@ https://www.toughguycomputing.com/home_finder_agents_social/site/<site_key>/
 ├── app/
 │   ├── __init__.py              # Flask factory, WSGI middleware, session routing
 │   ├── models.py                # 14 core ORM models
-│   ├── models_social.py         # 8 social ORM models
+│   ├── models_social.py         # 9 social ORM models
 │   ├── migrations.py            # Idempotent schema migrations
 │   ├── routes/
 │   │   ├── auth.py              # 13 routes — registration, login, masquerade
@@ -126,11 +126,11 @@ https://www.toughguycomputing.com/home_finder_agents_social/site/<site_key>/
 │   │   ├── scorer.py            # 18-factor scoring engine
 │   │   ├── geocoder.py          # Coordinate resolution
 │   │   └── scheduler.py         # Legacy APScheduler (replaced by Task Scheduler)
-│   ├── templates/               # ~77 Jinja2 templates
+│   ├── templates/               # ~78 Jinja2 templates
 │   │   ├── base.html            # Master layout
 │   │   ├── landing.html         # Site chooser
 │   │   ├── auth/                # 12 templates
-│   │   ├── dashboard/           # 33 templates
+│   │   ├── dashboard/           # 34 templates (includes admin_feedback.html)
 │   │   ├── social/              # 14 templates
 │   │   └── email/               # 5 templates
 │   └── static/
@@ -138,6 +138,7 @@ https://www.toughguycomputing.com/home_finder_agents_social/site/<site_key>/
 │       ├── js/
 │       │   ├── preferences.js   # Scoring sliders, AJAX form save
 │       │   ├── landmarks.js     # User/admin landmark CRUD with map
+│       │   ├── help-hints.js    # Help level system: tooltips + inline hints
 │       │   └── site-manager.js  # Map/location/zip picker modals
 │       ├── sw.js                # Service worker (PWA)
 │       ├── manifest.json        # PWA manifest
@@ -166,7 +167,7 @@ https://www.toughguycomputing.com/home_finder_agents_social/site/<site_key>/
 | `site_manager_bp` | `/admin/sites` | Master-only site CRUD |
 | `docs_bp` | `/docs` | Documentation serving |
 
-**Total route count:** ~106 endpoints across 12 route files.
+**Total route count:** ~111 endpoints across 12 route files.
 
 ---
 
@@ -480,6 +481,21 @@ Community-submitted homes ("Add a Home"):
 | `listing_id` | INTEGER FK nullable | Promoted Listing if approved |
 | `rejection_reason` | VARCHAR(200) | |
 
+#### Feedback
+
+User/guest feedback submissions with sentiment tracking:
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | INTEGER PK | |
+| `user_id` | INTEGER FK nullable | Null if guest |
+| `email` | STRING(254) nullable | Provided by guests (optional) |
+| `sentiment` | STRING(20) | "positive", "neutral", "negative" (thumbs up/meh/thumbs down) |
+| `comment` | TEXT nullable | Optional free-form text |
+| `page_url` | STRING(500) | Page the user was on when submitting |
+| `is_read` | BOOLEAN | Default False; toggled by owner via admin |
+| `created_at` | DATETIME | |
+
 ### 4.4 Schema Migrations
 
 File: `app/migrations.py` — function `apply_all(engine)`.
@@ -510,6 +526,7 @@ master > owner > agent > principal > client > guest
 | Flag (fav/maybe/hide) | Session | Y | Y | Y | Y | Y |
 | AI deal analysis | Y | Y | Y | Y | Y | Y |
 | Set preferences | Session | Y | Read-only | Y | Y | Y |
+| Submit feedback | Y | Y | Y | Y | Y | Y |
 | Share listings | Y | Y | Y | Y | Y | Y |
 | Create collections | | Y | Y | Y | Y | Y |
 | Street watch | Email-only | Y | Y | Y | Y | Y |
@@ -521,6 +538,7 @@ master > owner > agent > principal > client > guest
 | Review friend listings | | | | Y | | |
 | Create listings directly | | | | Y | | |
 | Agent-specific prompts | | | | Y | | |
+| Review feedback | | | | | Y | Y |
 | Approve/suspend agents | | | | | Y | |
 | Manage users | | | | | Y | |
 | Configure billing | | | | | Y | |
@@ -711,6 +729,8 @@ The main listing grid. Features:
 - Flag indicator (heart=favorite, ?=maybe, eye-slash=hidden)
 - Source badge
 
+**Clickable Cards:** The entire listing card is clickable — navigating to the listing detail page. Interactive child elements (links, buttons, forms, dropdowns) still work independently via an `event.target.closest()` guard that skips card navigation when the click hits an interactive element. Hover effect: slight upward lift (`translateY(-1px)`) with background darkening to `#f3f4f6`. At help level 2+, a tooltip reads "Click anywhere on this card to see full details."
+
 **"Since your last visit" banner:** Shows count of new listings since last login.
 
 **Portfolio Analysis panel:** Expandable section at top. User selects a flag category (favorites/maybes/hidden), clicks "Ask Claude," gets ranked comparison with strategy advice.
@@ -766,6 +786,8 @@ Multi-section preference page:
 - Color-coded: 0=off (gray), 1-3=low (blue), 4-6=mid (yellow), 7-10=high (red)
 - Near Landmark dropdown: select from site landmarks or user landmarks
 - "Great Deal" threshold slider (composite score cutoff)
+- **Power Mode controls slider visibility** (see below) — hidden sliders preserve their values via hidden `<input>` elements so weights are never lost
+- An "Unlock" link appears at the bottom of the visible sliders, pointing users to the next power level
 
 **Section 3: User Landmarks (My Landmarks)**
 - Up to 3 personal POI per user
@@ -774,11 +796,13 @@ Multi-section preference page:
 - Saved landmarks appear in the Near Landmark dropdown under "My Landmarks" optgroup
 - AJAX CRUD: `POST /my-landmarks`
 
-**Section 4: Target Areas**
+**Section 4: Target Areas** *(owner and master roles only)*
 - Interactive map showing zip code polygons (GeoJSON from OpenDataDE)
 - Click polygons to assign/unassign zips to named areas
 - Owner configures the master area map; users see labeled areas
 - Master users can add new zips (`canAddZips` flag)
+- **Hidden for non-owner/master users** — the entire Target Areas map section is not rendered for agent, client, principal, or guest roles
+- The Target Areas summary card was removed from the scoring section (redundant with the map)
 
 **Section 5: Avoid Areas**
 - Census-defined place names that hide listings from dashboard
@@ -791,6 +815,55 @@ Multi-section preference page:
 **AJAX save:** Entire preferences form saves via AJAX (`POST /preferences` with `X-Requested-With: XMLHttpRequest`). No page reload. Status message shown inline.
 
 **Guest support:** Preferences stored in `session["guest_prefs"]`. Survives browser session.
+
+### 11.1 Help Level System (1/2/3)
+
+Stored in `preferences_json` as `help_level`. Default: 2 (Standard) for registered users, 3 (Guided) for guests.
+
+| Level | Name | Behavior |
+|-------|------|----------|
+| 1 | Expert | No tooltips, no inline hints — clean UI for power users |
+| 2 | Standard | Bootstrap tooltips on elements with `data-help` attributes |
+| 3 | Guided | Tooltips + visible `.help-hint` inline explanation blocks |
+
+**Toggle location:** Help dropdown in the navbar (instant AJAX save, no reload). Also shown at the top of the Preferences page.
+
+**Route:** `POST /api/help-level` — AJAX endpoint, saves to `preferences_json` (or `session["guest_prefs"]` for guests).
+
+**Context processor:** `help_level` is injected into all templates so any page can conditionally render hints.
+
+**JS module:** `app/static/js/help-hints.js` — initializes Bootstrap tooltips on `[data-help]` elements, toggles `.help-hint` visibility based on current level.
+
+**Tooltip coverage** (at level 2+):
+- All left nav icons: Dashboard, Map, Digest, Favorites, Watch, Tour, Preferences, Feedback
+- All dashboard filter labels: Area, Sort, Flag, Source, Min Score
+- Deal score ring on listing cards
+- Deal Score card on listing detail page (with level 3 inline hint)
+- AI "Analyze This Deal" button
+- "Fetch Property Details" button
+- Price Range header (with level 3 inline hint)
+- Great Deal Threshold label
+- Near Landmark label
+
+### 11.2 Power Mode (Low / Mid / High)
+
+Stored in `preferences_json` as `power_mode`. Default: `"high"` for registered users, `"low"` for guests.
+
+Controls two UI dimensions: **nav icon visibility** and **scoring slider visibility**.
+
+| Mode | Nav Icons | Scoring Sliders |
+|------|-----------|----------------|
+| **Low** | Core: Dashboard, Map, Favorites, Preferences, Help | 6 basic: Price, Size, Yard, Features, Flood, Year Built |
+| **Mid** | + Digest, Watch, Social, Feedback | + 6 intermediate: Single Story, Price/SqFt, Days on Market, HOA, Property Tax, Price Trend |
+| **High** | Everything (all nav icons) | + 6 location: Near Landmark, Near Medical, Near Grocery, Community Pool, Lot Ratio, Walkability |
+
+**Hidden sliders preserve values:** When a slider is hidden by a lower power mode, its current weight value is preserved in a hidden `<input>` so the user's scoring configuration is never lost when switching modes.
+
+**"Unlock" prompt:** At the bottom of the visible slider group, an "Unlock" link is shown pointing to the next power level (e.g., "Unlock 6 more sliders — switch to Mid mode").
+
+**Toggle location:** Help dropdown in the navbar and Preferences page — instant AJAX save, no reload.
+
+**Route:** `POST /api/power-mode` — AJAX endpoint, saves to `preferences_json` (or `session["guest_prefs"]` for guests).
 
 ---
 
@@ -965,6 +1038,9 @@ When an agent's client logs in, they see the agent's branding.
 | `GET /admin/billing` | Billing plan configuration |
 | `POST /admin/billing` | Update billing settings |
 | `POST /admin/landmarks` | Add/remove site POI landmarks (AJAX) |
+| `POST /feedback` | Submit feedback (all users, AJAX) |
+| `GET /admin/feedback` | Feedback review page (owner+) |
+| `POST /admin/feedback/<id>/read` | Mark feedback as read (AJAX) |
 
 ### Metrics Page
 
@@ -980,6 +1056,18 @@ Shows:
 ### User Management
 
 Table of all accounts showing: username, email, role (badge), status (active/suspended), created, last login. Actions: masquerade (eye icon), delete (trash icon). Owner accounts cannot be deleted from this page.
+
+### Feedback System
+
+**Submission (all users):** A floating feedback icon in the left nav bar (positioned between Preferences and Help) opens a modal overlay. The modal contains:
+- 3 sentiment buttons: thumbs up (positive), meh (neutral), thumbs down (negative)
+- Optional comment textarea
+- Optional email field (shown for guests only, so they can be contacted)
+- AJAX submission via `POST /feedback` — no page reload, inline success confirmation
+
+**Admin review (`GET /admin/feedback`):** Owner/master feedback review page showing all submissions in reverse chronological order. Each entry shows sentiment icon, comment, submitter info, timestamp, and page URL. Owners can mark individual entries as read via `POST /admin/feedback/<id>/read` (AJAX toggle). An unread badge count appears on the "Feedback" link in the right-side admin nav.
+
+**Model:** `Feedback` in `models_social.py`. Migration creates the `feedback` table.
 
 ---
 
@@ -1164,6 +1252,10 @@ base.html (navbar, modals, scripts, flash messages)
 ### base.html Key Components
 
 - **Responsive navbar** with role-aware menu items
+- **Left nav icons** with power-mode-gated visibility (Low/Mid/High) and `data-help` tooltips at help level 2+
+- **Feedback modal** — floating icon in left nav (between Preferences and Help); opens sentiment + comment form; AJAX submission
+- **Help Level toggle** in Help dropdown — 1/2/3 selector with instant AJAX save
+- **Power Mode toggle** in Help dropdown — Low/Mid/High selector with instant AJAX save
 - **Agent branding** (custom color/icon/logo/tagline)
 - **Two guest modals:** `welcomeModal` (first visit, cookie-gated) and `joinModal` (feature gate with custom messages)
 - **Contact Agent modal** (for clients/principals)
@@ -1182,6 +1274,7 @@ Single file: `app/static/css/style.css`. Bootstrap 5 base with custom overrides.
 |------|---------|
 | `preferences.js` | Dual-handle price slider, importance sliders (color-coded 0-10), AJAX form save, AI preferences analysis |
 | `landmarks.js` | User landmark CRUD (max 3), admin landmark management, Nominatim search, Leaflet map picker |
+| `help-hints.js` | Help level system: initializes Bootstrap tooltips on `[data-help]` elements, toggles `.help-hint` block visibility based on `help_level` (1=off, 2=tooltips, 3=tooltips+hints) |
 | `site-manager.js` | Map Picker (click center, shift+drag bounds), Location Picker (typeahead → auto-fill), ZIP Picker (state GeoJSON, click polygons) |
 | `sw.js` | Service worker: cache-first for static, network-first for HTML |
 
@@ -1215,6 +1308,9 @@ Standard response shape: `{ok: bool, message?: string, error?: string, ...data}`
 - Collection item add/remove (DOM update)
 - Street watch add/remove (DOM update)
 - Share/react (inline update)
+- Feedback submission (modal closes, success toast)
+- Help level toggle (tooltips/hints show/hide instantly)
+- Power mode toggle (nav icons + sliders show/hide instantly)
 
 ---
 
@@ -1227,6 +1323,7 @@ app/static/
 ├── css/style.css              # Single stylesheet
 ├── js/preferences.js          # Scoring sliders + AJAX save
 ├── js/landmarks.js            # User/admin landmark management
+├── js/help-hints.js           # Help level tooltips + inline hints
 ├── js/site-manager.js         # Map/Location/ZIP picker modals
 ├── sw.js                      # Service worker
 ├── manifest.json              # PWA manifest
