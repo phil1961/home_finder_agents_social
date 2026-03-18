@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────
 # File: app/models.py
-# App Version: 2026.03.14 | File Version: 1.6.0
-# Last Modified: 2026-03-14
+# App Version: 2026.03.14 | File Version: 1.7.0
+# Last Modified: 2026-03-17
 # ─────────────────────────────────────────────
 """Database models for HomeFinder."""
 import json
@@ -161,6 +161,10 @@ class User(UserMixin, db.Model):
         **{f"imp_{k}": v for k, v in DEFAULT_IMPORTANCE.items()},
         # Display
         "great_deal_threshold": GREAT_DEAL_SCORE_THRESHOLD,
+        # Help level: 1=Expert, 2=Standard (tooltips), 3=Guided (tooltips+inline)
+        "help_level": 2,
+        # Power mode: "low" (core nav + 6 sliders), "mid" (+ advanced nav), "high" (everything)
+        "power_mode": "high",
     }
 
     def get_prefs(self) -> dict:

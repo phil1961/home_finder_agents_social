@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────
 # File: app/routes/preferences_routes.py
-# App Version: 2026.03.14 | File Version: 1.3.0
-# Last Modified: 2026-03-14
+# App Version: 2026.03.14 | File Version: 1.4.0
+# Last Modified: 2026-03-17
 # ─────────────────────────────────────────────
 """
 app/routes/preferences_routes.py — Preferences and API endpoints.
@@ -59,6 +59,10 @@ def preferences():
 
                 # Preserve user_landmarks (managed via separate AJAX route)
                 prefs["user_landmarks"] = existing_prefs.get("user_landmarks", [])
+
+                # Preserve help_level and power_mode (managed via separate AJAX routes)
+                prefs["help_level"] = existing_prefs.get("help_level", 2)
+                prefs["power_mode"] = existing_prefs.get("power_mode", "high")
 
                 msg = "Scoring preferences saved!"
 
@@ -362,3 +366,56 @@ def user_landmarks():
     db.session.commit()
 
     return jsonify({"ok": True, "user_landmarks": user_lms})
+
+
+# ── Quick help-level toggle (navbar AJAX) ──────────────────────
+
+@dashboard_bp.route("/api/help-level", methods=["POST"])
+def api_help_level():
+    """AJAX toggle for help_level (1/2/3). Works for guests and logged-in users."""
+    from flask import session
+
+    data = request.get_json(silent=True) or {}
+    try:
+        level = max(1, min(3, int(data.get("level", 2))))
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid level"}), 400
+
+    if current_user.is_authenticated:
+        prefs = current_user.get_prefs()
+        prefs["help_level"] = level
+        current_user.set_prefs(prefs)
+        db.session.commit()
+    else:
+        guest = session.get("guest_prefs", {})
+        guest["help_level"] = level
+        session["guest_prefs"] = guest
+        session.modified = True
+
+    return jsonify({"ok": True, "help_level": level})
+
+
+# ── Quick power-mode toggle (navbar AJAX) ──────────────────────
+
+@dashboard_bp.route("/api/power-mode", methods=["POST"])
+def api_power_mode():
+    """AJAX toggle for power_mode (low/mid/high). Works for guests and logged-in users."""
+    from flask import session
+
+    data = request.get_json(silent=True) or {}
+    mode = data.get("mode", "high")
+    if mode not in ("low", "mid", "high"):
+        return jsonify({"error": "Invalid mode"}), 400
+
+    if current_user.is_authenticated:
+        prefs = current_user.get_prefs()
+        prefs["power_mode"] = mode
+        current_user.set_prefs(prefs)
+        db.session.commit()
+    else:
+        guest = session.get("guest_prefs", {})
+        guest["power_mode"] = mode
+        session["guest_prefs"] = guest
+        session.modified = True
+
+    return jsonify({"ok": True, "power_mode": mode})

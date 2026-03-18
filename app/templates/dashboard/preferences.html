@@ -1,7 +1,7 @@
 <!--
   File: app/templates/dashboard/preferences.html
-  App Version: 2026.03.14 | File Version: 2.0.0
-  Last Modified: 2026-03-15
+  App Version: 2026.03.14 | File Version: 2.1.0
+  Last Modified: 2026-03-17
 -->
 {% extends "base.html" %}
 {% block title %}Preferences – HomeFinder{% endblock %}
@@ -82,9 +82,72 @@
     </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════════════
+     HELP LEVEL & NAV MODE (instant-save, no form)
+     ══════════════════════════════════════════════════════════════ -->
+<div style="border: 2px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 24px; background: #fefefe;">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi bi-question-circle text-primary" style="font-size:1.1rem;"></i>
+                <h6 class="mb-0">Help Level</h6>
+            </div>
+            <p class="text-muted small mb-2">Controls tooltips and inline help throughout the site.</p>
+            <div class="d-flex gap-2 mb-2" id="prefsHelpLevel">
+                <button type="button" class="btn btn-outline-secondary btn-sm flex-fill {{ 'active' if prefs.get('help_level', 2) == 1 }}"
+                        data-level="1">
+                    <i class="bi bi-lightning-charge me-1"></i>Expert
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm flex-fill {{ 'active' if prefs.get('help_level', 2) == 2 }}"
+                        data-level="2">
+                    <i class="bi bi-chat-dots me-1"></i>Standard
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm flex-fill {{ 'active' if prefs.get('help_level', 2) == 3 }}"
+                        data-level="3">
+                    <i class="bi bi-book me-1"></i>Guided
+                </button>
+            </div>
+            <div class="small text-muted">
+                <strong>Expert</strong> — no hints &nbsp;·&nbsp;
+                <strong>Standard</strong> — tooltips on hover &nbsp;·&nbsp;
+                <strong>Guided</strong> — tooltips + inline help
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi bi-speedometer text-primary" style="font-size:1.1rem;"></i>
+                <h6 class="mb-0">Power Mode</h6>
+            </div>
+            <p class="text-muted small mb-2">Controls nav icons and scoring slider visibility.</p>
+            <div class="d-flex gap-2 mb-2" id="prefsPowerMode">
+                <button type="button" class="btn btn-outline-secondary btn-sm flex-fill {{ 'active' if prefs.get('power_mode', 'high') == 'low' }}"
+                        data-mode="low">
+                    <i class="bi bi-battery me-1"></i>Low
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm flex-fill {{ 'active' if prefs.get('power_mode', 'high') == 'mid' }}"
+                        data-mode="mid">
+                    <i class="bi bi-battery-half me-1"></i>Mid
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm flex-fill {{ 'active' if prefs.get('power_mode', 'high') == 'high' }}"
+                        data-mode="high">
+                    <i class="bi bi-battery-full me-1"></i>High
+                </button>
+            </div>
+            <div class="small text-muted">
+                <strong>Low</strong> — essentials only &nbsp;·&nbsp;
+                <strong>Mid</strong> — more controls &nbsp;·&nbsp;
+                <strong>High</strong> — everything
+            </div>
+        </div>
+    </div>
+    <div id="prefsUxStatus" class="small text-center mt-2" style="min-height:1.2em;"></div>
+</div>
+
 {% include "dashboard/_prefs_scoring.html" %}
 {% include "dashboard/_prefs_landmarks_admin.html" %}
+{% if current_user.is_authenticated and current_user.is_owner %}
 {% include "dashboard/_prefs_target_areas.html" %}
+{% endif %}
 
 <div class="text-center mb-4">
     <a href="{{ site_url('dashboard.index') }}" class="btn btn-outline-secondary">
@@ -123,6 +186,54 @@ const PREFS_CONFIG = {
     {% endif %}
 };
 const MAP_READONLY = PREFS_CONFIG.mapReadonly;
+
+// ── Instant-save Help Level & Nav Mode ──────────────────────────
+(function() {
+    const statusEl = document.getElementById('prefsUxStatus');
+
+    function flashStatus(msg) {
+        statusEl.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>' + msg + '</span>';
+        setTimeout(() => { statusEl.textContent = ''; }, 2000);
+    }
+
+    // Help Level
+    const hlGroup = document.getElementById('prefsHelpLevel');
+    if (hlGroup) {
+        hlGroup.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                hlGroup.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                fetch('{{ site_url("dashboard.api_help_level") }}', {
+                    method: 'POST',
+                    body: JSON.stringify({ level: parseInt(this.dataset.level) }),
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                })
+                .then(r => r.json())
+                .then(data => { if (data.ok) flashStatus('Help level saved'); });
+            });
+        });
+    }
+
+    // Power Mode
+    const pmGroup = document.getElementById('prefsPowerMode');
+    if (pmGroup) {
+        pmGroup.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                pmGroup.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                fetch('{{ site_url("dashboard.api_power_mode") }}', {
+                    method: 'POST',
+                    body: JSON.stringify({ mode: this.dataset.mode }),
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                })
+                .then(r => r.json())
+                .then(data => { if (data.ok) { flashStatus('Power mode saved'); window.location.reload(); } });
+            });
+        });
+    }
+})();
 </script>
 <script src="{{ url_for('static', filename='js/preferences.js') }}"></script>
 <script src="{{ url_for('static', filename='js/landmarks.js') }}"></script>

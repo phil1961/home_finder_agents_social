@@ -1,7 +1,7 @@
 <!--
   File: app/templates/dashboard/_prefs_scoring.html
-  App Version: 2026.03.14 | File Version: 1.0.0
-  Last Modified: 2026-03-15
+  App Version: 2026.03.14 | File Version: 1.1.0
+  Last Modified: 2026-03-17
 -->
 <!-- ══════════════════════════════════════════════════════════════
      SECTION 1: SCORING & SEARCH (sliders + criteria)
@@ -19,8 +19,13 @@
 
     <!-- Price Range -->
     <div class="card pref-section shadow-sm mb-3">
-        <div class="card-header"><i class="bi bi-currency-dollar"></i> Price Range</div>
+        <div class="card-header" data-help="Listings in this range get the best price score" data-help-placement="right">
+            <i class="bi bi-currency-dollar"></i> Price Range
+        </div>
         <div class="card-body">
+            <div class="help-hint d-none text-muted small mb-2">
+                <i class="bi bi-info-circle me-1"></i>Only listings within this range get a perfect price score. Listings outside your range score lower proportionally.
+            </div>
             <div class="d-flex justify-content-between mb-1">
                 <span class="price-display" id="minPriceLabel">${{ "{:,}".format(prefs.min_price) }}</span>
                 <span class="text-muted">to</span>
@@ -86,39 +91,11 @@
         </div>
     </div>
 
-    <!-- Target Areas (summary — full editor below) -->
-    <div class="card pref-section shadow-sm mb-3">
-        <div class="card-header"><i class="bi bi-geo-alt"></i> Target Areas</div>
-        <div class="card-body py-2">
-            <div id="areas-summary" class="mb-2">
-                {% if prefs.target_areas %}
-                    {% for area_name, zips in prefs.target_areas.items() %}
-                    <div class="small mb-1">
-                        <span class="fw-semibold">{{ area_name }}</span>
-                        <span class="text-muted ms-1">{{ zips|join(', ') }}</span>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                <span class="text-muted small">No target areas set.</span>
-                {% endif %}
-            </div>
-            {% if current_user.is_authenticated and current_user.is_master %}
-            <a href="#area-map-section" class="btn btn-sm btn-outline-primary w-100">
-                <i class="bi bi-map me-1"></i> Edit on Map ↓
-            </a>
-            {% else %}
-            <a href="#area-map-section" class="btn btn-sm btn-outline-secondary w-100">
-                <i class="bi bi-map me-1"></i> View on Map ↓
-            </a>
-            {% endif %}
-        </div>
-    </div>
-
     <!-- Display -->
     <div class="card pref-section shadow-sm mb-3">
         <div class="card-header"><i class="bi bi-display"></i> Display Settings</div>
         <div class="card-body">
-            <label class="form-label small">Great Deal Threshold</label>
+            <label class="form-label small" data-help="Listings scoring above this are highlighted green on the dashboard">Great Deal Threshold</label>
             <div class="d-flex align-items-center gap-3">
                 <input type="range" class="form-range flex-grow-1" name="great_deal_threshold"
                        id="threshold-slider" min="50" max="95" step="5"
@@ -142,7 +119,9 @@
         </div>
         <div class="card-body">
 
-            <!-- Core factors -->
+            {% set pm = power_mode|default('high') %}
+
+            <!-- Core factors (Low+) -->
             <div class="category-label mt-1">CORE FACTORS</div>
             {% set core = [
                 ("imp_price", "Price", "Lower price = higher score"),
@@ -150,6 +129,7 @@
                 ("imp_yard", "Yard Size", "Larger lot = better"),
                 ("imp_features", "Features", "Garage, porch, patio, beds, baths"),
                 ("imp_flood", "Flood Risk", "Above flood plain = best"),
+                ("imp_year_built", "Year Built", "Newer = less maintenance"),
             ] %}
             {% for key, label, desc in core %}
             <div class="imp-row d-flex align-items-center gap-2">
@@ -165,36 +145,18 @@
             </div>
             {% endfor %}
 
-            <!-- Property condition -->
-            <div class="category-label mt-3">PROPERTY CONDITION</div>
-            {% set condition = [
-                ("imp_year_built", "Year Built", "Newer = less maintenance"),
+            {% if pm in ('mid', 'high') %}
+            <!-- Property & deal factors (Mid+) -->
+            <div class="category-label mt-3">PROPERTY & DEAL</div>
+            {% set mid_factors = [
                 ("imp_single_story", "Single Story", "One-level retirement living"),
                 ("imp_price_per_sqft", "Price / Sqft", "Value for money metric"),
-            ] %}
-            {% for key, label, desc in condition %}
-            <div class="imp-row d-flex align-items-center gap-2">
-                <div style="width:130px;">
-                    <div class="small fw-semibold">{{ label }}</div>
-                    <div style="font-size:0.65rem; color:#9ca3af;">{{ desc }}</div>
-                </div>
-                <input type="range" class="form-range flex-grow-1 imp-slider" name="{{ key }}" id="{{ key }}"
-                       min="0" max="10" step="1" value="{{ prefs[key] }}"
-                       oninput="updateImpDisplay(this)">
-                <span class="imp-val {% if prefs[key] >= 7 %}high{% elif prefs[key] >= 4 %}mid{% elif prefs[key] >= 1 %}low{% else %}off{% endif %}"
-                      id="{{ key }}-val">{{ prefs[key] }}</span>
-            </div>
-            {% endfor %}
-
-            <!-- Deal opportunity -->
-            <div class="category-label mt-3">DEAL OPPORTUNITY</div>
-            {% set deal = [
                 ("imp_days_on_market", "Days on Market", "Longer = more negotiation room"),
-                ("imp_price_trend", "Price Trend", "Dropping price = opportunity"),
                 ("imp_hoa", "HOA Fee", "Lower or no HOA = better"),
                 ("imp_property_tax", "Property Tax", "Lower tax rate = better"),
+                ("imp_price_trend", "Price Trend", "Dropping price = opportunity"),
             ] %}
-            {% for key, label, desc in deal %}
+            {% for key, label, desc in mid_factors %}
             <div class="imp-row d-flex align-items-center gap-2">
                 <div style="width:130px;">
                     <div class="small fw-semibold">{{ label }}</div>
@@ -207,14 +169,16 @@
                       id="{{ key }}-val">{{ prefs[key] }}</span>
             </div>
             {% endfor %}
+            {% endif %}
 
-            <!-- Location & lifestyle -->
+            {% if pm == 'high' %}
+            <!-- Location & lifestyle (High only) -->
             <div class="category-label mt-3">LOCATION & LIFESTYLE</div>
 
             <!-- Proximity to Point of Interest -->
             <div class="imp-row d-flex align-items-start gap-2 pb-2" style="border-bottom:2px solid #e5e7eb;">
                 <div style="width:130px;">
-                    <div class="small fw-semibold">Near Landmark</div>
+                    <div class="small fw-semibold" data-help="Select a landmark and set importance > 0 to score listings by distance to it">Near Landmark</div>
                     <div style="font-size:0.65rem; color:#9ca3af;">Distance to a point of interest</div>
                 </div>
                 <div class="flex-grow-1">
@@ -371,6 +335,28 @@
                       id="{{ key }}-val">{{ prefs[key] }}</span>
             </div>
             {% endfor %}
+            {% endif %}
+
+            <!-- Hidden inputs for sliders not shown at current power level -->
+            {% if pm == 'low' %}
+            {% for key in ['imp_single_story','imp_price_per_sqft','imp_days_on_market','imp_hoa','imp_property_tax','imp_price_trend',
+                           'imp_proximity_medical','imp_proximity_grocery','imp_community_pool','imp_lot_ratio','imp_walkability','imp_proximity_poi'] %}
+            <input type="hidden" name="{{ key }}" value="{{ prefs[key] }}">
+            {% endfor %}
+            {% elif pm == 'mid' %}
+            {% for key in ['imp_proximity_medical','imp_proximity_grocery','imp_community_pool','imp_lot_ratio','imp_walkability','imp_proximity_poi'] %}
+            <input type="hidden" name="{{ key }}" value="{{ prefs[key] }}">
+            {% endfor %}
+            {% endif %}
+
+            {% if pm != 'high' %}
+            <div class="text-muted small text-center mt-3 py-2" style="background:#f8fafc;border-radius:6px;">
+                <i class="bi bi-lock me-1"></i>
+                {% if pm == 'low' %}12 more scoring factors available at Mid and High power.
+                {% else %}6 more location & lifestyle factors available at High power.{% endif %}
+                <a href="#" onclick="document.getElementById('prefsPowerMode').querySelector('[data-mode=high]').click();return false;">Unlock</a>
+            </div>
+            {% endif %}
 
             <div class="text-center mt-3">
                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetImportance()">

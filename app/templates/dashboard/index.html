@@ -1,15 +1,15 @@
 <!--
   File: app/templates/dashboard/index.html
-  App Version: 2026.03.14 | File Version: 1.8.0
-  Last Modified: 2026-03-14
+  App Version: 2026.03.14 | File Version: 1.9.0
+  Last Modified: 2026-03-17
 -->
 {% extends "base.html" %}
 {% block title %}Dashboard – HomeFinder{% endblock %}
 
 {% block head %}
 <style>
-    .listing-card { transition: box-shadow 0.15s; }
-    .listing-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+    .listing-card { transition: box-shadow 0.15s, transform 0.15s; cursor: pointer; }
+    .listing-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.12); transform: translateY(-1px); background: #f3f4f6; }
     .listing-card.great-deal { border-left: 4px solid #198754; }
     .source-badge-zillow { background: #006AFF; color: #fff; }
     .source-badge-realtor { background: #D92228; color: #fff; }
@@ -95,7 +95,7 @@
     <div class="card-body py-2">
         <form method="GET" class="row g-2 align-items-end">
             <div class="col">
-                <label class="form-label small mb-0">Area</label>
+                <label class="form-label small mb-0" data-help="Filter by target area — configured in Preferences">Area</label>
                 <select name="area" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="all" {% if current_area == 'all' %}selected{% endif %}>All Areas</option>
                     {% for a in areas %}
@@ -104,7 +104,7 @@
                 </select>
             </div>
             <div class="col">
-                <label class="form-label small mb-0">Sort</label>
+                <label class="form-label small mb-0" data-help="Change listing order — score, price, newest, or nearest">Sort</label>
                 <select name="sort" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="score" {% if current_sort == 'score' %}selected{% endif %}>Deal Score</option>
                     <option value="price_asc" {% if current_sort == 'price_asc' %}selected{% endif %}>Price ↑</option>
@@ -115,7 +115,7 @@
                 </select>
             </div>
             <div class="col">
-                <label class="form-label small mb-0">Flag</label>
+                <label class="form-label small mb-0" data-help="Show only favorites, maybes, hidden, or unflagged">Flag</label>
                 <select name="flag" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="all" {% if current_flag == 'all' %}selected{% endif %}>All</option>
                     <option value="favorite" {% if current_flag == 'favorite' %}selected{% endif %}>⭐ Favorites</option>
@@ -124,7 +124,7 @@
                 </select>
             </div>
             <div class="col">
-                <label class="form-label small mb-0">Source</label>
+                <label class="form-label small mb-0" data-help="Filter by data source — Zillow, Realtor, Agent, or Friend">Source</label>
                 <select name="source" class="form-select form-select-sm" onchange="this.form.submit()">
                     <option value="all" {% if current_source == 'all' %}selected{% endif %}>All Sources</option>
                     <option value="zillow" {% if current_source == 'zillow' %}selected{% endif %}>Zillow</option>
@@ -132,7 +132,7 @@
                 </select>
             </div>
             <div class="col">
-                <label class="form-label small mb-0">Min Score</label>
+                <label class="form-label small mb-0" data-help="Only show listings scoring at or above this value">Min Score</label>
                 <input type="number" name="min_score" class="form-control form-control-sm"
                        value="{{ current_min_score }}" min="0" max="100" placeholder="0">
             </div>
@@ -348,7 +348,10 @@
     {% set score = user_composites.get(listing.id, 0) %}
     {% set addr_encoded = listing.address|replace(',', '')|replace(' ', '-') %}
     <div class="col-lg-6 mb-3">
-        <div class="card listing-card h-100 border-0 shadow-sm {% if score >= great_deal_threshold %}great-deal{% endif %}">
+        <div class="card listing-card h-100 border-0 shadow-sm {% if score >= great_deal_threshold %}great-deal{% endif %}"
+             style="cursor:pointer;"
+             data-help="Click anywhere on this card to see full details" data-help-placement="top"
+             onclick="if(!event.target.closest('a,button,form,.btn,.modal')){window.location='{{ site_url('dashboard.listing_detail', listing_id=listing.id) }}';}">
             <div class="d-flex">
                 <!-- Photo -->
                 <div class="flex-shrink-0" style="width: 140px; min-height: 140px;">
@@ -371,7 +374,8 @@
                 <!-- Top row: score ring + address + flag -->
                 <div class="d-flex gap-3 align-items-start mb-2">
                     {% if listing.deal_score %}
-                    <div class="score-ring {% if score >= 75 %}score-high{% elif score >= 50 %}score-mid{% else %}score-low{% endif %}">
+                    <div class="score-ring {% if score >= 75 %}score-high{% elif score >= 50 %}score-mid{% else %}score-low{% endif %}"
+                         data-help="Deal score personalized to YOUR preferences" data-help-placement="right">
                         {{ "%.0f"|format(score) }}
                     </div>
                     {% endif %}

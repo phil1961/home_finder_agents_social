@@ -298,6 +298,28 @@ def create_app(config_class=None):
         return {"siblings": []}
 
     @app.context_processor
+    def inject_help_and_power():
+        """Inject help_level and power_mode for UI customization."""
+        from flask_login import current_user as _cu
+        from flask import session as _sess
+        if _cu.is_authenticated:
+            try:
+                prefs = _cu.get_prefs()
+                return {
+                    "help_level": prefs.get("help_level", 2),
+                    "power_mode": prefs.get("power_mode", "high"),
+                }
+            except Exception:
+                pass
+        else:
+            guest = _sess.get("guest_prefs", {})
+            return {
+                "help_level": guest.get("help_level", 3),
+                "power_mode": guest.get("power_mode", "low"),
+            }
+        return {"help_level": 2, "power_mode": "high"}
+
+    @app.context_processor
     def inject_feedback_count():
         """For owners: inject unread feedback count for nav badge."""
         from flask_login import current_user as _cu

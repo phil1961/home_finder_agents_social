@@ -1,6 +1,6 @@
 <!--
   File: app/templates/base.html
-  App Version: 2026.03.14 | File Version: 2.1.0
+  App Version: 2026.03.14 | File Version: 2.2.0
   Last Modified: 2026-03-17
 -->
 <!DOCTYPE html>
@@ -26,6 +26,7 @@
         .navbar.bg-dark { background-color: {{ ab.brand_color or '#212529' }} !important; }
     </style>
     {% endif %}
+    <script>window.HF_HELP_LEVEL = {{ help_level|default(2) }};</script>
     {% block head %}{% endblock %}
 </head>
 <body>
@@ -72,27 +73,35 @@
                 <!-- Left nav — browsing links visible to everyone -->
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('dashboard.index') }}">
+                        <a class="nav-link" href="{{ site_url('dashboard.index') }}"
+                           data-help="Your listing feed — filtered, scored, and sorted">
                             <i class="bi bi-grid" style="color:#7dd3fc;"></i> Dashboard
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('dashboard.map_view') }}">
+                        <a class="nav-link" href="{{ site_url('dashboard.map_view') }}"
+                           data-help="See all listings on an interactive map">
                             <i class="bi bi-geo-alt" style="color:#86efac;"></i> Map
                         </a>
                     </li>
+                    {% if power_mode|default('high') != 'low' %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('dashboard.digest') }}">
+                        <a class="nav-link" href="{{ site_url('dashboard.digest') }}"
+                           data-help="Tabular view of all listings with CSV export">
                             <i class="bi bi-newspaper" style="color:#fcd34d;"></i> Digest
                         </a>
                     </li>
+                    {% endif %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('dashboard.index', flag='favorite') }}">
+                        <a class="nav-link" href="{{ site_url('dashboard.index', flag='favorite') }}"
+                           data-help="Jump to your favorited listings">
                             <i class="bi bi-star" style="color:#fbbf24;"></i> Favorites
                         </a>
                     </li>
+                    {% if power_mode|default('high') != 'low' %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('dashboard.watch_manage') }}">
+                        <a class="nav-link" href="{{ site_url('dashboard.watch_manage') }}"
+                           data-help="Get email alerts when new listings appear on streets you watch">
                             <i class="bi bi-eye" style="color:#c4b5fd;"></i> Watch
                         </a>
                     </li>
@@ -140,23 +149,29 @@
                             {% endif %}
                         </ul>
                     </li>
+                    {% endif %}
                     {% if current_user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('dashboard.itinerary') }}">
+                        <a class="nav-link" href="{{ site_url('dashboard.itinerary') }}"
+                           data-help="Plan property visits from your flagged listings">
                             <i class="bi bi-map" style="color:#fdba74;"></i> Tour
                         </a>
                     </li>
                     {% endif %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('dashboard.preferences') }}">
+                        <a class="nav-link" href="{{ site_url('dashboard.preferences') }}"
+                           data-help="Customize scoring weights and search criteria">
                             <i class="bi bi-sliders" style="color:#a5b4fc;"></i> Preferences
                         </a>
                     </li>
+                    {% if power_mode|default('high') != 'low' %}
                     <li class="nav-item">
-                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#feedbackModal">
+                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#feedbackModal"
+                           data-help="Tell us what you think">
                             <i class="bi bi-chat-square-text" style="color:#c4b5fd;"></i> Feedback
                         </a>
                     </li>
+                    {% endif %}
                     {% if current_user.is_authenticated and current_user.assigned_agent %}
                     <li class="nav-item">
                         <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#contactAgentModal">
@@ -185,6 +200,33 @@
                             <li><a class="dropdown-item" href="{{ site_url('dashboard.why_owner') }}">
                                 <i class="bi bi-shield-check me-2"></i>Owner Operations Guide</a></li>
                             {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <span class="dropdown-item-text">
+                                    <span class="small text-muted d-block mb-1">Help Level</span>
+                                    <div class="btn-group btn-group-sm w-100" id="helpLevelToggle">
+                                        <button type="button" class="btn btn-outline-secondary {{ 'active' if help_level|default(2) == 1 }}"
+                                                data-level="1" title="Expert — no hints">1</button>
+                                        <button type="button" class="btn btn-outline-secondary {{ 'active' if help_level|default(2) == 2 }}"
+                                                data-level="2" title="Standard — tooltips on hover">2</button>
+                                        <button type="button" class="btn btn-outline-secondary {{ 'active' if help_level|default(2) == 3 }}"
+                                                data-level="3" title="Guided — tooltips + inline help">3</button>
+                                    </div>
+                                </span>
+                            </li>
+                            <li>
+                                <span class="dropdown-item-text">
+                                    <span class="small text-muted d-block mb-1">Power Mode</span>
+                                    <div class="btn-group btn-group-sm w-100" id="powerModeToggle">
+                                        <button type="button" class="btn btn-outline-secondary {{ 'active' if power_mode|default('high') == 'low' }}"
+                                                data-mode="low" title="Core features only">Low</button>
+                                        <button type="button" class="btn btn-outline-secondary {{ 'active' if power_mode|default('high') == 'mid' }}"
+                                                data-mode="mid" title="More controls">Mid</button>
+                                        <button type="button" class="btn btn-outline-secondary {{ 'active' if power_mode|default('high') == 'high' }}"
+                                                data-mode="high" title="All features">High</button>
+                                    </div>
+                                </span>
+                            </li>
                         </ul>
                     </li>
                 </ul>
@@ -484,6 +526,7 @@
     </main>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/help-hints.js') }}"></script>
     {% if not current_user.is_authenticated %}
     <script>
     // Show welcome modal on first visit (check cookie)
@@ -633,6 +676,72 @@
             });
         });
 
+    })();
+    </script>
+
+    <script>
+    // ── Help Level Toggle ──────────────────────────────────────────
+    (function() {
+        const toggle = document.getElementById('helpLevelToggle');
+        if (!toggle) return;
+        toggle.querySelectorAll('button').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const level = parseInt(this.dataset.level);
+                toggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+
+                fetch('{{ site_url("dashboard.api_help_level") }}', {
+                    method: 'POST',
+                    body: JSON.stringify({ level: level }),
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.ok) {
+                        window.HF_HELP_LEVEL = level;
+                        // Reload to apply new help level across all elements
+                        window.location.reload();
+                    }
+                });
+            });
+        });
+    })();
+    </script>
+
+    <script>
+    // ── Power Mode Toggle ──────────────────────────────────────────
+    (function() {
+        const toggle = document.getElementById('powerModeToggle');
+        if (!toggle) return;
+        toggle.querySelectorAll('button').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const mode = this.dataset.mode;
+                toggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+
+                fetch('{{ site_url("dashboard.api_power_mode") }}', {
+                    method: 'POST',
+                    body: JSON.stringify({ mode: mode }),
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.ok) window.location.reload();
+                });
+            });
+        });
     })();
     </script>
 

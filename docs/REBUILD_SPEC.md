@@ -1,6 +1,12 @@
+<!--
+  File: docs/REBUILD_SPEC.md
+  App Version: 1.1.0 | File Version: 1.1.0
+  Last Modified: 2026-03-17
+-->
+
 # HomeFinder Social — Comprehensive Rebuild Specification
 
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Date:** 2026-03-17
 **Purpose:** Complete feature specification for rebuilding HomeFinder Social from the ground up. This document captures every user-facing feature, backend service, data model, and integration point so a developer (human or AI) can reconstruct the entire application with minimal guidance.
 
@@ -95,9 +101,9 @@ https://www.toughguycomputing.com/home_finder_agents_social/site/<site_key>/
 │   │   ├── auth.py              # 13 routes — registration, login, masquerade
 │   │   ├── dashboard_helpers.py # Blueprint registration hub
 │   │   ├── listings.py          # 7 routes — dashboard, detail, flag, note, enrich
-│   │   ├── admin_routes.py      # 14 routes — metrics, prompts, users, billing
+│   │   ├── admin_routes.py      # 17 routes — metrics, prompts, users, billing, feedback
 │   │   ├── agent_routes.py      # 11 routes — client roster, branding, friend listings
-│   │   ├── preferences_routes.py# 6 routes — scoring weights, landmarks, areas
+│   │   ├── preferences_routes.py# 8 routes — scoring weights, landmarks, areas, help level, power mode
 │   │   ├── tour_routes.py       # 6 routes — itinerary, contact agent, help pages
 │   │   ├── ai_routes.py         # 3 routes — deal/portfolio/preferences analysis
 │   │   ├── watch_routes.py      # 5 routes — street watch CRUD, alerts

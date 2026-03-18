@@ -1,7 +1,7 @@
 <!--
   File: app/templates/dashboard/detail.html
-  App Version: 2026.03.14 | File Version: 1.10.0
-  Last Modified: 2026-03-14
+  App Version: 2026.03.14 | File Version: 1.11.0
+  Last Modified: 2026-03-17
 -->
 {% extends "base.html" %}
 {% block title %}{{ listing.address }} – HomeFinder{% endblock %}
@@ -219,7 +219,8 @@
                         Extended property details are available from {{ listing.source|capitalize }}.
                     </p>
                     <button type="button" class="btn btn-sm btn-outline-primary" id="enrich-btn"
-                            onclick="fetchEnrichment()">
+                            onclick="fetchEnrichment()"
+                            data-help="Pulls full details from source — uses 1 API credit">
                         <i class="bi bi-cloud-download me-1"></i>Fetch Property Details
                     </button>
                 </div>
@@ -357,7 +358,8 @@
             <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
                 <strong><i class="bi bi-robot"></i> AI Deal Analyst</strong>
                 {% if current_user.is_authenticated %}
-                <button class="btn btn-sm btn-primary" id="analyze-btn" onclick="runAnalysis()">
+                <button class="btn btn-sm btn-primary" id="analyze-btn" onclick="runAnalysis()"
+                        data-help="Claude AI analyzes this listing against your preferences — strengths, red flags, and a specific offer amount">
                     <i class="bi bi-lightning-charge"></i> Analyze This Deal
                 </button>
                 {% else %}
@@ -423,8 +425,14 @@
         <!-- Deal Score -->
         {% if listing.deal_score %}
         <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-transparent border-0"><strong>Deal Score</strong></div>
+            <div class="card-header bg-transparent border-0"
+                 data-help="Weighted average of all 18 factors using YOUR importance settings">
+                <strong>Deal Score</strong>
+            </div>
             <div class="card-body pt-0">
+                <div class="help-hint d-none text-muted small mb-2">
+                    <i class="bi bi-info-circle me-1"></i>This score is personalized — it reflects your importance weights from Preferences. Other users see different scores for the same listing.
+                </div>
                 {% set score = user_composite %}
                 <h2 class="text-center text-{{ 'success' if score >= 75 else ('primary' if score >= 50 else 'danger') }} mb-3">
                     {{ "%.0f"|format(score) }}<small class="text-muted">/100</small>
