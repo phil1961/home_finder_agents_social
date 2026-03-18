@@ -1,0 +1,164 @@
+<!--
+  File: app/templates/dashboard/admin_feedback.html
+  App Version: 2026.03.14 | File Version: 1.0.0
+  Last Modified: 2026-03-17
+-->
+{% extends "base.html" %}
+{% block title %}Feedback — HomeFinder{% endblock %}
+
+{% block head %}
+<style>
+    .fb-row { transition: opacity .3s; }
+    .fb-row.is-read { opacity: 0.55; }
+    .fb-row:hover { opacity: 1 !important; background: #f8fafc; }
+    .sentiment-badge { font-size: 1.1rem; }
+    .fb-comment { white-space: pre-wrap; word-break: break-word; max-width: 500px; }
+    .fb-filter-btn.active { font-weight: 600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">
+        <i class="bi bi-chat-square-text text-primary me-2"></i>User Feedback
+        <span class="text-muted" style="font-size:0.9rem;">{{ total }} total</span>
+        {% if unread_count > 0 %}
+        <span class="badge bg-danger ms-2" style="font-size:0.7rem;">{{ unread_count }} new</span>
+        {% endif %}
+    </h4>
+    <a href="{{ site_url('dashboard.admin_metrics') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to Metrics
+    </a>
+</div>
+
+<!-- Sentiment filter -->
+<div class="btn-group btn-group-sm mb-3">
+    <a href="{{ site_url('dashboard.admin_feedback') }}"
+       class="btn btn-outline-secondary fb-filter-btn {{ 'active' if not filter_sentiment }}">All</a>
+    <a href="{{ site_url('dashboard.admin_feedback', sentiment='positive') }}"
+       class="btn btn-outline-success fb-filter-btn {{ 'active' if filter_sentiment == 'positive' }}">
+        <i class="bi bi-hand-thumbs-up-fill me-1"></i>Positive</a>
+    <a href="{{ site_url('dashboard.admin_feedback', sentiment='neutral') }}"
+       class="btn btn-outline-warning fb-filter-btn {{ 'active' if filter_sentiment == 'neutral' }}">
+        <i class="bi bi-emoji-neutral-fill me-1"></i>Neutral</a>
+    <a href="{{ site_url('dashboard.admin_feedback', sentiment='negative') }}"
+       class="btn btn-outline-danger fb-filter-btn {{ 'active' if filter_sentiment == 'negative' }}">
+        <i class="bi bi-hand-thumbs-down-fill me-1"></i>Negative</a>
+</div>
+
+{% if items %}
+<div class="table-responsive">
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <th style="width:40px;"></th>
+                <th>Sentiment</th>
+                <th>Comment</th>
+                <th>Page</th>
+                <th>Who</th>
+                <th>When</th>
+                <th style="width:60px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fb in items %}
+            <tr class="fb-row {{ 'is-read' if fb.is_read }}" id="fb-row-{{ fb.id }}">
+                <td>
+                    {% if not fb.is_read %}
+                    <span class="badge bg-primary" style="font-size:0.55rem;">NEW</span>
+                    {% endif %}
+                </td>
+                <td class="sentiment-badge">
+                    {% if fb.sentiment == 'positive' %}
+                    <i class="bi bi-hand-thumbs-up-fill text-success" title="Positive"></i>
+                    {% elif fb.sentiment == 'neutral' %}
+                    <i class="bi bi-emoji-neutral-fill text-warning" title="Neutral"></i>
+                    {% else %}
+                    <i class="bi bi-hand-thumbs-down-fill text-danger" title="Negative"></i>
+                    {% endif %}
+                </td>
+                <td class="fb-comment">{{ fb.comment or '—' }}</td>
+                <td class="small text-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                    title="{{ fb.page_url or '' }}">
+                    {{ fb.page_url or '—' }}
+                </td>
+                <td class="small">
+                    {% if fb.user %}
+                    <span class="badge bg-light text-dark border" style="font-size:0.65rem;">{{ fb.user_role or 'user' }}</span>
+                    {{ fb.user.username }}
+                    {% elif fb.email %}
+                    <span class="badge bg-light text-dark border" style="font-size:0.65rem;">guest</span>
+                    {{ fb.email }}
+                    {% else %}
+                    <span class="text-muted">anonymous</span>
+                    {% endif %}
+                </td>
+                <td class="small text-muted text-nowrap">
+                    {{ fb.created_at.strftime('%b %d, %H:%M') if fb.created_at else '—' }}
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-secondary border-0 fb-read-btn"
+                            data-id="{{ fb.id }}"
+                            title="{{ 'Mark unread' if fb.is_read else 'Mark read' }}">
+                        <i class="bi {{ 'bi-envelope' if fb.is_read else 'bi-envelope-open' }}"></i>
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<nav>
+    <ul class="pagination pagination-sm justify-content-center">
+        {% for p in range(1, total_pages + 1) %}
+        <li class="page-item {{ 'active' if p == page }}">
+            <a class="page-link"
+               href="{{ site_url('dashboard.admin_feedback', page=p, sentiment=filter_sentiment) }}">{{ p }}</a>
+        </li>
+        {% endfor %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="text-center text-muted py-5">
+    <i class="bi bi-inbox" style="font-size:2.5rem;"></i>
+    <p class="mt-2">No feedback yet. The floating button is live — users will see it on every page.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('.fb-read-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const id = this.dataset.id;
+        const row = document.getElementById('fb-row-' + id);
+        const icon = this.querySelector('i');
+
+        fetch('{{ site_url("dashboard.admin_feedback_toggle_read", feedback_id=0) }}'.replace('/0/', '/' + id + '/'), {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                row.classList.toggle('is-read', data.is_read);
+                icon.className = data.is_read ? 'bi bi-envelope' : 'bi bi-envelope-open';
+                this.title = data.is_read ? 'Mark unread' : 'Mark read';
+                // Update NEW badge
+                const badge = row.querySelector('.badge.bg-primary');
+                if (data.is_read && badge) badge.remove();
+                if (!data.is_read && !badge) {
+                    row.querySelector('td').innerHTML = '<span class="badge bg-primary" style="font-size:0.55rem;">NEW</span>';
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

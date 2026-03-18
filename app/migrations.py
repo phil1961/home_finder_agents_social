@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────
 # File: app/migrations.py
-# App Version: 2026.03.14 | File Version: 1.5.0
-# Last Modified: 2026-03-14
+# App Version: 2026.03.14 | File Version: 1.6.0
+# Last Modified: 2026-03-17
 # ─────────────────────────────────────────────
 """
 app/migrations.py
@@ -461,6 +461,25 @@ def apply_all(engine, logger=None):
                 if col_name not in fl_cols:
                     conn.execute(text(f"ALTER TABLE friend_listings ADD COLUMN {col_name} {col_type}"))
                     log.info(f"Migration: added '{col_name}' to friend_listings")
+
+        # feedback
+        if not inspector.has_table("feedback"):
+            conn.execute(text("""
+                CREATE TABLE feedback (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER REFERENCES users(id),
+                    email VARCHAR(254),
+                    sentiment VARCHAR(20) NOT NULL,
+                    comment TEXT DEFAULT '',
+                    page_url VARCHAR(500),
+                    user_role VARCHAR(20),
+                    is_read BOOLEAN NOT NULL DEFAULT 0,
+                    created_at DATETIME
+                )
+            """))
+            conn.execute(text("CREATE INDEX ix_fb_user_id ON feedback(user_id)"))
+            conn.execute(text("CREATE INDEX ix_fb_created_at ON feedback(created_at)"))
+            log.info("Migration: created feedback table")
 
         conn.commit()
 

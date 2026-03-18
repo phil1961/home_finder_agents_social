@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────
 # File: app/__init__.py
-# App Version: 2026.03.13 | File Version: 1.5.0
-# Last Modified: 2026-03-13
+# App Version: 2026.03.14 | File Version: 1.6.0
+# Last Modified: 2026-03-17
 # ─────────────────────────────────────────────
 """Flask application factory."""
 import logging
@@ -296,6 +296,19 @@ def create_app(config_class=None):
             siblings = User.query.filter_by(email=_cu.email).order_by(User.id).all()
             return {"siblings": siblings}
         return {"siblings": []}
+
+    @app.context_processor
+    def inject_feedback_count():
+        """For owners: inject unread feedback count for nav badge."""
+        from flask_login import current_user as _cu
+        if _cu.is_authenticated and _cu.is_owner:
+            try:
+                from app.models_social import Feedback
+                count = Feedback.query.filter_by(is_read=False).count()
+                return {"feedback_unread_count": count}
+            except Exception:
+                pass
+        return {"feedback_unread_count": 0}
 
     # ── Request logger ────────────────────────────────────────────
     @app.before_request

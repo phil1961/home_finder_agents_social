@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────
 # File: app/routes/admin_routes.py
-# App Version: 2026.03.14 | File Version: 1.7.0
-# Last Modified: 2026-03-14
+# App Version: 2026.03.14 | File Version: 1.8.0
+# Last Modified: 2026-03-17
 # ─────────────────────────────────────────────
 """
 app/routes/admin_routes.py — Owner-level admin routes.
@@ -809,3 +809,85 @@ def admin_billing():
     return render_template("dashboard/admin_billing.html",
                            billing=info, plans=PLAN_DEFAULTS,
                            user=current_user)
+
+
+# ── Feedback ──────────────────────────────────────────────────────
+
+@dashboard_bp.route("/feedback", methods=["POST"])
+def submit_feedback():
+    """Submit feedback from the floating button. Open to all users and guests."""
+    from app.models_social import Feedback
+
+    sentiment = request.form.get("sentiment", "").strip()
+    if sentiment not in ("positive", "neutral", "negative"):
+        return jsonify({"error": "Invalid sentiment"}), 400
+
+    comment = request.form.get("comment", "").strip()[:2000]
+    page_url = request.form.get("page_url", "").strip()[:500]
+    email = request.form.get("email", "").strip()[:254] or None
+
+    fb = Feedback(
+        sentiment=sentiment,
+        comment=comment,
+        page_url=page_url,
+        email=email,
+        user_id=current_user.id if current_user.is_authenticated else None,
+        user_role=current_user.role if current_user.is_authenticated else "guest",
+    )
+    try:
+        db.session.add(fb)
+        db.session.commit()
+        return jsonify({"ok": True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@dashboard_bp.route("/admin/feedback")
+@login_required
+def admin_feedback():
+    """Owner/master: review submitted feedback."""
+    if not current_user.is_owner:
+        flash("Access denied.", "danger")
+        return _site_redirect("dashboard.index")
+
+    from app.models_social import Feedback, FEEDBACK_SENTIMENTS
+
+    page = request.args.get("page", 1, type=int)
+    per_page = 25
+    filter_sentiment = request.args.get("sentiment", "")
+
+    query = Feedback.query.order_by(Feedback.created_at.desc())
+    if filter_sentiment in ("positive", "neutral", "negative"):
+        query = query.filter_by(sentiment=filter_sentiment)
+
+    total = query.count()
+    items = query.offset((page - 1) * per_page).limit(per_page).all()
+    total_pages = max(1, (total + per_page - 1) // per_page)
+
+    # Count unread
+    unread_count = Feedback.query.filter_by(is_read=False).count()
+
+    return render_template("dashboard/admin_feedback.html",
+                           items=items, sentiments=FEEDBACK_SENTIMENTS,
+                           page=page, total_pages=total_pages, total=total,
+                           unread_count=unread_count,
+                           filter_sentiment=filter_sentiment,
+                           user=current_user)
+
+
+@dashboard_bp.route("/admin/feedback/<int:feedback_id>/read", methods=["POST"])
+@login_required
+def admin_feedback_toggle_read(feedback_id):
+    """Toggle is_read on a feedback item. Returns JSON."""
+    if not current_user.is_owner:
+        return jsonify({"error": "Access denied"}), 403
+
+    from app.models_social import Feedback
+    fb = db.session.get(Feedback, feedback_id)
+    if not fb:
+        return jsonify({"error": "Not found"}), 404
+
+    fb.is_read = not fb.is_read
+    db.session.commit()
+    return jsonify({"ok": True, "is_read": fb.is_read})

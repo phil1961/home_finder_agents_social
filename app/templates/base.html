@@ -1,7 +1,7 @@
 <!--
   File: app/templates/base.html
-  App Version: 2026.03.14 | File Version: 2.0.0
-  Last Modified: 2026-03-14
+  App Version: 2026.03.14 | File Version: 2.1.0
+  Last Modified: 2026-03-17
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -152,6 +152,11 @@
                             <i class="bi bi-sliders" style="color:#a5b4fc;"></i> Preferences
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#feedbackModal">
+                            <i class="bi bi-chat-square-text" style="color:#c4b5fd;"></i> Feedback
+                        </a>
+                    </li>
                     {% if current_user.is_authenticated and current_user.assigned_agent %}
                     <li class="nav-item">
                         <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#contactAgentModal">
@@ -211,6 +216,16 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ site_url('dashboard.admin_prompts') }}">
                             <i class="bi bi-pencil-square" style="color:#94a3b8;"></i> Prompts
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link position-relative" href="{{ site_url('dashboard.admin_feedback') }}">
+                            <i class="bi bi-chat-square-text" style="color:#94a3b8;"></i> Feedback
+                            {% if feedback_unread_count is defined and feedback_unread_count > 0 %}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.55rem;">
+                                {{ feedback_unread_count }}
+                            </span>
+                            {% endif %}
                         </a>
                     </li>
                     {% endif %}
@@ -489,6 +504,138 @@
     </script>
     {% endif %}
     {% block scripts %}{% endblock %}
+    <!-- ── Feedback Modal ────────────────────────────────────────── -->
+    <div class="modal fade" id="feedbackModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-body p-4">
+                    <h5 class="fw-bold mb-1"><i class="bi bi-chat-square-text text-primary me-2"></i>Quick Feedback</h5>
+                    <p class="text-muted small mb-3">How's your experience? Tap a reaction, add a note if you like.</p>
+
+                    <!-- Sentiment buttons -->
+                    <div class="d-flex justify-content-center gap-3 mb-3" id="fbSentimentRow">
+                        <button type="button" class="btn btn-outline-success rounded-circle fb-sentiment-btn"
+                                data-sentiment="positive" style="width:56px;height:56px;font-size:1.5rem;"
+                                title="Thumbs Up">
+                            <i class="bi bi-hand-thumbs-up-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-warning rounded-circle fb-sentiment-btn"
+                                data-sentiment="neutral" style="width:56px;height:56px;font-size:1.5rem;"
+                                title="Meh">
+                            <i class="bi bi-emoji-neutral-fill"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-danger rounded-circle fb-sentiment-btn"
+                                data-sentiment="negative" style="width:56px;height:56px;font-size:1.5rem;"
+                                title="Thumbs Down">
+                            <i class="bi bi-hand-thumbs-down-fill"></i>
+                        </button>
+                    </div>
+
+                    <!-- Comment (optional) -->
+                    <textarea id="fbComment" class="form-control form-control-sm mb-2" rows="3"
+                              placeholder="Tell us more (optional)..." maxlength="2000"></textarea>
+
+                    {% if not current_user.is_authenticated %}
+                    <input type="email" id="fbEmail" class="form-control form-control-sm mb-2"
+                           placeholder="Your email (optional)">
+                    {% endif %}
+
+                    <!-- Status -->
+                    <div id="fbStatus" class="small text-center mb-2" style="min-height:1.2em;"></div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-sm btn-primary px-3" id="fbSubmitBtn" disabled>
+                            <i class="bi bi-send me-1"></i>Send
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ── Feedback widget ────────────────────────────────────────────
+    (function() {
+        let selectedSentiment = null;
+        const btns = document.querySelectorAll('.fb-sentiment-btn');
+        const submitBtn = document.getElementById('fbSubmitBtn');
+        const statusEl = document.getElementById('fbStatus');
+        const commentEl = document.getElementById('fbComment');
+        const emailEl = document.getElementById('fbEmail');
+
+        btns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                btns.forEach(b => {
+                    b.classList.remove('active');
+                    b.classList.replace('btn-success', 'btn-outline-success');
+                    b.classList.replace('btn-warning', 'btn-outline-warning');
+                    b.classList.replace('btn-danger', 'btn-outline-danger');
+                });
+                selectedSentiment = this.dataset.sentiment;
+                const colorMap = {positive: 'success', neutral: 'warning', negative: 'danger'};
+                const c = colorMap[selectedSentiment];
+                this.classList.replace('btn-outline-' + c, 'btn-' + c);
+                this.classList.add('active');
+                submitBtn.disabled = false;
+                statusEl.textContent = '';
+            });
+        });
+
+        submitBtn.addEventListener('click', function() {
+            if (!selectedSentiment) return;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            statusEl.textContent = '';
+
+            const fd = new FormData();
+            fd.append('sentiment', selectedSentiment);
+            fd.append('comment', commentEl.value.trim());
+            fd.append('page_url', window.location.pathname);
+            if (emailEl) fd.append('email', emailEl.value.trim());
+
+            fetch('{{ site_url("dashboard.submit_feedback") }}', {
+                method: 'POST',
+                body: fd,
+                credentials: 'same-origin',
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok) {
+                    statusEl.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>Thanks for your feedback!</span>';
+                    setTimeout(() => {
+                        bootstrap.Modal.getInstance(document.getElementById('feedbackModal')).hide();
+                        // Reset form
+                        selectedSentiment = null;
+                        btns.forEach(b => {
+                            b.classList.remove('active');
+                            b.classList.replace('btn-success', 'btn-outline-success');
+                            b.classList.replace('btn-warning', 'btn-outline-warning');
+                            b.classList.replace('btn-danger', 'btn-outline-danger');
+                        });
+                        commentEl.value = '';
+                        if (emailEl) emailEl.value = '';
+                        submitBtn.innerHTML = '<i class="bi bi-send me-1"></i>Send';
+                        submitBtn.disabled = true;
+                        statusEl.textContent = '';
+                    }, 1200);
+                } else {
+                    statusEl.innerHTML = '<span class="text-danger">Error: ' + (data.error || 'Unknown') + '</span>';
+                    submitBtn.innerHTML = '<i class="bi bi-send me-1"></i>Send';
+                    submitBtn.disabled = false;
+                }
+            })
+            .catch(() => {
+                statusEl.innerHTML = '<span class="text-danger">Network error. Try again.</span>';
+                submitBtn.innerHTML = '<i class="bi bi-send me-1"></i>Send';
+                submitBtn.disabled = false;
+            });
+        });
+
+    })();
+    </script>
+
     <script>
     // Parse emoji in navbar brand and any .twemoji-parse elements into crisp SVGs
     document.addEventListener('DOMContentLoaded', function() {

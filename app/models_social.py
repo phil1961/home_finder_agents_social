@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────
 # File: app/models_social.py
-# App Version: 2026.03.14 | File Version: 1.2.0
-# Last Modified: 2026-03-14
+# App Version: 2026.03.14 | File Version: 1.3.0
+# Last Modified: 2026-03-17
 # ─────────────────────────────────────────────
 """Social feature models for HomeFinder Social."""
 import json
@@ -290,6 +290,38 @@ class FriendListing(db.Model):
 
     def __repr__(self):
         return f"<FriendListing '{self.address}' by {self.submitter_email}>"
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  USER FEEDBACK
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Sentiment choices for quick-react buttons
+FEEDBACK_SENTIMENTS = [
+    ("positive", "Thumbs Up", "bi-hand-thumbs-up-fill", "text-success"),
+    ("neutral", "Meh", "bi-emoji-neutral-fill", "text-warning"),
+    ("negative", "Thumbs Down", "bi-hand-thumbs-down-fill", "text-danger"),
+]
+
+
+class Feedback(db.Model):
+    """User or guest feedback captured via the floating feedback button."""
+    __tablename__ = "feedback"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
+    email = db.Column(db.String(254), nullable=True)
+    sentiment = db.Column(db.String(20), nullable=False)  # positive, neutral, negative
+    comment = db.Column(db.Text, default="")
+    page_url = db.Column(db.String(500), nullable=True)
+    user_role = db.Column(db.String(20), nullable=True)
+    is_read = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship("User", backref=db.backref("feedback_items", lazy="dynamic"))
+
+    def __repr__(self):
+        return f"<Feedback {self.sentiment} by user_id={self.user_id}>"
 
 
 def expire_friend_listings():

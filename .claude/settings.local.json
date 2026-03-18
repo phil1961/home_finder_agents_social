@@ -1,31 +1,24 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cd D:/Projects/home_finder_agents_social *)",
-      "Bash(cd D:\\\\Projects\\\\home_finder_agents_social *)",
-      "Bash(find D:/Projects/home_finder_agents_social *)",
-      "Bash(ls D:/Projects/home_finder_agents_social*)",
-      "Bash(ls -* D:/Projects/home_finder_agents_social*)",
-      "Bash(wc -l D:/Projects/home_finder_agents_social*)",
-      "Bash(wc *D:/Projects/home_finder_agents_social*)",
-      "Bash(tail *D:/Projects/home_finder_agents_social*)",
-      "Bash(tail *C:/Users/palarson*)",
-      "Bash(head *D:/Projects/home_finder_agents_social*)",
-      "Bash(mkdir -p D:/Projects/home_finder_agents_social*)",
-      "Bash(touch D:/Projects/home_finder_agents_social*)",
-      "Bash(mv D:/Projects/home_finder_agents_social*)",
-      "Bash(rm D:/Projects/home_finder_agents_social*)",
+      "Bash(cd *)",
+      "Bash(find *)",
+      "Bash(ls *)",
+      "Bash(wc *)",
+      "Bash(tail *)",
+      "Bash(head *)",
+      "Bash(mkdir *)",
+      "Bash(touch *)",
+      "Bash(mv *)",
+      "Bash(rm *)",
+      "Bash(cat *)",
       "Bash(curl *)",
       "Bash(sleep *)",
-      "Bash(cat C:/Users/palarson*)",
-      "Bash(powershell -Command \"Import-Module WebAdministration*)",
-      "Bash(powershell -Command \"icacls*)",
+      "Bash(pwd*)",
+      "Bash(python *)",
+      "Bash(powershell *)",
       "WebSearch",
-      "WebFetch",
-      "Bash(cd:*)",
-      "Bash(.venv/Scripts/python -c \"from app import create_app; app = create_app\\(\\); print\\(''''OK''''\\)\")",
-      "Bash(.venv/Scripts/python -m pytest tests/ --tb=no -q)",
-      "Bash(.venv/Scripts/python -c \"from wsgi import app; print\\(''''OK''''\\)\")"
+      "WebFetch"
     ]
   }
 }

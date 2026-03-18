@@ -37,7 +37,7 @@ DEFAULT_IMPORTANCE = {
 AVOID_AREAS = ["East Goose Creek", "Upper Summerville"]
 GREAT_DEAL_SCORE_THRESHOLD = 75  # composite score out of 100
 
-APP_VERSION = "2026.03.12"
+APP_VERSION = "2026.03.17"
 
 # ── Default AI system prompts ────────────────────────────────────
 # These are used when no PromptOverride exists for a given type.
