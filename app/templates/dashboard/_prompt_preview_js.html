@@ -4,6 +4,40 @@ let currentPreviewType = 'deal';
 const PREF_DEFAULTS = {price:8,size:5,yard:7,features:8,flood:6,year_built:5,single_story:7,price_per_sqft:4,hoa:6,tax:5,dom:3,pool:2};
 const PORTFOLIO_DEFAULT = `Buyer's favorites (3 properties):\n\n1. 742 Evergreen Terrace — $385,000 | 4bd/2.5ba | 2,100 sqft | Score: 72\n   Garage, porch, patio. Year built 1989. Price dropped 3.5%.\n\n2. 15 Oak Lane — $420,000 | 4bd/3ba | 2,450 sqft | Score: 81\n   Garage, single story. Year built 2005. HOA $125/mo.\n\n3. 303 Palmetto Dr — $349,000 | 3bd/2ba | 1,850 sqft | Score: 68\n   Porch, patio. Year built 1975. No flood zone. Price dropped 6.1%.\n\nMarket: Charleston, SC`;
 
+// ── Bio chip/toggle interactions ──────────────────────────────
+(function() {
+    // Single-select chip groups
+    document.querySelectorAll('.bio-chip-group').forEach(group => {
+        group.querySelectorAll('.bio-chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                const was = this.classList.contains('sel');
+                group.querySelectorAll('.bio-chip').forEach(c => c.classList.remove('sel'));
+                if (!was) this.classList.add('sel');
+            });
+        });
+    });
+    // Multi-select chip groups
+    document.querySelectorAll('.bio-multi-group').forEach(group => {
+        group.querySelectorAll('.bio-chip').forEach(chip => {
+            chip.addEventListener('click', function() { this.classList.toggle('sel'); });
+        });
+    });
+    // Toggle pills
+    document.querySelectorAll('.bio-toggle').forEach(pill => {
+        if (pill.id === 'pm-bio-toggle') return; // handled separately
+        pill.addEventListener('click', function() { this.classList.toggle('on'); });
+    });
+    // Master bio toggle — show/hide bio fields
+    const bioToggle = document.getElementById('pm-bio-toggle');
+    const bioFields = document.getElementById('pm-bio-fields');
+    if (bioToggle && bioFields) {
+        bioToggle.addEventListener('click', function() {
+            this.classList.toggle('on');
+            bioFields.style.display = this.classList.contains('on') ? 'block' : 'none';
+        });
+    }
+})();
+
 function openPreviewModal(ptype) {
     currentPreviewType = ptype;
     const titles = {deal:'Deal Analyst',portfolio:'Portfolio Analyst',preferences:'Preferences Coach'};
@@ -39,10 +73,93 @@ function resetSampleData() {
         document.getElementById('pm-pref-beds').value=4;document.getElementById('pm-pref-baths').value=3;
         document.getElementById('pm-pref-plow').value=200000;document.getElementById('pm-pref-phigh').value=600000;
     }
+    // Reset bio to defaults
+    _resetBioDefaults();
+}
+
+function _resetBioDefaults() {
+    // Life stage
+    document.querySelectorAll('#pm-bio-stage .bio-chip').forEach(c => c.classList.remove('sel'));
+    const defStage = document.querySelector('#pm-bio-stage .bio-chip[data-val="retired"]');
+    if (defStage) defStage.classList.add('sel');
+    // Activities
+    document.querySelectorAll('#pm-bio-activities .bio-chip').forEach(c => c.classList.remove('sel'));
+    ['golf','fishing','gardening'].forEach(v => {
+        const el = document.querySelector('#pm-bio-activities .bio-chip[data-val="'+v+'"]');
+        if (el) el.classList.add('sel');
+    });
+    // Budget
+    document.querySelectorAll('#pm-bio-budget .bio-chip').forEach(c => c.classList.remove('sel'));
+    const defBudget = document.querySelector('#pm-bio-budget .bio-chip[data-val="comfortable"]');
+    if (defBudget) defBudget.classList.add('sel');
+    // Toggles
+    document.getElementById('pm-bio-fixed').classList.add('on');
+    document.getElementById('pm-bio-partner').classList.add('on');
+    document.getElementById('pm-bio-worship').classList.add('on');
+    document.getElementById('pm-bio-single-story').classList.add('on');
+    document.getElementById('pm-bio-medical').classList.remove('on');
+    document.getElementById('pm-bio-walkability').classList.remove('on');
+    // Text fields
+    document.getElementById('pm-bio-denom').value = 'Lutheran';
+    document.getElementById('pm-bio-reloc').value = 'Minneapolis, MN';
+}
+
+function _buildBioContext() {
+    const bioToggle = document.getElementById('pm-bio-toggle');
+    if (!bioToggle || !bioToggle.classList.contains('on')) return '';
+
+    const lines = [];
+
+    // Life stage
+    const stage = document.querySelector('#pm-bio-stage .bio-chip.sel');
+    if (stage) {
+        const labels = {retired:'retired',pre_retirement:'pre-retirement',empty_nester:'empty nester',growing_family:'growing family',young_professional:'young professional',established_family:'established family'};
+        lines.push('Life stage: ' + (labels[stage.dataset.val] || stage.dataset.val));
+    }
+
+    // Household
+    const hh = [];
+    if (document.getElementById('pm-bio-partner').classList.contains('on')) hh.push('moving with spouse/partner');
+    if (hh.length) lines.push('Household: ' + hh.join('; '));
+
+    // Budget
+    const budget = document.querySelector('#pm-bio-budget .bio-chip.sel');
+    if (budget) {
+        const bl = {stretching:'budget is tight',comfortable:'budget is comfortable',flexible:'budget is flexible'};
+        lines.push('Budget comfort: ' + (bl[budget.dataset.val] || budget.dataset.val));
+    }
+    if (document.getElementById('pm-bio-fixed').classList.contains('on'))
+        lines.push('On a fixed income — ongoing costs are especially important');
+
+    // Activities
+    const acts = [];
+    document.querySelectorAll('#pm-bio-activities .bio-chip.sel').forEach(c => acts.push(c.dataset.val));
+    if (acts.length) lines.push('Hobbies & interests: ' + acts.join(', '));
+
+    // Worship
+    if (document.getElementById('pm-bio-worship').classList.contains('on')) {
+        const denom = document.getElementById('pm-bio-denom').value.trim();
+        lines.push(denom ? 'Faith community — looking for nearby ' + denom + ' church' : 'Faith community is important');
+    }
+
+    // Health
+    const health = [];
+    if (document.getElementById('pm-bio-single-story').classList.contains('on')) health.push('single-story living');
+    if (document.getElementById('pm-bio-medical').classList.contains('on')) health.push('near medical');
+    if (document.getElementById('pm-bio-walkability').classList.contains('on')) health.push('walkability');
+    if (health.length) lines.push('Mobility: ' + health.join(', '));
+
+    // Relocating
+    const reloc = document.getElementById('pm-bio-reloc').value.trim();
+    if (reloc) lines.push('Relocating from: ' + reloc);
+
+    if (!lines.length) return '';
+    return '\n\n--- Buyer Profile ---\n' + lines.map(l => '- ' + l).join('\n');
 }
 
 function buildSampleContext() {
     const t=currentPreviewType;
+    let ctx = '';
     if(t==='deal'){
         const v=id=>document.getElementById('pm-'+id).value;
         const c=id=>document.getElementById('pm-'+id).checked;
@@ -53,7 +170,7 @@ function buildSampleContext() {
         const lot=parseInt(v('lot')); const acres=lot>0?(lot/43560).toFixed(2):'0';
         const pchg=parseFloat(v('pchg')); const dir=pchg<0?'dropped':'increased';
         const hoa=parseInt(v('hoa'));
-        let ctx=`Property: ${v('address')}\nPrice: $${price.toLocaleString()}\nBeds: ${v('beds')}  |  Baths: ${v('baths')}  |  Sqft: ${sqft.toLocaleString()}`;
+        ctx=`Property: ${v('address')}\nPrice: $${price.toLocaleString()}\nBeds: ${v('beds')}  |  Baths: ${v('baths')}  |  Sqft: ${sqft.toLocaleString()}`;
         if(lot>0)ctx+=`\nLot size: ${lot.toLocaleString()} sqft (${acres} acres)`;
         ctx+=`\nYear built: ${v('year')}\nPrice per sqft: $${ppsqft}\nDays on market: ${v('dom')}`;
         ctx+=`\nHOA: ${hoa>0?'$'+hoa+'/month':'None'}`;
@@ -61,18 +178,19 @@ function buildSampleContext() {
         if(pchg!==0)ctx+=`\nPrice has ${dir} ${Math.abs(pchg).toFixed(1)}%`;
         if(feats.length)ctx+=`\nFeatures: ${feats.join(', ')}`;
         ctx+=`\nFlood zone: ${document.getElementById('pm-flood').value}\nDeal score: ${v('score')}/100\nMarket: ${v('market')}`;
-        return ctx;
     } else if(t==='portfolio'){
-        return document.getElementById('pm-portfolio-text').value;
+        ctx = document.getElementById('pm-portfolio-text').value;
     } else {
         const wv=k=>(document.getElementById('pm-wt-'+k)||{}).value||'5';
-        let ctx="Buyer's scoring preferences:\n";
+        ctx="Buyer's scoring preferences:\n";
         const labels={price:'Price',size:'Size',yard:'Yard',features:'Features',flood:'Flood risk',year_built:'Year built',single_story:'Single story',price_per_sqft:'Price per sqft',hoa:'HOA',tax:'Tax',dom:'Days on market',pool:'Community pool'};
         for(const[k,l] of Object.entries(labels))ctx+=`  ${l} importance: ${wv(k)}/10\n`;
         ctx+=`Price range: $${parseInt(document.getElementById('pm-pref-plow').value).toLocaleString()} - $${parseInt(document.getElementById('pm-pref-phigh').value).toLocaleString()}\n`;
         ctx+=`Min beds: ${document.getElementById('pm-pref-beds').value}  |  Min baths: ${document.getElementById('pm-pref-baths').value}\nMust have: garage, porch, patio\nMarket: Charleston, SC`;
-        return ctx;
     }
+    // Append buyer profile if enabled
+    ctx += _buildBioContext();
+    return ctx;
 }
 
 function sendPreview() {

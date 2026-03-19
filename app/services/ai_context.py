@@ -1,4 +1,8 @@
-# v20260310-1
+# ─────────────────────────────────────────────
+# File: app/services/ai_context.py
+# App Version: 2026.03.14 | File Version: 1.1.0
+# Last Modified: 2026-03-18
+# ─────────────────────────────────────────────
 """
 AI Context Builders — pure string-building functions for Claude prompts.
 
@@ -15,6 +19,165 @@ def _get_site_display_name() -> str:
         return getattr(g, "site", {}).get("display_name", "the local area")
     except RuntimeError:
         return "the local area"
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  BUYER PROFILE CONTEXT
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+def build_buyer_profile_context(buyer_profile: dict) -> str:
+    """
+    Convert a buyer_profile dict into natural-language context for Claude.
+
+    Returns empty string if profile is empty/None, so callers can simply
+    append without checking.
+    """
+    if not buyer_profile:
+        return ""
+
+    lines = []
+
+    # Life stage
+    stage = buyer_profile.get("life_stage")
+    stage_labels = {
+        "young_professional": "young professional",
+        "growing_family": "growing family",
+        "established_family": "established family with older children",
+        "empty_nester": "empty nester",
+        "pre_retirement": "pre-retirement, planning to retire soon",
+        "retired": "retired",
+    }
+    if stage and stage in stage_labels:
+        lines.append(f"Life stage: {stage_labels[stage]}")
+
+    # Household
+    household = []
+    kids = buyer_profile.get("kids")
+    if kids:
+        age_labels = {"young": "young children", "school_age": "school-age children",
+                      "teens": "teenagers"}
+        kid_desc = age_labels.get(kids, kids)
+        household.append(f"has {kid_desc} at home")
+    pets = buyer_profile.get("pets")
+    if pets:
+        pet_labels = {"dog": "dog owner", "cat": "cat owner", "both": "dog and cat owner"}
+        household.append(pet_labels.get(pets, f"{pets} owner"))
+    wfh = buyer_profile.get("work_from_home")
+    if wfh and wfh != "no":
+        wfh_labels = {"full": "works from home full-time", "hybrid": "works from home part-time (hybrid)"}
+        household.append(wfh_labels.get(wfh, "works from home"))
+    if buyer_profile.get("partner"):
+        household.append("moving with spouse/partner")
+    if household:
+        lines.append(f"Household: {'; '.join(household)}")
+
+    # Budget feel
+    budget = buyer_profile.get("budget_feel")
+    if budget:
+        budget_labels = {
+            "stretching": "budget is tight — stretching to afford",
+            "comfortable": "budget is comfortable",
+            "flexible": "budget is flexible — willing to spend more for the right property",
+        }
+        lines.append(f"Budget comfort: {budget_labels.get(budget, budget)}")
+    if buyer_profile.get("fixed_income"):
+        lines.append("On a fixed income — ongoing costs (HOA, taxes, maintenance) are especially important")
+
+    # Activities
+    activities = buyer_profile.get("activities", [])
+    if activities:
+        activity_labels = {
+            "golf": "golf", "fishing": "fishing/boating", "beach": "beach & water activities",
+            "running": "running/cycling", "gardening": "gardening",
+            "hunting": "hunting/outdoors", "dining": "dining out",
+            "arts": "arts & culture", "fitness": "fitness/gym", "swimming": "swimming",
+        }
+        named = [activity_labels.get(a, a) for a in activities]
+        lines.append(f"Hobbies & interests: {', '.join(named)}")
+
+    # Faith
+    if buyer_profile.get("worship_important"):
+        denom = buyer_profile.get("denomination", "").strip()
+        if denom:
+            lines.append(f"Faith community is important — looking for nearby {denom} church/worship")
+        else:
+            lines.append("Faith community is important — proximity to church/place of worship matters")
+
+    # Community style
+    community = buyer_profile.get("community_style")
+    if community:
+        comm_labels = {
+            "quiet": "prefers a quiet, private neighborhood",
+            "friendly": "wants a friendly neighborhood with good neighbors",
+            "active": "prefers an active community with events and social activities",
+        }
+        lines.append(comm_labels.get(community, f"Community preference: {community}"))
+
+    # Schools
+    if buyer_profile.get("school_quality"):
+        district = buyer_profile.get("school_district", "").strip()
+        if district:
+            lines.append(f"School quality is very important — prefers {district} school district")
+        else:
+            lines.append("School quality is very important")
+
+    # Health & Mobility
+    health = []
+    if buyer_profile.get("single_story_important"):
+        health.append("single-story living is important")
+    if buyer_profile.get("medical_proximity"):
+        health.append("proximity to medical facilities matters")
+    if buyer_profile.get("walkability_important"):
+        health.append("walkability is a priority")
+    if health:
+        lines.append(f"Mobility & health: {'; '.join(health)}")
+
+    # Relocating from
+    relocating = buyer_profile.get("relocating_from", "").strip()
+    if relocating:
+        lines.append(f"Relocating from: {relocating}")
+
+    if not lines:
+        return ""
+
+    return "\n--- Buyer Profile ---\n" + "\n".join(f"- {line}" for line in lines)
+
+
+def _buyer_summary_line(buyer_profile: dict) -> str:
+    """One-line buyer description for system prompt context.
+
+    Falls back to generic description when no profile exists.
+    """
+    if not buyer_profile:
+        return "Buyer is searching for a home in the area"
+
+    parts = []
+    stage = buyer_profile.get("life_stage")
+    stage_short = {
+        "young_professional": "Young professional",
+        "growing_family": "Growing family",
+        "established_family": "Established family",
+        "empty_nester": "Empty nester",
+        "pre_retirement": "Pre-retiree",
+        "retired": "Retiree",
+    }
+    if stage and stage in stage_short:
+        parts.append(stage_short[stage])
+
+    if buyer_profile.get("partner"):
+        parts.append("with partner")
+    if buyer_profile.get("kids"):
+        parts.append("with kids")
+
+    activities = buyer_profile.get("activities", [])
+    if activities:
+        top = activities[:3]
+        parts.append(f"interests: {', '.join(top)}")
+
+    if buyer_profile.get("fixed_income"):
+        parts.append("fixed income")
+
+    return "Buyer: " + ", ".join(parts) if parts else "Buyer is searching for a home"
 
 
 def build_listing_context(listing, deal_score=None, user_prefs=None) -> str:
@@ -112,9 +275,15 @@ def build_listing_context(listing, deal_score=None, user_prefs=None) -> str:
             must_haves.append("patio")
         if must_haves:
             lines.append(f"Must-haves: {', '.join(must_haves)}")
-        lines.append(f"Location: {_get_site_display_name()} (retirement home)")
-        lines.append("Buyer is retired, prioritizes single-story living, "
-                     "large yard, proximity to family, above flood plain")
+        lines.append(f"Location: {_get_site_display_name()}")
+
+        # Buyer profile (dynamic from Tune questionnaire)
+        buyer_profile = user_prefs.get("buyer_profile")
+        profile_text = build_buyer_profile_context(buyer_profile)
+        if profile_text:
+            lines.append(profile_text)
+        else:
+            lines.append(_buyer_summary_line(None))
 
     return "\n".join(lines)
 
@@ -190,6 +359,11 @@ def build_portfolio_context(listings, user_composites: dict, user_prefs: dict,
     if user_prefs.get("must_have_porch"): must_haves.append("porch")
     if user_prefs.get("must_have_patio"): must_haves.append("patio")
 
+    # Dynamic buyer profile
+    buyer_profile = user_prefs.get("buyer_profile")
+    buyer_line = _buyer_summary_line(buyer_profile)
+    profile_block = build_buyer_profile_context(buyer_profile)
+
     system_context = (
         f"You've been given the buyer's \"{flag_label}\" list — "
         f"the {len(listings)} properties they're most interested in.\n\n"
@@ -197,9 +371,10 @@ def build_portfolio_context(listings, user_composites: dict, user_prefs: dict,
         f"\n\nBuyer profile:\n"
         f"- Budget: ${budget_min:,} – ${budget_max:,}\n"
         f"- Min {min_beds}BR / {min_baths}BA\n"
-        f"- Retired couple, wants: single story, large yard, above flood plain, near family\n"
+        f"- {buyer_line}\n"
         + (f"- Must-haves: {', '.join(must_haves)}\n" if must_haves else "")
         + f"- Location: {_get_site_display_name()}"
+        + (f"\n{profile_block}" if profile_block else "")
     )
 
     user_message = (
@@ -264,6 +439,11 @@ def build_preferences_context(prefs: dict, defaults: dict) -> str:
     if prefs.get("must_have_patio"):
         must_haves.append("patio")
 
+    # Dynamic buyer profile
+    buyer_profile = prefs.get("buyer_profile")
+    buyer_line = _buyer_summary_line(buyer_profile)
+    profile_block = build_buyer_profile_context(buyer_profile)
+
     context = f"""BUYER PREFERENCES CONFIGURATION:
 
 Budget: ${prefs.get('min_price', 200000):,} – ${prefs.get('max_price', 600000):,}
@@ -278,10 +458,12 @@ Factors turned OFF (0): {', '.join(turned_off) if turned_off else 'None'}
 Highest priority (8-10): {', '.join(high_priority) if high_priority else 'None'}
 
 CONTEXT:
-- Buyer is a retired couple
+- {buyer_line}
 - Location: {_get_site_display_name()}
-- Priorities: single-story, large yard, above flood plain, near family
 - This is a 17-factor scoring system — each listing gets scored 0-100 on every factor,
   then these weights determine how much each factor contributes to the final composite score"""
+
+    if profile_block:
+        context += f"\n{profile_block}"
 
     return context

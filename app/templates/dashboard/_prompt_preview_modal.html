@@ -1,126 +1,336 @@
 <!--
+  File: app/templates/dashboard/_prompt_preview_modal.html
+  App Version: 2026.03.14 | File Version: 1.2.0
+  Last Modified: 2026-03-18
+
   Shared partial: Prompt preview modal
   Included by admin_prompts.html and agent_prompts.html
 -->
+<style>
+    /* ── Modal chrome ──────────────────────────────────── */
+    #previewModal .modal-dialog { max-width: 1140px; }
+    #previewModal .modal-content {
+        border: none; border-radius: 14px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+    #previewModal .modal-header {
+        cursor: move; user-select: none;
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        color: #fff; border-bottom: none; padding: 12px 20px;
+    }
+    #previewModal .modal-header .modal-title { font-size: 1rem; font-weight: 600; }
+    #previewModal .modal-header .btn-close { filter: invert(1) grayscale(1) brightness(2); }
+    #previewModal .modal-body { padding: 20px; background: #f8fafc; }
+    #previewModal .modal-footer {
+        background: #f1f5f9; border-top: 1px solid #e2e8f0; padding: 10px 20px;
+    }
+    #previewModal .modal-dialog.dragging { transition: none; }
+
+    /* ── Sample data panel ──────────────────────────────── */
+    .pm-data-panel {
+        background: #fff; border-radius: 10px; padding: 16px;
+        border: 1px solid #e2e8f0;
+    }
+    .pm-data-panel h6 { font-size: 0.9rem; }
+
+    /* ── Results panel ─────────────────────────────────── */
+    .pm-results-panel {
+        background: #fff; border-radius: 10px; padding: 16px;
+        border: 1px solid #e2e8f0; min-height: 300px;
+    }
+    .pm-results-panel h6 { font-size: 0.9rem; }
+
+    /* ── Bio chips & toggles ───────────────────────────── */
+    .bio-chip {
+        display: inline-block; padding: 4px 12px; margin: 2px;
+        border: 2px solid #e2e8f0; border-radius: 18px;
+        font-size: 0.75rem; color: #64748b; cursor: pointer;
+        background: #fff; transition: all 0.15s ease; user-select: none;
+    }
+    .bio-chip:hover { border-color: #fbbf24; background: #fffbeb; color: #92400e; }
+    .bio-chip.sel {
+        border-color: #d97706; background: linear-gradient(135deg, #fffbeb, #fef3c7);
+        color: #92400e; font-weight: 600;
+        box-shadow: 0 1px 4px rgba(217,119,6,0.2);
+    }
+
+    .bio-toggle {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 4px 12px; margin: 2px;
+        border: 2px solid #e2e8f0; border-radius: 18px;
+        font-size: 0.75rem; color: #64748b; cursor: pointer;
+        background: #fff; transition: all 0.15s ease; user-select: none;
+    }
+    .bio-toggle:hover { border-color: #fbbf24; background: #fffbeb; }
+    .bio-toggle.on {
+        border-color: #d97706; background: linear-gradient(135deg, #fffbeb, #fef3c7);
+        color: #92400e; font-weight: 600;
+        box-shadow: 0 1px 4px rgba(217,119,6,0.2);
+    }
+
+    .pm-bio-section {
+        border-top: 2px solid #f1f5f9; padding-top: 12px; margin-top: 12px;
+    }
+    .pm-bio-section .bio-label {
+        font-size: 0.68rem; font-weight: 700; color: #94a3b8;
+        text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px;
+    }
+
+    /* ── Send button upgrade ───────────────────────────── */
+    #pm-send-btn {
+        background: linear-gradient(135deg, #0ea5e9, #0284c7);
+        border: none; color: #fff; font-weight: 600;
+        padding: 6px 24px; border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+    #pm-send-btn:hover { background: linear-gradient(135deg, #0284c7, #0369a1); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(14,165,233,0.3); }
+    #pm-send-btn:disabled { opacity: 0.7; transform: none; box-shadow: none; }
+
+    /* ── Section dividers in results ────────────────────── */
+    #previewModal .result-section-card {
+        border: none; border-radius: 8px;
+        background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    }
+</style>
+
 <!-- Preview Modal -->
 <div class="modal fade" id="previewModal" tabindex="-1">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header py-2">
-                <h5 class="modal-title"><i class="bi bi-play-circle me-2 text-info"></i>Test Prompt: <span id="pm-title"></span></h5>
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-play-circle me-2" style="color:#38bdf8;"></i>Test Prompt: <span id="pm-title"></span>
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="row g-3">
                     <!-- Left: Editable sample data -->
-                    <div class="col-lg-5">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="mb-0"><i class="bi bi-pencil me-1"></i>Sample Data</h6>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetSampleData()" style="font-size:0.72rem;">
-                                <i class="bi bi-arrow-counterclockwise me-1"></i>Reset Defaults
-                            </button>
-                        </div>
-                        <!-- Deal fields -->
-                        <div id="pm-fields-deal" class="pm-fields" style="display:none;">
-                            <div class="row g-2">
-                                <div class="col-12"><label class="form-label small mb-0">Address</label><input type="text" class="form-control form-control-sm" id="pm-address" value="742 Evergreen Terrace, Springfield" maxlength="200"></div>
-                                <div class="col-6"><label class="form-label small mb-0">Price</label><input type="number" class="form-control form-control-sm" id="pm-price" value="385000" min="10000" max="50000000" step="1000"></div>
-                                <div class="col-3"><label class="form-label small mb-0">Beds</label><input type="number" class="form-control form-control-sm" id="pm-beds" value="4" min="1" max="20"></div>
-                                <div class="col-3"><label class="form-label small mb-0">Baths</label><input type="number" class="form-control form-control-sm" id="pm-baths" value="2.5" min="1" max="20" step="0.5"></div>
-                                <div class="col-4"><label class="form-label small mb-0">Sqft</label><input type="number" class="form-control form-control-sm" id="pm-sqft" value="2100" min="200" max="50000"></div>
-                                <div class="col-4"><label class="form-label small mb-0">Lot Sqft</label><input type="number" class="form-control form-control-sm" id="pm-lot" value="8712" min="0" max="500000"></div>
-                                <div class="col-4"><label class="form-label small mb-0">Year Built</label><input type="number" class="form-control form-control-sm" id="pm-year" value="1989" min="1800" max="2030"></div>
-                                <div class="col-4"><label class="form-label small mb-0">Days on Market</label><input type="number" class="form-control form-control-sm" id="pm-dom" value="34" min="0" max="999"></div>
-                                <div class="col-4"><label class="form-label small mb-0">HOA/mo</label><input type="number" class="form-control form-control-sm" id="pm-hoa" value="0" min="0" max="5000"></div>
-                                <div class="col-4"><label class="form-label small mb-0">Tax/yr</label><input type="number" class="form-control form-control-sm" id="pm-tax" value="4200" min="0" max="100000"></div>
-                                <div class="col-4"><label class="form-label small mb-0">Price Change %</label><input type="number" class="form-control form-control-sm" id="pm-pchg" value="-3.5" min="-50" max="50" step="0.1"></div>
-                                <div class="col-4"><label class="form-label small mb-0">Deal Score</label><input type="number" class="form-control form-control-sm" id="pm-score" value="72" min="0" max="100"></div>
-                                <div class="col-4"><label class="form-label small mb-0">Flood Zone</label><select class="form-select form-select-sm" id="pm-flood"><option value="X" selected>X (minimal)</option><option value="AE">AE (high risk)</option><option value="VE">VE (coastal)</option><option value="unknown">Unknown</option></select></div>
-                                <div class="col-12">
-                                    <label class="form-label small mb-0">Features</label>
-                                    <div class="d-flex flex-wrap gap-2 mt-1">
-                                        <div class="form-check form-check-inline"><input class="form-check-input pm-feat" type="checkbox" id="pm-garage" checked><label class="form-check-label small" for="pm-garage">Garage</label></div>
-                                        <div class="form-check form-check-inline"><input class="form-check-input pm-feat" type="checkbox" id="pm-porch" checked><label class="form-check-label small" for="pm-porch">Porch</label></div>
-                                        <div class="form-check form-check-inline"><input class="form-check-input pm-feat" type="checkbox" id="pm-patio" checked><label class="form-check-label small" for="pm-patio">Patio</label></div>
-                                        <div class="form-check form-check-inline"><input class="form-check-input pm-feat" type="checkbox" id="pm-pool"><label class="form-check-label small" for="pm-pool">Pool</label></div>
-                                        <div class="form-check form-check-inline"><input class="form-check-input pm-feat" type="checkbox" id="pm-single"><label class="form-check-label small" for="pm-single">Single Story</label></div>
+                    <div class="col-lg-6">
+                        <div class="pm-data-panel">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0"><i class="bi bi-pencil me-1 text-primary"></i>Sample Data</h6>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetSampleData()" style="font-size:0.72rem; border-radius:6px;">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Reset
+                                </button>
+                            </div>
+                            <!-- Deal fields -->
+                            <div id="pm-fields-deal" class="pm-fields" style="display:none;">
+                                <div class="row g-2">
+                                    <div class="col-12"><label class="form-label small mb-0">Address</label><input type="text" class="form-control form-control-sm" id="pm-address" value="742 Evergreen Terrace, Springfield" maxlength="200"></div>
+                                    <div class="col-6"><label class="form-label small mb-0">Price</label><input type="number" class="form-control form-control-sm" id="pm-price" value="385000" min="10000" max="50000000" step="1000"></div>
+                                    <div class="col-3"><label class="form-label small mb-0">Beds</label><input type="number" class="form-control form-control-sm" id="pm-beds" value="4" min="1" max="20"></div>
+                                    <div class="col-3"><label class="form-label small mb-0">Baths</label><input type="number" class="form-control form-control-sm" id="pm-baths" value="2.5" min="1" max="20" step="0.5"></div>
+                                    <div class="col-4"><label class="form-label small mb-0">Sqft</label><input type="number" class="form-control form-control-sm" id="pm-sqft" value="2100" min="200" max="50000"></div>
+                                    <div class="col-4"><label class="form-label small mb-0">Lot Sqft</label><input type="number" class="form-control form-control-sm" id="pm-lot" value="8712" min="0" max="500000"></div>
+                                    <div class="col-4"><label class="form-label small mb-0">Year Built</label><input type="number" class="form-control form-control-sm" id="pm-year" value="1989" min="1800" max="2030"></div>
+                                    <div class="col-4"><label class="form-label small mb-0">Days on Market</label><input type="number" class="form-control form-control-sm" id="pm-dom" value="34" min="0" max="999"></div>
+                                    <div class="col-4"><label class="form-label small mb-0">HOA/mo</label><input type="number" class="form-control form-control-sm" id="pm-hoa" value="0" min="0" max="5000"></div>
+                                    <div class="col-4"><label class="form-label small mb-0">Tax/yr</label><input type="number" class="form-control form-control-sm" id="pm-tax" value="4200" min="0" max="100000"></div>
+                                    <div class="col-4"><label class="form-label small mb-0">Price Change %</label><input type="number" class="form-control form-control-sm" id="pm-pchg" value="-3.5" min="-50" max="50" step="0.1"></div>
+                                    <div class="col-4"><label class="form-label small mb-0">Deal Score</label><input type="number" class="form-control form-control-sm" id="pm-score" value="72" min="0" max="100"></div>
+                                    <div class="col-4"><label class="form-label small mb-0">Flood Zone</label><select class="form-select form-select-sm" id="pm-flood"><option value="X" selected>X (minimal)</option><option value="AE">AE (high risk)</option><option value="VE">VE (coastal)</option><option value="unknown">Unknown</option></select></div>
+                                    <div class="col-12">
+                                        <label class="form-label small mb-0">Features</label>
+                                        <div class="d-flex flex-wrap gap-2 mt-1">
+                                            <div class="form-check form-check-inline"><input class="form-check-input pm-feat" type="checkbox" id="pm-garage" checked><label class="form-check-label small" for="pm-garage">Garage</label></div>
+                                            <div class="form-check form-check-inline"><input class="form-check-input pm-feat" type="checkbox" id="pm-porch" checked><label class="form-check-label small" for="pm-porch">Porch</label></div>
+                                            <div class="form-check form-check-inline"><input class="form-check-input pm-feat" type="checkbox" id="pm-patio" checked><label class="form-check-label small" for="pm-patio">Patio</label></div>
+                                            <div class="form-check form-check-inline"><input class="form-check-input pm-feat" type="checkbox" id="pm-pool"><label class="form-check-label small" for="pm-pool">Pool</label></div>
+                                            <div class="form-check form-check-inline"><input class="form-check-input pm-feat" type="checkbox" id="pm-single"><label class="form-check-label small" for="pm-single">Single Story</label></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6"><label class="form-label small mb-0">Stories</label><input type="number" class="form-control form-control-sm" id="pm-stories" value="2" min="1" max="5"></div>
+                                    <div class="col-6"><label class="form-label small mb-0">Market</label><input type="text" class="form-control form-control-sm" id="pm-market" value="Charleston, SC" maxlength="100"></div>
+                                </div>
+                            </div>
+                            <!-- Portfolio fields -->
+                            <div id="pm-fields-portfolio" class="pm-fields" style="display:none;">
+                                <p class="text-muted small mb-2">Edit the portfolio summary sent to Claude. Each line is a property.</p>
+                                <textarea class="form-control" id="pm-portfolio-text" rows="14" style="font-family:monospace;font-size:0.75rem;"></textarea>
+                            </div>
+                            <!-- Preferences fields -->
+                            <div id="pm-fields-preferences" class="pm-fields" style="display:none;">
+                                <p class="text-muted small mb-2">Adjust the scoring weights sent to Claude (0-10 scale).</p>
+                                <div class="row g-2">
+                                    {% for wt_key, wt_label in [('price','Price'),('size','Size'),('yard','Yard'),('features','Features'),('flood','Flood Risk'),('year_built','Year Built'),('single_story','Single Story'),('price_per_sqft','$/Sqft'),('hoa','HOA'),('tax','Tax'),('dom','Days on Market'),('pool','Community Pool')] %}
+                                    <div class="col-6">
+                                        <div class="d-flex justify-content-between align-items-center"><label class="form-label small mb-0">{{ wt_label }}</label><span class="small text-muted" id="pm-wt-val-{{ wt_key }}"></span></div>
+                                        <input type="range" class="form-range" id="pm-wt-{{ wt_key }}" min="0" max="10" step="1" oninput="document.getElementById('pm-wt-val-{{ wt_key }}').textContent=this.value+'/10'">
+                                    </div>
+                                    {% endfor %}
+                                    <div class="col-6"><label class="form-label small mb-0">Min Beds</label><input type="number" class="form-control form-control-sm" id="pm-pref-beds" value="4" min="1" max="10"></div>
+                                    <div class="col-6"><label class="form-label small mb-0">Min Baths</label><input type="number" class="form-control form-control-sm" id="pm-pref-baths" value="3" min="1" max="10"></div>
+                                    <div class="col-6"><label class="form-label small mb-0">Price Range Low</label><input type="number" class="form-control form-control-sm" id="pm-pref-plow" value="200000" min="0" step="10000"></div>
+                                    <div class="col-6"><label class="form-label small mb-0">Price Range High</label><input type="number" class="form-control form-control-sm" id="pm-pref-phigh" value="600000" min="0" step="10000"></div>
+                                </div>
+                            </div>
+
+                            <!-- ── Buyer Profile (shared across all test types) ── -->
+                            <div class="pm-bio-section">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div class="bio-label"><i class="bi bi-person-lines-fill me-1"></i>Buyer Profile (Tune)</div>
+                                    <span class="bio-toggle" id="pm-bio-toggle" title="Include buyer profile in test">
+                                        <i class="bi bi-sliders2"></i> Include Bio
+                                    </span>
+                                </div>
+                                <div id="pm-bio-fields" style="display:none;">
+                                    <div class="mb-2">
+                                        <div class="bio-label">Life Stage</div>
+                                        <div id="pm-bio-stage" class="bio-chip-group" style="white-space:nowrap;">
+                                            <span class="bio-chip sel" data-val="retired">Retired</span>
+                                            <span class="bio-chip" data-val="pre_retirement">Pre-Retirement</span>
+                                            <span class="bio-chip" data-val="empty_nester">Empty Nester</span>
+                                            <span class="bio-chip" data-val="growing_family">Growing Family</span>
+                                            <span class="bio-chip" data-val="young_professional">Young Pro</span>
+                                        </div>
+                                    </div>
+                                    <div class="mb-2">
+                                        <div class="bio-label">Activities</div>
+                                        <div id="pm-bio-activities" class="bio-multi-group" style="white-space:nowrap;">
+                                            <span class="bio-chip sel" data-val="golf">Golf</span>
+                                            <span class="bio-chip sel" data-val="fishing">Fishing</span>
+                                            <span class="bio-chip" data-val="beach">Beach</span>
+                                            <span class="bio-chip" data-val="running">Running</span>
+                                            <span class="bio-chip sel" data-val="gardening">Garden</span>
+                                            <span class="bio-chip" data-val="dining">Dining</span>
+                                            <span class="bio-chip" data-val="arts">Arts</span>
+                                            <span class="bio-chip" data-val="fitness">Fitness</span>
+                                        </div>
+                                    </div>
+                                    <div class="mb-2">
+                                        <div class="bio-label">Budget & Income</div>
+                                        <div id="pm-bio-budget" class="bio-chip-group d-inline">
+                                            <span class="bio-chip" data-val="stretching">Stretching</span>
+                                            <span class="bio-chip sel" data-val="comfortable">Comfortable</span>
+                                            <span class="bio-chip" data-val="flexible">Flexible</span>
+                                        </div>
+                                        <span class="bio-toggle on" id="pm-bio-fixed"><i class="bi bi-piggy-bank"></i> Fixed Income</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <div class="bio-label">Household & Community</div>
+                                        <div style="white-space:nowrap;">
+                                            <span class="bio-toggle on" id="pm-bio-partner"><i class="bi bi-heart"></i> Partner</span>
+                                            <span class="bio-toggle on" id="pm-bio-worship"><i class="bi bi-bookmark-star"></i> Worship</span>
+                                            <span class="bio-toggle on" id="pm-bio-single-story"><i class="bi bi-layers"></i> Single Story</span>
+                                            <span class="bio-toggle" id="pm-bio-medical"><i class="bi bi-hospital"></i> Medical</span>
+                                            <span class="bio-toggle" id="pm-bio-walkability"><i class="bi bi-signpost-split"></i> Walkable</span>
+                                        </div>
+                                    </div>
+                                    <div class="row g-2">
+                                        <div class="col-6"><label class="form-label mb-0" style="font-size:0.7rem;">Denomination</label><input type="text" class="form-control form-control-sm" id="pm-bio-denom" value="Lutheran" style="font-size:0.75rem;"></div>
+                                        <div class="col-6"><label class="form-label mb-0" style="font-size:0.7rem;">Relocating From</label><input type="text" class="form-control form-control-sm" id="pm-bio-reloc" value="Minneapolis, MN" style="font-size:0.75rem;"></div>
                                     </div>
                                 </div>
-                                <div class="col-6"><label class="form-label small mb-0">Stories</label><input type="number" class="form-control form-control-sm" id="pm-stories" value="2" min="1" max="5"></div>
-                                <div class="col-6"><label class="form-label small mb-0">Market</label><input type="text" class="form-control form-control-sm" id="pm-market" value="Charleston, SC" maxlength="100"></div>
-                            </div>
-                        </div>
-                        <!-- Portfolio fields -->
-                        <div id="pm-fields-portfolio" class="pm-fields" style="display:none;">
-                            <p class="text-muted small mb-2">Edit the portfolio summary sent to Claude. Each line is a property.</p>
-                            <textarea class="form-control" id="pm-portfolio-text" rows="14" style="font-family:monospace;font-size:0.75rem;"></textarea>
-                        </div>
-                        <!-- Preferences fields -->
-                        <div id="pm-fields-preferences" class="pm-fields" style="display:none;">
-                            <p class="text-muted small mb-2">Adjust the scoring weights sent to Claude (0-10 scale).</p>
-                            <div class="row g-2">
-                                {% for wt_key, wt_label in [('price','Price'),('size','Size'),('yard','Yard'),('features','Features'),('flood','Flood Risk'),('year_built','Year Built'),('single_story','Single Story'),('price_per_sqft','$/Sqft'),('hoa','HOA'),('tax','Tax'),('dom','Days on Market'),('pool','Community Pool')] %}
-                                <div class="col-6">
-                                    <div class="d-flex justify-content-between align-items-center"><label class="form-label small mb-0">{{ wt_label }}</label><span class="small text-muted" id="pm-wt-val-{{ wt_key }}"></span></div>
-                                    <input type="range" class="form-range" id="pm-wt-{{ wt_key }}" min="0" max="10" step="1" oninput="document.getElementById('pm-wt-val-{{ wt_key }}').textContent=this.value+'/10'">
-                                </div>
-                                {% endfor %}
-                                <div class="col-6"><label class="form-label small mb-0">Min Beds</label><input type="number" class="form-control form-control-sm" id="pm-pref-beds" value="4" min="1" max="10"></div>
-                                <div class="col-6"><label class="form-label small mb-0">Min Baths</label><input type="number" class="form-control form-control-sm" id="pm-pref-baths" value="3" min="1" max="10"></div>
-                                <div class="col-6"><label class="form-label small mb-0">Price Range Low</label><input type="number" class="form-control form-control-sm" id="pm-pref-plow" value="200000" min="0" step="10000"></div>
-                                <div class="col-6"><label class="form-label small mb-0">Price Range High</label><input type="number" class="form-control form-control-sm" id="pm-pref-phigh" value="600000" min="0" step="10000"></div>
                             </div>
                         </div>
                     </div>
                     <!-- Right: Results -->
-                    <div class="col-lg-7">
-                        <h6 class="mb-2"><i class="bi bi-display me-1"></i>Preview (as users will see it)</h6>
-                        <div id="pm-ready" class="text-center text-muted py-5"><i class="bi bi-arrow-left" style="font-size:2rem;opacity:0.3;"></i><p class="mt-2 small">Adjust the sample data, then click <strong>Send to Claude</strong>.</p></div>
-                        <div id="pm-loading" style="display:none;" class="text-center py-5"><div class="spinner-border text-info"></div><p class="text-muted mt-2 small">Claude is analyzing the sample data...</p></div>
-                        <div id="pm-error" style="display:none;" class="alert alert-danger small"></div>
-                        <!-- Deal result -->
-                        <div id="pm-result-deal" style="display:none;">
-                            <div class="text-center mb-3"><span class="badge fs-6 px-3 py-2" id="pm-verdict-badge"></span></div>
-                            <p class="fw-semibold mb-3" id="pm-deal-summary" style="font-size:1.05rem;"></p>
-                            <div class="mb-3"><h6 class="text-success"><i class="bi bi-check-circle-fill"></i> Strengths</h6><p class="mb-0 small" id="pm-deal-strengths" style="white-space:pre-line;"></p></div>
-                            <div class="mb-3"><h6 class="text-warning"><i class="bi bi-exclamation-triangle-fill"></i> Concerns</h6><p class="mb-0 small" id="pm-deal-concerns" style="white-space:pre-line;"></p></div>
-                            <div class="p-3 rounded" style="background:#eff6ff;border-left:4px solid #2563eb;"><h6 class="text-primary mb-2"><i class="bi bi-cash-stack"></i> Negotiation Strategy</h6><p class="mb-0 small" id="pm-deal-negotiation" style="white-space:pre-line;"></p></div>
-                        </div>
-                        <!-- Portfolio result -->
-                        <div id="pm-result-portfolio" style="display:none;">
-                            <div class="alert alert-primary border-0 mb-3" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);"><strong><i class="bi bi-lightbulb"></i> Big Picture:</strong> <span id="pm-pf-headline"></span></div>
-                            <div class="row g-3">
-                                <div class="col-6"><div class="card border-0 bg-light h-100"><div class="card-body"><h6 class="card-title"><i class="bi bi-trophy"></i> Ranking</h6><div id="pm-pf-ranking" class="small" style="white-space:pre-line;"></div></div></div></div>
-                                <div class="col-6"><div class="card border-0 bg-light h-100"><div class="card-body"><h6 class="card-title"><i class="bi bi-diagram-3"></i> Patterns</h6><div id="pm-pf-patterns" class="small" style="white-space:pre-line;"></div></div></div></div>
-                                <div class="col-6"><div class="card border-0 bg-light h-100"><div class="card-body"><h6 class="card-title"><i class="bi bi-bullseye"></i> Strategy</h6><div id="pm-pf-strategy" class="small" style="white-space:pre-line;"></div></div></div></div>
-                                <div class="col-6"><div class="card border-0 bg-light h-100"><div class="card-body"><h6 class="card-title"><i class="bi bi-star"></i> Dark Horse</h6><div id="pm-pf-darkhorse" class="small" style="white-space:pre-line;"></div></div></div></div>
+                    <div class="col-lg-6">
+                        <div class="pm-results-panel">
+                            <h6 class="mb-2"><i class="bi bi-display me-1 text-primary"></i>Preview (as users will see it)</h6>
+                            <div id="pm-ready" class="text-center text-muted py-5">
+                                <i class="bi bi-arrow-left" style="font-size:2rem;opacity:0.15;"></i>
+                                <p class="mt-2 small">Adjust the sample data, then click <strong>Send to Claude</strong>.</p>
                             </div>
-                            <div class="alert alert-success border-0 mt-3 mb-0" style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);"><strong><i class="bi bi-check-circle"></i> Bottom Line:</strong> <span id="pm-pf-bottomline"></span></div>
-                        </div>
-                        <!-- Preferences result -->
-                        <div id="pm-result-preferences" style="display:none;">
-                            <div class="alert alert-primary border-0 mb-3" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);"><strong><i class="bi bi-lightbulb"></i> Assessment:</strong> <span id="pm-pr-headline"></span></div>
-                            <div class="row g-3">
-                                <div class="col-6"><div class="card border-0 bg-light h-100"><div class="card-body"><h6 class="card-title text-success"><i class="bi bi-check-circle"></i> Well Configured</h6><div id="pm-pr-strengths" class="small" style="white-space:pre-line;"></div></div></div></div>
-                                <div class="col-6"><div class="card border-0 bg-light h-100"><div class="card-body"><h6 class="card-title text-warning"><i class="bi bi-exclamation-triangle"></i> Blind Spots</h6><div id="pm-pr-blindspots" class="small" style="white-space:pre-line;"></div></div></div></div>
-                                <div class="col-6"><div class="card border-0 bg-light h-100"><div class="card-body"><h6 class="card-title text-primary"><i class="bi bi-sliders"></i> Suggested Tweaks</h6><div id="pm-pr-tweaks" class="small" style="white-space:pre-line;"></div></div></div></div>
-                                <div class="col-6"><div class="card border-0 bg-light h-100"><div class="card-body"><h6 class="card-title"><i class="bi bi-geo-alt"></i> Local Insight</h6><div id="pm-pr-local" class="small" style="white-space:pre-line;"></div></div></div></div>
+                            <div id="pm-loading" style="display:none;" class="text-center py-5">
+                                <div class="spinner-border text-info"></div>
+                                <p class="text-muted mt-2 small">Claude is analyzing the sample data...</p>
                             </div>
-                            <div class="alert alert-success border-0 mt-3 mb-0" style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);"><strong><i class="bi bi-check-circle"></i> Bottom Line:</strong> <span id="pm-pr-bottomline"></span></div>
-                        </div>
-                        <!-- Meta -->
-                        <div id="pm-meta" style="display:none;" class="text-muted mt-2" style="font-size:0.7rem;">
-                            <i class="bi bi-clock me-1"></i><span id="pm-time"></span>ms response
-                            <button type="button" class="btn btn-sm btn-link p-0 ms-2" style="font-size:0.72rem;" onclick="document.getElementById('pm-raw-json').classList.toggle('d-none')">Toggle raw JSON</button>
-                            <pre id="pm-raw-json" class="d-none bg-light p-2 rounded mt-2 small" style="font-size:0.7rem;max-height:200px;overflow-y:auto;white-space:pre-wrap;"></pre>
+                            <div id="pm-error" style="display:none;" class="alert alert-danger small"></div>
+                            <!-- Deal result -->
+                            <div id="pm-result-deal" style="display:none;">
+                                <div class="text-center mb-3"><span class="badge fs-6 px-3 py-2" id="pm-verdict-badge"></span></div>
+                                <p class="fw-semibold mb-3" id="pm-deal-summary" style="font-size:1.05rem;"></p>
+                                <div class="mb-3"><h6 class="text-success"><i class="bi bi-check-circle-fill"></i> Strengths</h6><p class="mb-0 small" id="pm-deal-strengths" style="white-space:pre-line;"></p></div>
+                                <div class="mb-3"><h6 class="text-warning"><i class="bi bi-exclamation-triangle-fill"></i> Concerns</h6><p class="mb-0 small" id="pm-deal-concerns" style="white-space:pre-line;"></p></div>
+                                <div class="p-3 rounded" style="background:#eff6ff;border-left:4px solid #2563eb;"><h6 class="text-primary mb-2"><i class="bi bi-cash-stack"></i> Negotiation Strategy</h6><p class="mb-0 small" id="pm-deal-negotiation" style="white-space:pre-line;"></p></div>
+                            </div>
+                            <!-- Portfolio result -->
+                            <div id="pm-result-portfolio" style="display:none;">
+                                <div class="alert alert-primary border-0 mb-3" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);"><strong><i class="bi bi-lightbulb"></i> Big Picture:</strong> <span id="pm-pf-headline"></span></div>
+                                <div class="row g-3">
+                                    <div class="col-6"><div class="card result-section-card h-100"><div class="card-body py-2 px-3"><h6 class="card-title" style="font-size:0.85rem;"><i class="bi bi-trophy"></i> Ranking</h6><div id="pm-pf-ranking" class="small" style="white-space:pre-line;"></div></div></div></div>
+                                    <div class="col-6"><div class="card result-section-card h-100"><div class="card-body py-2 px-3"><h6 class="card-title" style="font-size:0.85rem;"><i class="bi bi-diagram-3"></i> Patterns</h6><div id="pm-pf-patterns" class="small" style="white-space:pre-line;"></div></div></div></div>
+                                    <div class="col-6"><div class="card result-section-card h-100"><div class="card-body py-2 px-3"><h6 class="card-title" style="font-size:0.85rem;"><i class="bi bi-bullseye"></i> Strategy</h6><div id="pm-pf-strategy" class="small" style="white-space:pre-line;"></div></div></div></div>
+                                    <div class="col-6"><div class="card result-section-card h-100"><div class="card-body py-2 px-3"><h6 class="card-title" style="font-size:0.85rem;"><i class="bi bi-star"></i> Dark Horse</h6><div id="pm-pf-darkhorse" class="small" style="white-space:pre-line;"></div></div></div></div>
+                                </div>
+                                <div class="alert alert-success border-0 mt-3 mb-0" style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);"><strong><i class="bi bi-check-circle"></i> Bottom Line:</strong> <span id="pm-pf-bottomline"></span></div>
+                            </div>
+                            <!-- Preferences result -->
+                            <div id="pm-result-preferences" style="display:none;">
+                                <div class="alert alert-primary border-0 mb-3" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);"><strong><i class="bi bi-lightbulb"></i> Assessment:</strong> <span id="pm-pr-headline"></span></div>
+                                <div class="row g-3">
+                                    <div class="col-6"><div class="card result-section-card h-100"><div class="card-body py-2 px-3"><h6 class="card-title text-success" style="font-size:0.85rem;"><i class="bi bi-check-circle"></i> Well Configured</h6><div id="pm-pr-strengths" class="small" style="white-space:pre-line;"></div></div></div></div>
+                                    <div class="col-6"><div class="card result-section-card h-100"><div class="card-body py-2 px-3"><h6 class="card-title text-warning" style="font-size:0.85rem;"><i class="bi bi-exclamation-triangle"></i> Blind Spots</h6><div id="pm-pr-blindspots" class="small" style="white-space:pre-line;"></div></div></div></div>
+                                    <div class="col-6"><div class="card result-section-card h-100"><div class="card-body py-2 px-3"><h6 class="card-title text-primary" style="font-size:0.85rem;"><i class="bi bi-sliders"></i> Suggested Tweaks</h6><div id="pm-pr-tweaks" class="small" style="white-space:pre-line;"></div></div></div></div>
+                                    <div class="col-6"><div class="card result-section-card h-100"><div class="card-body py-2 px-3"><h6 class="card-title" style="font-size:0.85rem;"><i class="bi bi-geo-alt"></i> Local Insight</h6><div id="pm-pr-local" class="small" style="white-space:pre-line;"></div></div></div></div>
+                                </div>
+                                <div class="alert alert-success border-0 mt-3 mb-0" style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);"><strong><i class="bi bi-check-circle"></i> Bottom Line:</strong> <span id="pm-pr-bottomline"></span></div>
+                            </div>
+                            <!-- Meta -->
+                            <div id="pm-meta" style="display:none;" class="text-muted mt-3" style="font-size:0.7rem;">
+                                <i class="bi bi-clock me-1"></i><span id="pm-time"></span>ms response
+                                <button type="button" class="btn btn-sm btn-link p-0 ms-2" style="font-size:0.72rem;" onclick="document.getElementById('pm-raw-json').classList.toggle('d-none')">Toggle raw JSON</button>
+                                <pre id="pm-raw-json" class="d-none bg-light p-2 rounded mt-2 small" style="font-size:0.7rem;max-height:200px;overflow-y:auto;white-space:pre-wrap;"></pre>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer py-2">
-                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-info btn-sm px-4" id="pm-send-btn" onclick="sendPreview()"><i class="bi bi-send me-1"></i> Send to Claude</button>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal" style="border-radius:6px;">Close</button>
+                <button type="button" class="btn btn-sm" id="pm-send-btn" onclick="sendPreview()"><i class="bi bi-send me-1"></i> Send to Claude</button>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Draggable modal script -->
+<script>
+(function() {
+    const modal = document.getElementById('previewModal');
+    if (!modal) return;
+    const header = modal.querySelector('.modal-header');
+    const dialog = modal.querySelector('.modal-dialog');
+    let isDragging = false, startX, startY, origX, origY;
+
+    header.addEventListener('mousedown', function(e) {
+        if (e.target.closest('.btn-close')) return;
+        isDragging = true;
+        dialog.classList.add('dragging');
+        const rect = dialog.getBoundingClientRect();
+        origX = rect.left;
+        origY = rect.top;
+        startX = e.clientX;
+        startY = e.clientY;
+        dialog.style.position = 'fixed';
+        dialog.style.left = origX + 'px';
+        dialog.style.top = origY + 'px';
+        dialog.style.margin = '0';
+        dialog.style.transform = 'none';
+        dialog.style.width = rect.width + 'px';
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', function(e) {
+        if (!isDragging) return;
+        dialog.style.left = (origX + e.clientX - startX) + 'px';
+        dialog.style.top = (origY + e.clientY - startY) + 'px';
+    });
+
+    document.addEventListener('mouseup', function() {
+        if (isDragging) { isDragging = false; dialog.classList.remove('dragging'); }
+    });
+
+    modal.addEventListener('hidden.bs.modal', function() {
+        dialog.style.position = '';
+        dialog.style.left = '';
+        dialog.style.top = '';
+        dialog.style.margin = '';
+        dialog.style.transform = '';
+        dialog.style.width = '';
+    });
+})();
+</script>

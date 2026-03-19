@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────
 # File: app/__init__.py
-# App Version: 2026.03.14 | File Version: 1.6.0
-# Last Modified: 2026-03-17
+# App Version: 2026.03.14 | File Version: 1.7.0
+# Last Modified: 2026-03-18
 # ─────────────────────────────────────────────
 """Flask application factory."""
 import logging
@@ -299,7 +299,7 @@ def create_app(config_class=None):
 
     @app.context_processor
     def inject_help_and_power():
-        """Inject help_level and power_mode for UI customization."""
+        """Inject help_level, power_mode, and ai_mode for UI customization."""
         from flask_login import current_user as _cu
         from flask import session as _sess
         if _cu.is_authenticated:
@@ -308,16 +308,18 @@ def create_app(config_class=None):
                 return {
                     "help_level": prefs.get("help_level", 2),
                     "power_mode": prefs.get("power_mode", "high"),
+                    "ai_mode": prefs.get("ai_mode", "on"),
                 }
             except Exception:
                 pass
         else:
             guest = _sess.get("guest_prefs", {})
             return {
-                "help_level": guest.get("help_level", 3),
+                "help_level": guest.get("help_level", 2),
                 "power_mode": guest.get("power_mode", "low"),
+                "ai_mode": guest.get("ai_mode", "off"),
             }
-        return {"help_level": 2, "power_mode": "high"}
+        return {"help_level": 2, "power_mode": "high", "ai_mode": "on"}
 
     @app.context_processor
     def inject_feedback_count():

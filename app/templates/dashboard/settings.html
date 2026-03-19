@@ -1,0 +1,718 @@
+<!--
+  File: app/templates/dashboard/settings.html
+  App Version: 2026.03.14 | File Version: 1.4.0
+  Last Modified: 2026-03-18
+-->
+{% extends "base.html" %}
+{% block title %}Settings – HomeFinder{% endblock %}
+
+{% block head %}
+<style>
+    /* ── Settings toggle cards ─────────────────────────────── */
+    .setting-card {
+        border: none;
+        border-radius: 12px;
+        transition: box-shadow 0.2s ease;
+    }
+    .setting-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important; }
+
+    /* Toggle option tiles */
+    .opt-tile {
+        flex: 1;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 14px 10px 12px;
+        text-align: center;
+        cursor: pointer;
+        background: #fff;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+    .opt-tile:hover { border-color: #93c5fd; background: #f0f7ff; }
+    .opt-tile .opt-icon { font-size: 1.5rem; display: block; margin-bottom: 6px; color: #94a3b8; transition: color 0.2s ease; }
+    .opt-tile .opt-label { font-weight: 600; font-size: 0.9rem; color: #475569; transition: color 0.2s ease; }
+    .opt-tile .opt-desc  { font-size: 0.72rem; color: #9ca3af; margin-top: 4px; line-height: 1.3; }
+
+    /* Active states */
+    .opt-tile.active-help {
+        border-color: #6366f1;
+        background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+        box-shadow: 0 2px 8px rgba(99,102,241,0.15);
+    }
+    .opt-tile.active-help .opt-icon  { color: #6366f1; }
+    .opt-tile.active-help .opt-label { color: #4338ca; }
+
+    .opt-tile.active-power {
+        border-color: #0d9488;
+        background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%);
+        box-shadow: 0 2px 8px rgba(13,148,136,0.15);
+    }
+    .opt-tile.active-power .opt-icon  { color: #0d9488; }
+    .opt-tile.active-power .opt-label { color: #0f766e; }
+
+    .opt-tile.active-ai {
+        border-color: #d97706;
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        box-shadow: 0 2px 8px rgba(217,119,6,0.15);
+    }
+    .opt-tile.active-ai .opt-icon  { color: #d97706; }
+    .opt-tile.active-ai .opt-label { color: #92400e; }
+
+    /* Check badge on active tile */
+    .opt-tile .opt-check {
+        position: absolute; top: 6px; right: 8px;
+        font-size: 0.85rem; opacity: 0; transition: opacity 0.2s ease;
+    }
+    .opt-tile.active-help .opt-check  { opacity: 1; color: #6366f1; }
+    .opt-tile.active-power .opt-check { opacity: 1; color: #0d9488; }
+    .opt-tile.active-ai .opt-check    { opacity: 1; color: #d97706; }
+
+    /* Preview strip */
+    .preview-strip {
+        background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 8px;
+        padding: 10px 14px; font-size: 0.8rem; color: #64748b;
+        min-height: 40px; transition: all 0.3s ease;
+    }
+    .preview-strip i { margin-right: 4px; }
+
+    /* Status toast */
+    .settings-toast {
+        position: fixed; bottom: 24px; left: 50%;
+        transform: translateX(-50%) translateY(20px);
+        background: #065f46; color: #fff;
+        padding: 8px 20px; border-radius: 24px;
+        font-size: 0.85rem; font-weight: 500;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+        opacity: 0; transition: all 0.3s ease;
+        z-index: 9999; pointer-events: none;
+    }
+    .settings-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── Tune questionnaire ──────────────────────────────── */
+    #tunePanel { display: none; }
+    #tunePanel.visible { display: block; }
+
+    .tune-section {
+        background: #fff; border: 1px solid #f1f5f9; border-radius: 10px;
+        padding: 16px 18px; margin-bottom: 12px;
+    }
+    .tune-section h6 { font-size: 0.9rem; font-weight: 600; margin-bottom: 8px; }
+    .tune-section h6 i { margin-right: 6px; }
+
+    /* Chip selectors */
+    .chip {
+        display: inline-block; padding: 5px 14px; margin: 3px;
+        border: 2px solid #e2e8f0; border-radius: 20px;
+        font-size: 0.78rem; font-weight: 500; color: #475569;
+        cursor: pointer; background: #fff;
+        transition: all 0.15s ease; user-select: none;
+    }
+    .chip:hover { border-color: #d97706; background: #fffbeb; }
+    .chip.selected {
+        border-color: #d97706; background: #fef3c7; color: #92400e; font-weight: 600;
+    }
+    .chip i { margin-right: 4px; font-size: 0.8rem; }
+
+    /* Toggle pill (yes/no) */
+    .toggle-pill {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 5px 14px; margin: 3px;
+        border: 2px solid #e2e8f0; border-radius: 20px;
+        font-size: 0.78rem; font-weight: 500; color: #475569;
+        cursor: pointer; background: #fff;
+        transition: all 0.15s ease; user-select: none;
+    }
+    .toggle-pill:hover { border-color: #d97706; background: #fffbeb; }
+    .toggle-pill.on {
+        border-color: #d97706; background: #fef3c7; color: #92400e; font-weight: 600;
+    }
+
+    .tune-text-input {
+        border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 12px;
+        font-size: 0.82rem; width: 100%; max-width: 300px;
+        transition: border-color 0.15s ease;
+    }
+    .tune-text-input:focus { border-color: #d97706; outline: none; box-shadow: 0 0 0 2px rgba(217,119,6,0.15); }
+
+    .tune-save-bar {
+        background: linear-gradient(135deg, #fffbeb, #fef3c7);
+        border: 1px solid #fde68a; border-radius: 10px;
+        padding: 12px 18px;
+    }
+
+    .conditional-section { display: none; }
+    .conditional-section.visible { display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-0"><i class="bi bi-toggles"></i> Settings</h4>
+        <small class="text-muted">Display and experience settings</small>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- ── Help Level ──────────────────────────────────────── -->
+    <div class="col-lg-{{ '6' if current_user.is_authenticated else '8 mx-auto' }}">
+        <div class="card setting-card shadow-sm h-100">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <i class="bi bi-question-circle" style="font-size:1.3rem; color:#6366f1;"></i>
+                    <h5 class="mb-0">Help Level</h5>
+                </div>
+                <p class="text-muted small mb-3">Controls tooltips and inline help throughout the site.</p>
+                <div class="d-flex gap-3 mb-3" id="settingsHelpLevel">
+                    <div class="opt-tile {{ 'active-help' if prefs.get('help_level', 2) == 3 }}" data-level="3">
+                        <i class="bi bi-check-circle-fill opt-check"></i>
+                        <i class="bi bi-book opt-icon"></i>
+                        <div class="opt-label">Guided</div>
+                        <div class="opt-desc">Tooltips + inline help</div>
+                    </div>
+                    <div class="opt-tile {{ 'active-help' if prefs.get('help_level', 2) == 2 }}" data-level="2">
+                        <i class="bi bi-check-circle-fill opt-check"></i>
+                        <i class="bi bi-chat-dots opt-icon"></i>
+                        <div class="opt-label">Standard</div>
+                        <div class="opt-desc">Tooltips on hover</div>
+                    </div>
+                    <div class="opt-tile {{ 'active-help' if prefs.get('help_level', 2) == 1 }}" data-level="1">
+                        <i class="bi bi-check-circle-fill opt-check"></i>
+                        <i class="bi bi-lightning-charge opt-icon"></i>
+                        <div class="opt-label">Expert</div>
+                        <div class="opt-desc">No hints — clean UI</div>
+                    </div>
+                </div>
+                <div class="preview-strip" id="helpPreview">
+                    {% if prefs.get('help_level', 2) == 1 %}
+                    <i class="bi bi-lightning-charge"></i> Hints and help text are hidden. You'll see a minimal, distraction-free interface.
+                    {% elif prefs.get('help_level', 2) == 3 %}
+                    <i class="bi bi-book"></i> Help text appears inline next to controls, plus tooltips on hover. Best for getting started.
+                    {% else %}
+                    <i class="bi bi-chat-dots"></i> Hover over any element with a dotted underline to see a tooltip. A good balance of guidance and clarity.
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Power Mode (auth only) ─────────────────────────── -->
+    {% if current_user.is_authenticated %}
+    <div class="col-lg-6">
+        <div class="card setting-card shadow-sm h-100">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <i class="bi bi-speedometer2" style="font-size:1.3rem; color:#0d9488;"></i>
+                    <h5 class="mb-0">Power Mode</h5>
+                </div>
+                <p class="text-muted small mb-3">Controls which nav items and features are visible.</p>
+                <div class="d-flex gap-3 mb-3" id="settingsPowerMode">
+                    <div class="opt-tile {{ 'active-power' if prefs.get('power_mode', 'high') == 'low' }}" data-mode="low">
+                        <i class="bi bi-check-circle-fill opt-check"></i>
+                        <i class="bi bi-layout-sidebar opt-icon"></i>
+                        <div class="opt-label">Low</div>
+                        <div class="opt-desc">Essentials only</div>
+                    </div>
+                    <div class="opt-tile {{ 'active-power' if prefs.get('power_mode', 'high') == 'mid' }}" data-mode="mid">
+                        <i class="bi bi-check-circle-fill opt-check"></i>
+                        <i class="bi bi-layout-text-sidebar opt-icon"></i>
+                        <div class="opt-label">Mid</div>
+                        <div class="opt-desc">More controls</div>
+                    </div>
+                    <div class="opt-tile {{ 'active-power' if prefs.get('power_mode', 'high') == 'high' }}" data-mode="high">
+                        <i class="bi bi-check-circle-fill opt-check"></i>
+                        <i class="bi bi-grid-3x3-gap opt-icon"></i>
+                        <div class="opt-label">High</div>
+                        <div class="opt-desc">Everything</div>
+                    </div>
+                </div>
+                <div class="preview-strip" id="powerPreview">
+                    {% if prefs.get('power_mode', 'high') == 'low' %}
+                    <i class="bi bi-layout-sidebar"></i> Shows: Dashboard, Map, Favorites, Tour, Preferences, Settings. Hides: Digest, Watch, Social, Feedback.
+                    {% elif prefs.get('power_mode', 'high') == 'mid' %}
+                    <i class="bi bi-layout-text-sidebar"></i> Shows most features. Hides a few advanced nav items for a cleaner look.
+                    {% else %}
+                    <i class="bi bi-grid-3x3-gap"></i> All navigation items and features are visible. Digest, Watch, Social, Feedback — everything.
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ── AI Analysis (auth only) ─────────────────────────────── -->
+{% if current_user.is_authenticated %}
+<div class="row g-4 mb-4">
+    <div class="col-lg-8 mx-auto">
+        <div class="card setting-card shadow-sm">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <i class="bi bi-robot" style="font-size:1.3rem; color:#d97706;"></i>
+                    <h5 class="mb-0">AI Analysis</h5>
+                </div>
+                <p class="text-muted small mb-3">
+                    Controls the three Claude AI analysis features: Deal Analyst on listing pages,
+                    Portfolio Analyst on Favorites, and Preferences Coach on the scoring page.
+                </p>
+
+                <div class="d-flex gap-3 mb-3" id="settingsAiMode">
+                    <div class="opt-tile {{ 'active-ai' if prefs.get('ai_mode', 'on') == 'off' }}" data-mode="off">
+                        <i class="bi bi-check-circle-fill opt-check"></i>
+                        <i class="bi bi-slash-circle opt-icon"></i>
+                        <div class="opt-label">Off</div>
+                        <div class="opt-desc">No AI features</div>
+                    </div>
+                    <div class="opt-tile {{ 'active-ai' if prefs.get('ai_mode', 'on') == 'on' }}" data-mode="on">
+                        <i class="bi bi-check-circle-fill opt-check"></i>
+                        <i class="bi bi-lightning-charge opt-icon"></i>
+                        <div class="opt-label">On</div>
+                        <div class="opt-desc">All AI buttons active</div>
+                    </div>
+                    <div class="opt-tile {{ 'active-ai' if prefs.get('ai_mode', 'on') == 'tune' }}" data-mode="tune">
+                        <i class="bi bi-check-circle-fill opt-check"></i>
+                        <i class="bi bi-sliders2 opt-icon"></i>
+                        <div class="opt-label">Tune</div>
+                        <div class="opt-desc">Personalized AI</div>
+                    </div>
+                </div>
+
+                <div class="preview-strip" id="aiPreview">
+                    {% if prefs.get('ai_mode', 'on') == 'off' %}
+                    <i class="bi bi-slash-circle"></i> AI analysis buttons are hidden across the site. Deal scores and listings are unaffected.
+                    {% elif prefs.get('ai_mode', 'on') == 'tune' %}
+                    <i class="bi bi-sliders2"></i> AI is active with your buyer profile. Claude tailors analysis to your life stage, interests, and priorities.
+                    {% else %}
+                    <i class="bi bi-lightning-charge"></i> Three AI panels are active: <strong>Deal Analyst</strong> on listing pages, <strong>Portfolio Analyst</strong> on Favorites, and <strong>Preferences Coach</strong> on Scoring Preferences.
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     TUNE — Buyer Profile Questionnaire (auth only)
+     ══════════════════════════════════════════════════════════════ -->
+{% set bp = prefs.get('buyer_profile', {}) %}
+<div id="tunePanel" class="{{ 'visible' if prefs.get('ai_mode', 'on') == 'tune' }}">
+<div class="row g-4 mb-4">
+    <div class="col-lg-10 mx-auto">
+        <div class="card setting-card shadow-sm">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <i class="bi bi-person-lines-fill" style="font-size:1.3rem; color:#d97706;"></i>
+                    <h5 class="mb-0">Your Buyer Profile</h5>
+                </div>
+                <p class="text-muted small mb-3">
+                    Tell us about yourself so Claude can give you truly personalized analysis.
+                    Pick what applies, skip what doesn't. Everything is optional.
+                </p>
+
+                <!-- 1. Life Stage -->
+                <div class="tune-section">
+                    <h6><i class="bi bi-person text-primary"></i> Life Stage</h6>
+                    <div id="tune-life-stage" class="chip-group">
+                        <span class="chip {{ 'selected' if bp.get('life_stage') == 'young_professional' }}" data-val="young_professional"><i class="bi bi-briefcase"></i>Young Professional</span>
+                        <span class="chip {{ 'selected' if bp.get('life_stage') == 'growing_family' }}" data-val="growing_family"><i class="bi bi-people"></i>Growing Family</span>
+                        <span class="chip {{ 'selected' if bp.get('life_stage') == 'established_family' }}" data-val="established_family"><i class="bi bi-house"></i>Established Family</span>
+                        <span class="chip {{ 'selected' if bp.get('life_stage') == 'empty_nester' }}" data-val="empty_nester"><i class="bi bi-emoji-smile"></i>Empty Nester</span>
+                        <span class="chip {{ 'selected' if bp.get('life_stage') == 'pre_retirement' }}" data-val="pre_retirement"><i class="bi bi-clock-history"></i>Pre-Retirement</span>
+                        <span class="chip {{ 'selected' if bp.get('life_stage') == 'retired' }}" data-val="retired"><i class="bi bi-sun"></i>Retired</span>
+                    </div>
+                </div>
+
+                <!-- 2. Household -->
+                <div class="tune-section">
+                    <h6><i class="bi bi-house-heart text-danger"></i> Household</h6>
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="small text-muted mb-1 fw-semibold">Kids at home?</div>
+                            <div id="tune-kids" class="chip-group">
+                                <span class="chip {{ 'selected' if bp.get('kids') == 'young' }}" data-val="young">Young</span>
+                                <span class="chip {{ 'selected' if bp.get('kids') == 'school_age' }}" data-val="school_age">School-Age</span>
+                                <span class="chip {{ 'selected' if bp.get('kids') == 'teens' }}" data-val="teens">Teens</span>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="small text-muted mb-1 fw-semibold">Pets?</div>
+                            <div id="tune-pets" class="chip-group">
+                                <span class="chip {{ 'selected' if bp.get('pets') == 'dog' }}" data-val="dog"><i class="bi bi-emoji-heart-eyes"></i>Dog</span>
+                                <span class="chip {{ 'selected' if bp.get('pets') == 'cat' }}" data-val="cat">Cat</span>
+                                <span class="chip {{ 'selected' if bp.get('pets') == 'both' }}" data-val="both">Both</span>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="small text-muted mb-1 fw-semibold">Work from home?</div>
+                            <div id="tune-wfh" class="chip-group">
+                                <span class="chip {{ 'selected' if bp.get('work_from_home') == 'full' }}" data-val="full">Full-Time</span>
+                                <span class="chip {{ 'selected' if bp.get('work_from_home') == 'hybrid' }}" data-val="hybrid">Hybrid</span>
+                                <span class="chip {{ 'selected' if bp.get('work_from_home') == 'no' }}" data-val="no">No</span>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="small text-muted mb-1 fw-semibold">&nbsp;</div>
+                            <span class="toggle-pill {{ 'on' if bp.get('partner') }}" id="tune-partner">
+                                <i class="bi bi-heart"></i> Moving with partner/spouse
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Budget Feel -->
+                <div class="tune-section">
+                    <h6><i class="bi bi-wallet2 text-success"></i> Budget Comfort</h6>
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <div id="tune-budget" class="chip-group">
+                            <span class="chip {{ 'selected' if bp.get('budget_feel') == 'stretching' }}" data-val="stretching">Stretching</span>
+                            <span class="chip {{ 'selected' if bp.get('budget_feel') == 'comfortable' }}" data-val="comfortable">Comfortable</span>
+                            <span class="chip {{ 'selected' if bp.get('budget_feel') == 'flexible' }}" data-val="flexible">Flexible</span>
+                        </div>
+                        <span class="toggle-pill {{ 'on' if bp.get('fixed_income') }}" id="tune-fixed-income">
+                            <i class="bi bi-piggy-bank"></i> Fixed income
+                        </span>
+                    </div>
+                </div>
+
+                <!-- 4. Activities & Interests -->
+                <div class="tune-section">
+                    <h6><i class="bi bi-bicycle text-info"></i> Activities & Interests</h6>
+                    <p class="text-muted small mb-2">Pick all that apply — helps Claude evaluate proximity to things you care about.</p>
+                    {% set saved_activities = bp.get('activities', []) %}
+                    <div id="tune-activities" class="multi-chip-group">
+                        <span class="chip {{ 'selected' if 'golf' in saved_activities }}" data-val="golf"><i class="bi bi-flag"></i>Golf</span>
+                        <span class="chip {{ 'selected' if 'fishing' in saved_activities }}" data-val="fishing"><i class="bi bi-water"></i>Fishing / Boating</span>
+                        <span class="chip {{ 'selected' if 'beach' in saved_activities }}" data-val="beach"><i class="bi bi-brightness-high"></i>Beach / Water</span>
+                        <span class="chip {{ 'selected' if 'running' in saved_activities }}" data-val="running"><i class="bi bi-person-walking"></i>Running / Cycling</span>
+                        <span class="chip {{ 'selected' if 'gardening' in saved_activities }}" data-val="gardening"><i class="bi bi-flower1"></i>Gardening</span>
+                        <span class="chip {{ 'selected' if 'hunting' in saved_activities }}" data-val="hunting"><i class="bi bi-tree"></i>Hunting / Outdoors</span>
+                        <span class="chip {{ 'selected' if 'dining' in saved_activities }}" data-val="dining"><i class="bi bi-cup-hot"></i>Dining Out</span>
+                        <span class="chip {{ 'selected' if 'arts' in saved_activities }}" data-val="arts"><i class="bi bi-palette"></i>Arts / Culture</span>
+                        <span class="chip {{ 'selected' if 'fitness' in saved_activities }}" data-val="fitness"><i class="bi bi-heart-pulse"></i>Fitness / Gym</span>
+                        <span class="chip {{ 'selected' if 'swimming' in saved_activities }}" data-val="swimming"><i class="bi bi-droplet"></i>Swimming</span>
+                    </div>
+                </div>
+
+                <!-- 5. Faith & Community -->
+                <div class="tune-section">
+                    <h6><i class="bi bi-building text-purple" style="color:#7c3aed;"></i> Faith & Community</h6>
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <span class="toggle-pill {{ 'on' if bp.get('worship_important') }}" id="tune-worship">
+                                <i class="bi bi-bookmark-star"></i> Church/worship nearby matters
+                            </span>
+                            <div id="tune-denomination-wrap" class="mt-2 conditional-section {{ 'visible' if bp.get('worship_important') }}">
+                                <input type="text" class="tune-text-input" id="tune-denomination"
+                                       placeholder="Denomination (optional)" value="{{ bp.get('denomination', '') }}">
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="small text-muted mb-1 fw-semibold">Community style</div>
+                            <div id="tune-community" class="chip-group">
+                                <span class="chip {{ 'selected' if bp.get('community_style') == 'quiet' }}" data-val="quiet"><i class="bi bi-moon"></i>Quiet</span>
+                                <span class="chip {{ 'selected' if bp.get('community_style') == 'friendly' }}" data-val="friendly"><i class="bi bi-hand-thumbs-up"></i>Friendly</span>
+                                <span class="chip {{ 'selected' if bp.get('community_style') == 'active' }}" data-val="active"><i class="bi bi-people"></i>Active</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. Schools (conditional) -->
+                <div id="tune-schools-section" class="tune-section conditional-section {{ 'visible' if bp.get('kids') }}">
+                    <h6><i class="bi bi-mortarboard text-warning"></i> Schools</h6>
+                    <div class="d-flex flex-wrap align-items-start gap-3">
+                        <span class="toggle-pill {{ 'on' if bp.get('school_quality') }}" id="tune-school-quality">
+                            <i class="bi bi-star"></i> School quality is important
+                        </span>
+                        <input type="text" class="tune-text-input" id="tune-school-district"
+                               placeholder="Preferred district (optional)" value="{{ bp.get('school_district', '') }}">
+                    </div>
+                </div>
+
+                <!-- 7. Health & Mobility -->
+                <div class="tune-section">
+                    <h6><i class="bi bi-heart-pulse text-danger"></i> Health & Mobility</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="toggle-pill {{ 'on' if bp.get('single_story_important') }}" id="tune-single-story">
+                            <i class="bi bi-layers"></i> Single-story important
+                        </span>
+                        <span class="toggle-pill {{ 'on' if bp.get('medical_proximity') }}" id="tune-medical">
+                            <i class="bi bi-hospital"></i> Near medical facilities
+                        </span>
+                        <span class="toggle-pill {{ 'on' if bp.get('walkability_important') }}" id="tune-walkability">
+                            <i class="bi bi-signpost-split"></i> Walkability matters
+                        </span>
+                    </div>
+                </div>
+
+                <!-- 8. Relocating From -->
+                <div class="tune-section">
+                    <h6><i class="bi bi-geo-alt text-primary"></i> Relocating From</h6>
+                    <input type="text" class="tune-text-input" id="tune-relocating"
+                           placeholder="City, state, or region (optional)" value="{{ bp.get('relocating_from', '') }}">
+                    <div class="small text-muted mt-1">Helps Claude comment on climate, culture, and lifestyle differences.</div>
+                </div>
+
+                <!-- Save bar -->
+                <div class="tune-save-bar d-flex justify-content-between align-items-center mt-3">
+                    <div class="small text-muted" id="tuneSaveStatus">
+                        {% if bp %}
+                        <i class="bi bi-check-circle text-success me-1"></i>Profile saved — AI analysis is personalized
+                        {% else %}
+                        Fill in what applies to you. AI analysis will be tailored to your answers.
+                        {% endif %}
+                    </div>
+                    <button class="btn btn-sm px-4" id="tuneSaveBtn"
+                            style="background:#d97706; color:#fff; font-weight:600;">
+                        <i class="bi bi-check2 me-1"></i>Save Profile
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+{% endif %}{# auth-only: AI + Tune #}
+
+<!-- Status toast -->
+<div class="settings-toast" id="settingsToast"></div>
+
+<div class="text-center mb-4">
+    <a href="{{ site_url('dashboard.index') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+    </a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    const toast = document.getElementById('settingsToast');
+    let toastTimer;
+    function showToast(msg) {
+        toast.innerHTML = '<i class="bi bi-check-circle me-1"></i>' + msg;
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+    }
+
+    const helpPreviews = {
+        1: '<i class="bi bi-lightning-charge"></i> Hints and help text are hidden. You\'ll see a minimal, distraction-free interface.',
+        2: '<i class="bi bi-chat-dots"></i> Hover over any element with a dotted underline to see a tooltip. A good balance of guidance and clarity.',
+        3: '<i class="bi bi-book"></i> Help text appears inline next to controls, plus tooltips on hover. Best for getting started.',
+    };
+    const powerPreviews = {
+        low:  '<i class="bi bi-layout-sidebar"></i> Shows: Dashboard, Map, Favorites, Tour, Preferences, Settings. Hides: Digest, Watch, Social, Feedback.',
+        mid:  '<i class="bi bi-layout-text-sidebar"></i> Shows most features. Hides a few advanced nav items for a cleaner look.',
+        high: '<i class="bi bi-grid-3x3-gap"></i> All navigation items and features are visible. Digest, Watch, Social, Feedback — everything.',
+    };
+    const aiPreviews = {
+        off:  '<i class="bi bi-slash-circle"></i> AI analysis buttons are hidden across the site. Deal scores and listings are unaffected.',
+        on:   '<i class="bi bi-lightning-charge"></i> Three AI panels are active: <strong>Deal Analyst</strong> on listing pages, <strong>Portfolio Analyst</strong> on Favorites, and <strong>Preferences Coach</strong> on Scoring Preferences.',
+        tune: '<i class="bi bi-sliders2"></i> AI is active with your buyer profile. Claude tailors analysis to your life stage, interests, and priorities.',
+    };
+
+    // ── Help Level ────────────────────────────────────────────
+    const hlGroup = document.getElementById('settingsHelpLevel');
+    hlGroup.querySelectorAll('.opt-tile').forEach(tile => {
+        tile.addEventListener('click', function() {
+            hlGroup.querySelectorAll('.opt-tile').forEach(t => t.classList.remove('active-help'));
+            this.classList.add('active-help');
+            document.getElementById('helpPreview').innerHTML = helpPreviews[parseInt(this.dataset.level)];
+            fetch('{{ site_url("dashboard.api_help_level") }}', {
+                method: 'POST', body: JSON.stringify({ level: parseInt(this.dataset.level) }),
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            }).then(r => r.json()).then(d => { if (d.ok) showToast('Help level saved'); });
+        });
+    });
+
+    // ── Power Mode (auth only) ───────────────────────────────
+    const pmGroup = document.getElementById('settingsPowerMode');
+    if (pmGroup) pmGroup.querySelectorAll('.opt-tile').forEach(tile => {
+        tile.addEventListener('click', function() {
+            pmGroup.querySelectorAll('.opt-tile').forEach(t => t.classList.remove('active-power'));
+            this.classList.add('active-power');
+            document.getElementById('powerPreview').innerHTML = powerPreviews[this.dataset.mode];
+            fetch('{{ site_url("dashboard.api_power_mode") }}', {
+                method: 'POST', body: JSON.stringify({ mode: this.dataset.mode }),
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            }).then(r => r.json()).then(d => {
+                if (d.ok) { showToast('Power mode saved'); setTimeout(() => window.location.reload(), 1000); }
+            });
+        });
+    });
+
+    // ── AI Mode (auth only) ──────────────────────────────────
+    const aiGroup = document.getElementById('settingsAiMode');
+    const tunePanel = document.getElementById('tunePanel');
+
+    if (aiGroup) aiGroup.querySelectorAll('.opt-tile').forEach(tile => {
+        tile.addEventListener('click', function() {
+            aiGroup.querySelectorAll('.opt-tile').forEach(t => t.classList.remove('active-ai'));
+            this.classList.add('active-ai');
+            const mode = this.dataset.mode;
+            document.getElementById('aiPreview').innerHTML = aiPreviews[mode];
+
+            // Show/hide tune questionnaire
+            if (mode === 'tune') {
+                tunePanel.classList.add('visible');
+                tunePanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else {
+                tunePanel.classList.remove('visible');
+            }
+
+            fetch('{{ site_url("dashboard.api_ai_mode") }}', {
+                method: 'POST', body: JSON.stringify({ mode: mode }),
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            }).then(r => r.json()).then(d => { if (d.ok) showToast('AI mode saved'); });
+        });
+    });
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    //  TUNE QUESTIONNAIRE INTERACTIONS
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    // Single-select chip groups (click to select, click again to deselect)
+    document.querySelectorAll('.chip-group').forEach(group => {
+        group.querySelectorAll('.chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                const wasSelected = this.classList.contains('selected');
+                group.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+                if (!wasSelected) this.classList.add('selected');
+
+                // Conditional: show schools section when kids is selected
+                if (group.id === 'tune-kids') {
+                    const schoolsSection = document.getElementById('tune-schools-section');
+                    if (!wasSelected) {
+                        schoolsSection.classList.add('visible');
+                    } else {
+                        schoolsSection.classList.remove('visible');
+                    }
+                }
+            });
+        });
+    });
+
+    // Multi-select chip groups (toggle each independently)
+    document.querySelectorAll('.multi-chip-group').forEach(group => {
+        group.querySelectorAll('.chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                this.classList.toggle('selected');
+            });
+        });
+    });
+
+    // Toggle pills (on/off)
+    document.querySelectorAll('.toggle-pill').forEach(pill => {
+        pill.addEventListener('click', function() {
+            this.classList.toggle('on');
+            // Conditional: show denomination field when worship is toggled
+            if (this.id === 'tune-worship') {
+                const wrap = document.getElementById('tune-denomination-wrap');
+                if (this.classList.contains('on')) wrap.classList.add('visible');
+                else wrap.classList.remove('visible');
+            }
+        });
+    });
+
+    // ── Save profile ──────────────────────────────────────────
+    const _tuneSaveBtn = document.getElementById('tuneSaveBtn');
+    if (_tuneSaveBtn) _tuneSaveBtn.addEventListener('click', function() {
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
+
+        const profile = {};
+
+        // Life stage
+        const stageChip = document.querySelector('#tune-life-stage .chip.selected');
+        if (stageChip) profile.life_stage = stageChip.dataset.val;
+
+        // Kids
+        const kidsChip = document.querySelector('#tune-kids .chip.selected');
+        if (kidsChip) profile.kids = kidsChip.dataset.val;
+
+        // Pets
+        const petsChip = document.querySelector('#tune-pets .chip.selected');
+        if (petsChip) profile.pets = petsChip.dataset.val;
+
+        // Work from home
+        const wfhChip = document.querySelector('#tune-wfh .chip.selected');
+        if (wfhChip) profile.work_from_home = wfhChip.dataset.val;
+
+        // Partner
+        if (document.getElementById('tune-partner').classList.contains('on'))
+            profile.partner = true;
+
+        // Budget
+        const budgetChip = document.querySelector('#tune-budget .chip.selected');
+        if (budgetChip) profile.budget_feel = budgetChip.dataset.val;
+
+        // Fixed income
+        if (document.getElementById('tune-fixed-income').classList.contains('on'))
+            profile.fixed_income = true;
+
+        // Activities (multi-select)
+        const activities = [];
+        document.querySelectorAll('#tune-activities .chip.selected').forEach(c => {
+            activities.push(c.dataset.val);
+        });
+        if (activities.length) profile.activities = activities;
+
+        // Worship
+        if (document.getElementById('tune-worship').classList.contains('on')) {
+            profile.worship_important = true;
+            const denom = document.getElementById('tune-denomination').value.trim();
+            if (denom) profile.denomination = denom;
+        }
+
+        // Community style
+        const commChip = document.querySelector('#tune-community .chip.selected');
+        if (commChip) profile.community_style = commChip.dataset.val;
+
+        // Schools
+        if (document.getElementById('tune-school-quality').classList.contains('on'))
+            profile.school_quality = true;
+        const district = document.getElementById('tune-school-district').value.trim();
+        if (district) profile.school_district = district;
+
+        // Health
+        if (document.getElementById('tune-single-story').classList.contains('on'))
+            profile.single_story_important = true;
+        if (document.getElementById('tune-medical').classList.contains('on'))
+            profile.medical_proximity = true;
+        if (document.getElementById('tune-walkability').classList.contains('on'))
+            profile.walkability_important = true;
+
+        // Relocating from
+        const relocating = document.getElementById('tune-relocating').value.trim();
+        if (relocating) profile.relocating_from = relocating;
+
+        fetch('{{ site_url("dashboard.api_buyer_profile") }}', {
+            method: 'POST',
+            body: JSON.stringify({ profile: profile }),
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check2 me-1"></i>Save Profile';
+            if (data.ok) {
+                showToast('Buyer profile saved — AI analysis is now personalized');
+                document.getElementById('tuneSaveStatus').innerHTML =
+                    '<i class="bi bi-check-circle text-success me-1"></i>Profile saved — AI analysis is personalized';
+            }
+        })
+        .catch(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check2 me-1"></i>Save Profile';
+            showToast('Error saving profile');
+        });
+    });
+})();
+</script>
+{% endblock %}

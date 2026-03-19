@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────
 # File: app/routes/preferences_routes.py
-# App Version: 2026.03.14 | File Version: 1.4.0
-# Last Modified: 2026-03-17
+# App Version: 2026.03.14 | File Version: 1.6.0
+# Last Modified: 2026-03-18
 # ─────────────────────────────────────────────
 """
 app/routes/preferences_routes.py — Preferences and API endpoints.
@@ -13,6 +13,17 @@ from app.models import db, Listing, UserFlag, User
 from app.routes.dashboard_helpers import (
     dashboard_bp, _guest_prefs, _get_site_target_areas, _site_redirect,
 )
+
+
+@dashboard_bp.route("/settings")
+def settings():
+    """Display settings page (help level, power mode)."""
+    if current_user.is_authenticated:
+        prefs = current_user.get_prefs()
+    else:
+        prefs = _guest_prefs()
+
+    return render_template("dashboard/settings.html", prefs=prefs)
 
 
 @dashboard_bp.route("/preferences", methods=["GET", "POST"])
@@ -60,9 +71,11 @@ def preferences():
                 # Preserve user_landmarks (managed via separate AJAX route)
                 prefs["user_landmarks"] = existing_prefs.get("user_landmarks", [])
 
-                # Preserve help_level and power_mode (managed via separate AJAX routes)
+                # Preserve settings managed via separate AJAX routes
                 prefs["help_level"] = existing_prefs.get("help_level", 2)
                 prefs["power_mode"] = existing_prefs.get("power_mode", "high")
+                prefs["ai_mode"] = existing_prefs.get("ai_mode", "on")
+                prefs["buyer_profile"] = existing_prefs.get("buyer_profile", {})
 
                 msg = "Scoring preferences saved!"
 
@@ -419,3 +432,67 @@ def api_power_mode():
         session.modified = True
 
     return jsonify({"ok": True, "power_mode": mode})
+
+
+# ── Quick AI mode toggle (settings page AJAX) ──────────────────
+
+@dashboard_bp.route("/api/ai-mode", methods=["POST"])
+def api_ai_mode():
+    """AJAX toggle for ai_mode (off/on/tune). Works for guests and logged-in users."""
+    from flask import session
+
+    data = request.get_json(silent=True) or {}
+    mode = data.get("mode", "on")
+    if mode not in ("off", "on", "tune"):
+        return jsonify({"error": "Invalid mode"}), 400
+
+    if current_user.is_authenticated:
+        prefs = current_user.get_prefs()
+        prefs["ai_mode"] = mode
+        current_user.set_prefs(prefs)
+        db.session.commit()
+    else:
+        guest = session.get("guest_prefs", {})
+        guest["ai_mode"] = mode
+        session["guest_prefs"] = guest
+        session.modified = True
+
+    return jsonify({"ok": True, "ai_mode": mode})
+
+
+# ── Buyer profile save (Tune questionnaire AJAX) ──────────────
+
+@dashboard_bp.route("/api/buyer-profile", methods=["POST"])
+def api_buyer_profile():
+    """AJAX save for buyer profile questionnaire. Works for guests and logged-in users."""
+    from flask import session
+
+    data = request.get_json(silent=True) or {}
+    profile = data.get("profile")
+    if not isinstance(profile, dict):
+        return jsonify({"error": "Invalid profile data"}), 400
+
+    # Whitelist allowed keys to prevent arbitrary data injection
+    allowed_keys = {
+        "life_stage", "kids", "pets", "work_from_home", "partner",
+        "budget_feel", "fixed_income",
+        "activities",
+        "worship_important", "denomination", "community_style",
+        "school_quality", "school_district",
+        "single_story_important", "medical_proximity", "walkability_important",
+        "relocating_from",
+    }
+    clean = {k: v for k, v in profile.items() if k in allowed_keys}
+
+    if current_user.is_authenticated:
+        prefs = current_user.get_prefs()
+        prefs["buyer_profile"] = clean
+        current_user.set_prefs(prefs)
+        db.session.commit()
+    else:
+        guest = session.get("guest_prefs", {})
+        guest["buyer_profile"] = clean
+        session["guest_prefs"] = guest
+        session.modified = True
+
+    return jsonify({"ok": True})

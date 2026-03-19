@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────
 # File: app/routes/ai_routes.py
-# App Version: 2026.03.14 | File Version: 1.5.0
-# Last Modified: 2026-03-14
+# App Version: 2026.03.14 | File Version: 1.6.0
+# Last Modified: 2026-03-18
 # ─────────────────────────────────────────────
 """
 app/routes/ai_routes.py — AI analysis routes.
@@ -163,6 +163,10 @@ def analyze_preferences():
     }
     for k in imp_keys:
         prefs[k] = int(request.form.get(k, User.DEFAULT_PREFS.get(k, 5)))
+
+    # Include buyer profile from saved prefs (managed via Settings > Tune)
+    saved_prefs = current_user.get_prefs()
+    prefs["buyer_profile"] = saved_prefs.get("buyer_profile", {})
 
     try:
         from app.services.deal_analyst import analyze_preferences as run_prefs_analysis

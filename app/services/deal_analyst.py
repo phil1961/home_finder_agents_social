@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────
 # File: app/services/deal_analyst.py
-# App Version: 2026.03.11 | File Version: 1.4.0
-# Last Modified: 2026-03-11
+# App Version: 2026.03.14 | File Version: 1.5.0
+# Last Modified: 2026-03-18
 # ─────────────────────────────────────────────
 """
 AI Deal Analyst — powered by Claude.
@@ -136,11 +136,12 @@ def analyze_listing(listing, deal_score=None, user_prefs=None, system_prompt=Non
         from config import DEFAULT_PROMPTS
         system_prompt = DEFAULT_PROMPTS["deal"]
 
-    user_message = f"""Analyze this listing for my retired buyer:
+    user_message = f"""Analyze this listing for my buyer:
 
 {context}
 
-Remember: be specific, reference real numbers, and give an actual dollar amount for the suggested opening offer."""
+Remember: be specific, reference real numbers, and give an actual dollar amount for the suggested opening offer.
+If the buyer profile is provided, tailor your analysis to their specific situation, lifestyle, and priorities."""
 
     return _call_anthropic(system_prompt, user_message)
 
