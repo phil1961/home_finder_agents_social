@@ -115,6 +115,7 @@ Four tiers: **free**, **basic**, **pro**, **unlimited**. Each tier defines usage
 
 ## Docs
 
+- `docs/master/AI_TUNE_SPEC.md` — AI Tune & Buyer Profile technical spec
 - `docs/agent/AGENT_GUIDE.md` — agent role guide
 - `docs/master/ARCHITECTURE.md` — system architecture overview
 - `docs/master/DEPLOYMENT_GUIDE.md` — deployment instructions

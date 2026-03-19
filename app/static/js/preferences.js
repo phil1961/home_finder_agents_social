@@ -1,7 +1,7 @@
 /* ─────────────────────────────────────────────
    File: app/static/js/preferences.js
-   App Version: 2026.03.14 | File Version: 1.0.0
-   Last Modified: 2026-03-15
+   App Version: 2026.03.14 | File Version: 1.1.0
+   Last Modified: 2026-03-18
    ───────────────────────────────────────────── */
 
 // ── Price range slider ──────────────────────────────────────
@@ -96,6 +96,13 @@ function saveFormAjax(e, form, statusId) {
     .then(data => {
         if (data.ok) {
             statusEl.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>' + data.message + '</span>';
+            // Show guest session warning modal after save
+            if (!PREFS_CONFIG.isAuth) {
+                const modal = document.getElementById('guestSavedModal');
+                if (modal) {
+                    setTimeout(() => new bootstrap.Modal(modal).show(), 600);
+                }
+            }
         } else {
             statusEl.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle me-1"></i>' + (data.message || 'Save failed') + '</span>';
         }

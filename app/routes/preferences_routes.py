@@ -72,10 +72,20 @@ def preferences():
                 prefs["user_landmarks"] = existing_prefs.get("user_landmarks", [])
 
                 # Preserve settings managed via separate AJAX routes
-                prefs["help_level"] = existing_prefs.get("help_level", 2)
-                prefs["power_mode"] = existing_prefs.get("power_mode", "high")
-                prefs["ai_mode"] = existing_prefs.get("ai_mode", "on")
-                prefs["buyer_profile"] = existing_prefs.get("buyer_profile", {})
+                if is_auth:
+                    prefs["help_level"] = existing_prefs.get("help_level", 2)
+                    prefs["power_mode"] = existing_prefs.get("power_mode", "high")
+                    prefs["ai_mode"] = existing_prefs.get("ai_mode", "on")
+                    prefs["buyer_profile"] = existing_prefs.get("buyer_profile", {})
+                else:
+                    # For guests: read from raw session, not _guest_prefs() which
+                    # merges DEFAULT_PREFS and would inject power_mode="high"
+                    from flask import session as _gs
+                    _raw = _gs.get("guest_prefs", {})
+                    prefs["help_level"] = _raw.get("help_level", 2)
+                    prefs["power_mode"] = _raw.get("power_mode", "low")
+                    prefs["ai_mode"] = _raw.get("ai_mode", "off")
+                    prefs["buyer_profile"] = _raw.get("buyer_profile", {})
 
                 msg = "Scoring preferences saved!"
 

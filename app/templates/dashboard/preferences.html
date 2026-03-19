@@ -1,6 +1,6 @@
 <!--
   File: app/templates/dashboard/preferences.html
-  App Version: 2026.03.14 | File Version: 2.2.0
+  App Version: 2026.03.14 | File Version: 2.3.0
   Last Modified: 2026-03-18
 -->
 {% extends "base.html" %}
@@ -92,6 +92,7 @@
     <a href="{{ site_url('dashboard.index') }}" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
     </a>
+    <div class="small text-muted mt-2" style="font-size:0.6rem; opacity:0.4;">prefs v2.3.0</div>
 </div>
 
 {% include "dashboard/_prefs_ai_coach.html" %}
@@ -168,24 +169,27 @@ const SITE_BOUNDS = L.latLngBounds(
 const SITE_BOUNDS = null;
 {% endif %}
 
-// Guard against Leaflet double-init
+// Guard against Leaflet double-init and missing map container
 let map;
 { const _el = document.getElementById('area-map');
-  if (_el && _el._leaflet_id) { L.map(_el).remove(); }
-  map = L.map('area-map', {
-    zoomControl: true,
-    minZoom: 9,
-    maxZoom: 14,
-    maxBounds: SITE_BOUNDS || undefined,
-    maxBoundsViscosity: SITE_BOUNDS ? 1.0 : 0
-}).setView([_siteLat, _siteLon], _siteZoom); }
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-}).addTo(map);
+  if (_el) {
+    if (_el._leaflet_id) { L.map(_el).remove(); }
+    map = L.map('area-map', {
+      zoomControl: true,
+      minZoom: 9,
+      maxZoom: 14,
+      maxBounds: SITE_BOUNDS || undefined,
+      maxBoundsViscosity: SITE_BOUNDS ? 1.0 : 0
+    }).setView([_siteLat, _siteLon], _siteZoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+  }
+}
 
 // Bounds toast
 let boundsToastTimer = null;
-map.on('drag', function() {
+if (map) map.on('drag', function() {
     if (SITE_BOUNDS && !SITE_BOUNDS.contains(map.getCenter())) {
         const toast = document.getElementById('map-bounds-toast');
         toast.classList.add('visible');
@@ -286,7 +290,7 @@ async function _detectStateAndLoadMap() {
         });
 }
 
-_detectStateAndLoadMap();
+if (map) _detectStateAndLoadMap();
 
 function handleZipClick(zip) {
     if (!activeAreaName.trim()) {
@@ -374,6 +378,7 @@ function refreshMap() {
 
 function refreshList() {
     const list = document.getElementById('area-list');
+    if (!list) return;
     if (Object.keys(areas).length === 0) {
         list.innerHTML = MAP_READONLY
             ? '<p class="text-muted small mb-0">No target areas configured for this site.</p>'
@@ -414,7 +419,9 @@ function refreshList() {
 
 function refreshHiddenInputs() {
     document.querySelectorAll('.area-hidden-input').forEach(el => el.remove());
-    const form = document.querySelector('input[name="_section"][value="areas"]').closest('form');
+    const sectionInput = document.querySelector('input[name="_section"][value="areas"]');
+    if (!sectionInput) return;
+    const form = sectionInput.closest('form');
     for (const [name, data] of Object.entries(areas)) {
         const ni = document.createElement('input');
         ni.type = 'hidden'; ni.name = 'area_name';

@@ -98,7 +98,7 @@
             <label class="form-label small" data-help="Listings scoring above this are highlighted green on the dashboard">Great Deal Threshold</label>
             <div class="d-flex align-items-center gap-3">
                 <input type="range" class="form-range flex-grow-1" name="great_deal_threshold"
-                       id="threshold-slider" min="50" max="95" step="5"
+                       id="threshold-slider" min="0" max="100" step="1"
                        value="{{ prefs.great_deal_threshold }}"
                        oninput="document.getElementById('threshold-val').textContent = this.value">
                 <span class="badge bg-success" id="threshold-val">{{ prefs.great_deal_threshold }}</span>

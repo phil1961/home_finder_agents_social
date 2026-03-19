@@ -165,6 +165,8 @@ class User(UserMixin, db.Model):
         "help_level": 2,
         # Power mode: "low" (core nav + 6 sliders), "mid" (+ advanced nav), "high" (everything)
         "power_mode": "high",
+        # AI mode: "off" (hide AI panels), "on" (standard), "tune" (personalized with buyer profile)
+        "ai_mode": "on",
     }
 
     def get_prefs(self) -> dict:

@@ -10,7 +10,14 @@
 <style>
     .listing-card { transition: box-shadow 0.15s, transform 0.15s; cursor: pointer; }
     .listing-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.12); transform: translateY(-1px); background: #f3f4f6; }
-    .listing-card.great-deal { border-left: 4px solid #198754; }
+    .listing-card.great-deal {
+        border-left: 5px solid #16a34a;
+        background: linear-gradient(135deg, #f0fdf4 0%, #fff 40%) !important;
+        box-shadow: 0 2px 8px rgba(22,163,74,0.12);
+    }
+    .listing-card.great-deal .great-deal-badge {
+        display: inline-block !important;
+    }
     .source-badge-zillow { background: #006AFF; color: #fff; }
     .source-badge-realtor { background: #D92228; color: #fff; }
     .score-ring {
@@ -49,35 +56,53 @@
 
 <!-- "Since your last visit" / value banner -->
 {% if since_stats %}
+{% set _gdc = since_stats.great_deal_count|default(0) %}
+{% if _gdc > 0 %}
+{# Great deals found — prominent green banner #}
 <div class="d-flex flex-wrap align-items-center gap-3 mb-3 px-3 py-2 rounded-3"
-     style="background: linear-gradient(135deg, #f0fdf4, #ecfdf5); border: 1px solid #bbf7d0;">
-    <i class="bi bi-graph-up-arrow text-success"></i>
-    {% if since_stats.new_count is defined %}
-    {# Logged-in user: show changes since last login #}
+     style="background: linear-gradient(135deg, #dcfce7, #bbf7d0); border: 1px solid #86efac;">
+    <i class="bi bi-trophy-fill text-success" style="font-size:1.1rem;"></i>
     <span class="small">
-        <strong>Since your last visit:</strong>
+        <strong class="text-success">{{ _gdc }} Great Deal{{ 's' if _gdc != 1 }}!</strong>
+        {{ _gdc }} of {{ since_stats.total_scored }} listings scored above your threshold of {{ great_deal_threshold }}
+        — top score: <strong class="text-success">{{ "%.0f"|format(since_stats.top_score) }}</strong>
+    </span>
+    {% if since_stats.new_count is defined %}
+    <span class="text-muted mx-1">·</span>
+    <span class="small">
         {% if since_stats.new_count > 0 %}
-        <span class="badge bg-success rounded-pill ms-1">{{ since_stats.new_count }} new</span>
+        <span class="badge bg-success rounded-pill">{{ since_stats.new_count }} new</span>
         {% endif %}
         {% if since_stats.drop_count > 0 %}
-        <span class="badge bg-warning text-dark rounded-pill ms-1">{{ since_stats.drop_count }} price drop{{ 's' if since_stats.drop_count != 1 }}</span>
-        {% endif %}
-        {% if since_stats.new_count == 0 and since_stats.drop_count == 0 %}
-        No changes — you're all caught up.
-        {% endif %}
-        <span class="text-muted ms-1">·</span>
-        {{ since_stats.total_scored }} listings scored for you
-    </span>
-    {% else %}
-    {# Guest: show total value #}
-    <span class="small">
-        <strong>{{ since_stats.total_scored }} listings scored</strong> across this market
-        {% if since_stats.top_score > 0 %}
-         — top deal score: <strong class="text-success">{{ "%.0f"|format(since_stats.top_score) }}</strong>
+        <span class="badge bg-warning text-dark rounded-pill">{{ since_stats.drop_count }} price drop{{ 's' if since_stats.drop_count != 1 }}</span>
         {% endif %}
     </span>
     {% endif %}
 </div>
+{% else %}
+{# No great deals — subdued info banner #}
+<div class="d-flex flex-wrap align-items-center gap-3 mb-3 px-3 py-2 rounded-3"
+     style="background: #f8fafc; border: 1px solid #e2e8f0;">
+    <i class="bi bi-graph-up-arrow text-muted"></i>
+    <span class="small text-muted">
+        <strong>{{ since_stats.total_scored }} listings scored</strong>
+        — no listings above your Great Deal threshold of {{ great_deal_threshold }} yet
+        (top score: {{ "%.0f"|format(since_stats.top_score) }})
+        {% if since_stats.new_count is defined %}
+        <span class="mx-1">·</span>
+            {% if since_stats.new_count > 0 %}
+            <span class="badge bg-light text-dark border rounded-pill">{{ since_stats.new_count }} new</span>
+            {% endif %}
+            {% if since_stats.drop_count > 0 %}
+            <span class="badge bg-light text-dark border rounded-pill">{{ since_stats.drop_count }} price drop{{ 's' if since_stats.drop_count != 1 }}</span>
+            {% endif %}
+            {% if since_stats.new_count == 0 and since_stats.drop_count == 0 %}
+            all caught up
+            {% endif %}
+        {% endif %}
+    </span>
+</div>
+{% endif %}
 {% endif %}
 
 <!-- Header row -->
@@ -111,7 +136,6 @@
                     <option value="price_desc" {% if current_sort == 'price_desc' %}selected{% endif %}>Price ↓</option>
                     <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>Newest</option>
                     <option value="yard" {% if current_sort == 'yard' %}selected{% endif %}>Yard Size</option>
-                    <option value="nearest" {% if current_sort == 'nearest' %}selected{% endif %}>Nearest to Me</option>
                 </select>
             </div>
             <div class="col">
@@ -385,6 +409,9 @@
                             <a href="{{ site_url('dashboard.listing_detail', listing_id=listing.id) }}" class="text-decoration-none text-dark">
                                 {{ listing.address }}
                             </a>
+                            <span class="great-deal-badge badge bg-success ms-1" style="display:none; font-size:0.65rem; vertical-align:middle;">
+                                <i class="bi bi-trophy-fill me-1"></i>Great Deal
+                            </span>
                         </h6>
                         <small class="text-muted">{{ listing.area_name or listing.city }}{% if listing.zip_code %}, {{ listing.zip_code }}{% endif %}</small>
                         {% if listing.place_name %}
@@ -427,13 +454,6 @@
                     <span class="badge feature-tag {% if _d <= 2 %}bg-success{% elif _d <= 5 %}bg-primary{% elif _d <= 10 %}bg-warning text-dark{% else %}bg-danger{% endif %}"
                           title="{{ poi_filter_name }}">
                         <i class="bi bi-pin-map-fill" style="font-size:0.6rem;"></i> {{ "%.1f"|format(_d) }} mi
-                    </span>
-                    {% endif %}
-                    {% if current_sort == 'nearest' and user_lat and listing.latitude %}
-                    {% set _ud = ((listing.latitude - user_lat)**2 + (listing.longitude - user_lng)**2)**0.5 * 69.0 %}
-                    <span class="badge feature-tag {% if _ud <= 2 %}bg-success{% elif _ud <= 5 %}bg-primary{% elif _ud <= 10 %}bg-warning text-dark{% else %}bg-danger{% endif %}"
-                          title="Distance from you">
-                        <i class="bi bi-person-walking" style="font-size:0.6rem;"></i> {{ "%.1f"|format(_ud) }} mi
                     </span>
                     {% endif %}
                 </div>
@@ -685,73 +705,6 @@ function copyShareLink(listingId) {
             }
         });
 }
-
-// ── "Nearest to Me" geolocation sort ────────────────────────
-(function() {
-    const sortSelect = document.querySelector('select[name="sort"]');
-    if (!sortSelect) return;
-
-    sortSelect.addEventListener('change', function(e) {
-        if (this.value !== 'nearest') return;
-
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (!navigator.geolocation) {
-            alert('Your browser does not support geolocation.');
-            this.value = 'score';
-            return;
-        }
-
-        // Show a brief status
-        const btn = document.querySelector('button[type="submit"]');
-        const origHtml = btn ? btn.innerHTML : '';
-        if (btn) btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-
-        navigator.geolocation.getCurrentPosition(
-            function(pos) {
-                // Add lat/lng to the form and submit
-                const form = sortSelect.closest('form');
-                let latInput = form.querySelector('input[name="user_lat"]');
-                let lngInput = form.querySelector('input[name="user_lng"]');
-                if (!latInput) {
-                    latInput = document.createElement('input');
-                    latInput.type = 'hidden'; latInput.name = 'user_lat';
-                    form.appendChild(latInput);
-                }
-                if (!lngInput) {
-                    lngInput = document.createElement('input');
-                    lngInput.type = 'hidden'; lngInput.name = 'user_lng';
-                    form.appendChild(lngInput);
-                }
-                latInput.value = pos.coords.latitude;
-                lngInput.value = pos.coords.longitude;
-                form.submit();
-            },
-            function(err) {
-                if (btn) btn.innerHTML = origHtml;
-                if (err.code === 1) {
-                    alert('Location access denied. Please allow location access in your browser settings to use "Nearest to Me".');
-                } else {
-                    alert('Could not determine your location. Please try again.');
-                }
-                sortSelect.value = 'score';
-            },
-            { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
-        );
-    });
-
-    // If already sorted by nearest, preserve the hidden inputs
-    {% if current_sort == 'nearest' and user_lat %}
-    const form = sortSelect.closest('form');
-    const li = document.createElement('input');
-    li.type='hidden'; li.name='user_lat'; li.value='{{ user_lat }}';
-    form.appendChild(li);
-    const lg = document.createElement('input');
-    lg.type='hidden'; lg.name='user_lng'; lg.value='{{ user_lng }}';
-    form.appendChild(lg);
-    {% endif %}
-})();
 
 // ── PWA Install Prompt Banner ───────────────────────────────
 (function() {

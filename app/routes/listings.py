@@ -73,8 +73,6 @@ def index():
     source_filter = request.args.get("source", "all")
     min_score = request.args.get("min_score", 0, type=int)
     max_distance = request.args.get("max_distance", 0, type=float)
-    user_lat = request.args.get("user_lat", 0, type=float)
-    user_lng = request.args.get("user_lng", 0, type=float)
 
     # Compute user prefs early — needed for avoid_areas filter and scoring
     user_prefs = current_user.get_prefs() if is_auth else _guest_prefs()
@@ -174,13 +172,6 @@ def index():
         listings.sort(key=lambda l: l.first_seen or l.last_seen or l.id, reverse=True)
     elif sort_by == "yard":
         listings.sort(key=lambda l: l.lot_sqft or 0, reverse=True)
-    elif sort_by == "nearest" and user_lat and user_lng:
-        from app.scraper.scorer import _haversine_miles
-        def _user_dist(l):
-            if l.latitude and l.longitude:
-                return _haversine_miles(l.latitude, l.longitude, user_lat, user_lng)
-            return 9999
-        listings.sort(key=_user_dist)
     else:
         listings.sort(key=lambda l: user_composites.get(l.id, 0), reverse=True)
 
@@ -235,6 +226,8 @@ def index():
 
     # ── "Since your last visit" stats ─────────────────────────────
     since_stats = None
+    _gdt = user_prefs.get("great_deal_threshold", 75)
+    _great_count = sum(1 for s in user_composites.values() if s >= _gdt)
     if is_auth and current_user.last_login:
         _ll = current_user.last_login
         _new = Listing.query.filter(
@@ -255,12 +248,14 @@ def index():
             "last_login": _ll,
             "total_scored": len(listings),
             "top_score": max(user_composites.values()) if user_composites else 0,
+            "great_deal_count": _great_count,
         }
     elif not is_auth:
         # Guests see total stats to demonstrate value
         since_stats = {
             "total_scored": len(listings),
             "top_score": max(user_composites.values()) if user_composites else 0,
+            "great_deal_count": _great_count,
         }
 
     # ── Most Shared This Week (top 5) ────────────────────────────
@@ -328,8 +323,6 @@ def index():
         poi_distances=poi_distances,
         poi_filter_name=poi_filter_name,
         current_max_distance=max_distance,
-        user_lat=user_lat,
-        user_lng=user_lng,
         user=current_user,
     )
 
