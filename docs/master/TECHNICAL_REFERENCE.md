@@ -1,7 +1,7 @@
 # HomeFinder — Technical Reference
 
-**Version:** 2026.03.15b
-**Last Updated:** 2026-03-15
+**Version:** 2026.03.19a
+**Last Updated:** 2026-03-19
 
 ---
 
@@ -114,7 +114,7 @@ Managed with raw `sqlite3` (not ORM). Stores site instance metadata.
 | is_suspended | Boolean | Account suspended by admin |
 | suspended_reason | String | Reason for suspension |
 | agent_id | FK → AgentProfile | Set for principals only |
-| preferences_json | Text | JSON scoring weights, price range, avoid areas, POI keys (`proximity_poi_name`, `proximity_poi_lat`, `proximity_poi_lng`, `imp_proximity_poi`), personal landmarks (`user_landmarks` — array of up to 3 objects with name, lat, lng) |
+| preferences_json | Text | JSON scoring weights, price range, avoid areas, POI keys (`proximity_poi_name`, `proximity_poi_lat`, `proximity_poi_lng`, `imp_proximity_poi`), personal landmarks (`user_landmarks` — array of up to 3 objects with name, lat, lng), `ai_mode` ("off"/"on"/"tune"), `buyer_profile` (dict for AI Tune), `great_deal_threshold` (integer, default 80). Note: `ai_mode`, `buyer_profile`, and `great_deal_threshold` are preserved during scoring preference saves. |
 | created_at | DateTime | |
 | last_login | DateTime | |
 
@@ -464,6 +464,9 @@ Browser hard-refresh: **Ctrl+Shift+R** (for template/static changes)
 | POST | `/agent/friend-listing/<id>/reject` | Reject with reason |
 | POST | `/my-landmarks` | Add/delete user-defined personal landmarks (AJAX, auth required, max 3) |
 | POST | `/admin/landmarks` | Add/delete site landmarks (AJAX, owner/master) |
+| GET | `/settings` | Settings page with Help Level, Power Mode, and AI Analysis cards |
+| POST | `/api/ai-mode` | Set AI mode ("off"/"on"/"tune") and save buyer profile (AJAX) |
+| POST | `/api/buyer-profile` | Save buyer profile for AI Tune (AJAX) |
 
 ### Street Watch (`/watch`)
 | Method | Endpoint | Description |
@@ -512,18 +515,25 @@ The masquerade system supports one level of chaining: master -> agent -> princip
 - `GET /auth/end-masquerade` always restores `session['masquerade_original_id']` (the true original user) and clears the key -- regardless of how many hops occurred.
 - This means a master masquerading as an agent can use the agent's "Preview" button to masquerade as a principal, and "End Preview" returns directly to the master.
 
-### Nearest-to-Me Sort
+### Settings Page
 
-The dashboard sort dropdown includes a "Nearest to Me" option. When selected:
+The Settings page (`GET /settings`) provides a unified interface with three cards:
 
-1. JavaScript calls `navigator.geolocation.getCurrentPosition()` with `maximumAge: 300000` (5-minute cache)
-2. Browser prompts the user for location permission
-3. A spinner appears on the filter button during GPS acquisition
-4. On success, hidden form fields `user_lat` and `user_lng` are populated and the filter form is submitted
-5. The server sorts listings by Haversine distance from the user's coordinates
-6. Each listing card receives a walking-person distance badge, color-coded by proximity
-7. `user_lat`/`user_lng` are preserved as hidden inputs across subsequent filter changes
-8. On denial or timeout, the sort falls back to Deal Score
+1. **Help Level** — slider (1–3) controlling the verbosity of contextual help throughout the UI
+2. **Power Mode** — off/low/high toggle controlling advanced feature visibility
+3. **AI Analysis** — off/on/tune selector; "tune" reveals the Buyer Profile form for AI Tune personalization
+
+Settings are persisted in `preferences_json` for authenticated users and in the session for guests.
+
+### Navigation
+
+- The **Help** nav item is a direct link to the Help page (no longer a dropdown menu)
+- Active nav items use a **nav-active underline indicator** system implemented via CSS custom properties (`--nav-active-color`)
+- The **Settings** gear icon in the nav links to the Settings page
+
+### Nearest-to-Me Sort (Removed)
+
+The "Nearest to Me" sort option has been removed from the dashboard sort dropdown.
 
 ---
 
@@ -595,7 +605,9 @@ All "nothing here" empty states replaced with value-first messaging across 9 tem
 | `test_street_watch.py` | Extraction, CRUD, deactivation, token unsubscribe, watch linking |
 | `test_engagement.py` | Since-last-visit stats, progressive nudges, smart empty state content |
 | `test_social_phase2.py` | Points system, referral loops, social models, agent listing workflow, user suspension, share counts/social proof, collections |
+| `test_ai_tune.py` | AI Tune settings, buyer profile persistence, ai_mode transitions |
+| `test_great_deal.py` | Great Deal threshold, badge rendering, visual effects |
 
 **Fixtures** (`conftest.py`): Creates a temporary registry + site DB per test, with helpers `make_user()`, `make_listing()`, `make_agent_profile()`.
 
-**Total: 84 tests**
+**Total: 217 tests**

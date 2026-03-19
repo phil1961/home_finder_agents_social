@@ -193,9 +193,9 @@
                             <i class="bi bi-toggles" style="color:#93c5fd;"></i> Settings
                         </a>
                     </li>
-                    {% if power_mode|default('high') != 'low' %}
+                    {% if current_user.is_authenticated and power_mode|default('high') != 'low' %}
                     <li class="nav-item">
-                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#feedbackModal"
+                        <a class="nav-link" href="#" onclick="event.preventDefault(); new bootstrap.Modal(document.getElementById('feedbackModal')).show();"
                            data-help="Tell us what you think">
                             <i class="bi bi-chat-square-text" style="color:#c4b5fd;"></i> Feedback
                         </a>

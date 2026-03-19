@@ -1,7 +1,7 @@
 # HomeFinder — User Guide
 
-**Version:** 2026.03.15b
-**Last Updated:** 2026-03-15
+**Version:** 2026.03.19a
+**Last Updated:** 2026-03-19
 
 ---
 
@@ -36,14 +36,11 @@ This card appears automatically — no setup required.
 
 **Filter bar:**
 - **Area** — Filter by neighborhood or submarket
-- **Sort** — Deal Score (default), Price asc/desc, Newest, Yard Size, or **Nearest to Me**
+- **Sort** — Deal Score (default), Price asc/desc, Newest, Yard Size
 - **Min Score** — Only show listings above a certain deal score
 - **Flags** — Show only your Favorites, Maybes, or Hidden listings
 - **Source** — Filter by Zillow or Realtor data source
 - **Max Mi** — Maximum distance from your selected landmark (0.5 / 1 / 2 / 3 / 5 / 10 / 15 / 25 mi; only appears when a landmark is selected in Preferences)
-
-**"Nearest to Me" sort:**
-When you select "Nearest to Me" from the Sort dropdown, your browser asks for location permission. Once granted, listings are sorted by distance from your current position (calculated using the Haversine formula). Each listing card shows a walking-person distance badge, color-coded by proximity. Your location is cached for 5 minutes so subsequent filter changes do not re-prompt. If you deny the location prompt or it times out, the sort falls back to Deal Score. A spinner appears on the filter button while the GPS fix is in progress.
 
 **Each listing card shows:**
 - Photo, address, price
@@ -260,6 +257,63 @@ Click **Digest** for an email-style summary of your top listings — great for s
 
 ---
 
+## Settings
+
+Click the **gear icon** in the navigation bar to open the Settings page. It contains three cards:
+
+### Help Level
+
+Control how much contextual guidance the app shows:
+- **Level 1** — Minimal: tooltips and hints are hidden
+- **Level 2** — Standard (default): helpful tips appear where relevant
+- **Level 3** — Verbose: detailed explanations and onboarding prompts throughout
+
+### Power Mode
+
+Toggle advanced features on or off:
+- **Off** — Simplified interface, best for casual browsing
+- **Low** (default for guests) — Core features visible
+- **High** — All advanced features enabled (bulk actions, export, extended filters)
+
+### AI Analysis Mode
+
+Control how AI deal analysis works:
+- **Off** (default for guests) — AI analysis buttons are hidden
+- **On** — Standard AI deal briefs, portfolio analysis, and preference coaching
+- **Tune** — Enables **AI Tune** with a Buyer Profile form (see below)
+
+---
+
+## AI Tune and Buyer Profile
+
+When AI Mode is set to **Tune**, a Buyer Profile form appears on the Settings page. Fill in your structured preferences so that Claude AI can personalize its analysis to your specific situation:
+
+- **Timeline** — When you plan to buy
+- **Priorities** — What matters most to you (e.g., school district, commute, yard)
+- **Dealbreakers** — Hard requirements that would rule out a property
+- **Other details** — Lifestyle notes, household info, etc.
+
+Your buyer profile is saved in your account and used automatically whenever you request a Deal Brief, Portfolio Analysis, or Preference Coaching. AI responses become significantly more relevant and actionable with a completed profile.
+
+---
+
+## Great Deal Score
+
+Set a **Great Deal Threshold** on the Preferences page (default: 80) to highlight exceptional listings:
+
+- Listings scoring at or above your threshold receive a **"Great Deal!"** badge on their card
+- Cards for great deals display a **golden glow** effect to stand out visually
+- The listing detail page plays a brief **confetti animation** when you view a great deal
+- The threshold is personal -- adjust it up or down to match your standards
+
+---
+
+## Help Page
+
+Click **Help** in the navigation bar to open the full Help page. It provides a comprehensive overview of features, keyboard shortcuts, and tips organized by topic. (Previously a dropdown menu, Help is now a dedicated page.)
+
+---
+
 ## Account Management
 
 ### Updating Preferences
@@ -269,7 +323,7 @@ Navigate to **Preferences** to change scoring weights, price range, and feature 
 Click **Forgot Password** on the login page to receive a reset email.
 
 ### Closing Your Account
-Navigate to **Settings → Close Account**. This permanently deletes your account, flags, notes, and watch data.
+Navigate to **Settings -> Close Account**. This permanently deletes your account, flags, notes, and watch data.
 
 ---
 

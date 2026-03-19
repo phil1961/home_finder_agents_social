@@ -1,4 +1,4 @@
-<!-- v20260315b -->
+<!-- v20260319a -->
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -62,6 +62,11 @@ python pipeline.py --site charleston --rescore # re-score only
 - **Masquerade:** Agents can impersonate own clients; master can impersonate anyone. Original user stored in `session['masquerade_original_id']`.
 - **Chained masquerade:** Master can masquerade as agent, then agent can masquerade as principal (master -> agent -> principal). `masquerade_original_id` is set only on the first hop and never overwritten, so "End Preview" always returns straight to the true original user regardless of chain depth.
 - **Never touch master accounts in migrations** — never write UPDATE/seed that sets a role on `role='master'` users. Only promote FROM `role='user'`.
+- **Settings page** (`/settings`) — unified page with three cards: Help Level (1–3 slider), Power Mode (off/low/high), and AI Analysis (off/on/tune). Accessible from the nav gear icon.
+- **`ai_mode`** stored in `preferences_json` as `"off"`, `"on"`, or `"tune"`. Guest default is `"off"`. When `"tune"`, the buyer profile form is shown for AI Tune.
+- **`buyer_profile`** dict stored in `preferences_json` — contains structured buyer preferences (timeline, priorities, dealbreakers, etc.) used by AI Tune to personalize deal analysis.
+- **`great_deal_threshold`** stored in `preferences_json` (default 80). Listings scoring at or above this threshold get a "Great Deal!" badge, golden glow effect on cards, and a celebratory confetti animation on the detail page.
+- **Guest defaults:** `help_level=2`, `power_mode="low"`, `ai_mode="off"`.
 
 ## Core Modules
 
@@ -111,11 +116,12 @@ Four tiers: **free**, **basic**, **pro**, **unlimited**. Each tier defines usage
 
 ## Testing
 
-84 integration tests across 7 test files. Run with `pytest` from the project root.
+217 integration tests across 9 test files (including `test_ai_tune.py` and `test_great_deal.py`). Run with `pytest` from the project root.
 
 ## Docs
 
 - `docs/master/AI_TUNE_SPEC.md` — AI Tune & Buyer Profile technical spec
+- `docs/GREAT_DEAL_SCORE.md` — Great Deal Score threshold and visual effects
 - `docs/agent/AGENT_GUIDE.md` — agent role guide
 - `docs/master/ARCHITECTURE.md` — system architecture overview
 - `docs/master/DEPLOYMENT_GUIDE.md` — deployment instructions
