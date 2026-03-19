@@ -212,24 +212,11 @@
                                     <span class="small text-muted d-block mb-1">Help Level</span>
                                     <div class="btn-group btn-group-sm w-100" id="helpLevelToggle">
                                         <button type="button" class="btn btn-outline-secondary {{ 'active' if help_level|default(2) == 3 }}"
-                                                data-level="3" title="Guided — tooltips + inline help">3</button>
+                                                data-level="3" title="Guided — tooltips + inline help">Guided</button>
                                         <button type="button" class="btn btn-outline-secondary {{ 'active' if help_level|default(2) == 2 }}"
-                                                data-level="2" title="Standard — tooltips on hover">2</button>
+                                                data-level="2" title="Standard — tooltips on hover">Standard</button>
                                         <button type="button" class="btn btn-outline-secondary {{ 'active' if help_level|default(2) == 1 }}"
-                                                data-level="1" title="Expert — no hints">1</button>
-                                    </div>
-                                </span>
-                            </li>
-                            <li>
-                                <span class="dropdown-item-text">
-                                    <span class="small text-muted d-block mb-1">Power Mode</span>
-                                    <div class="btn-group btn-group-sm w-100" id="powerModeToggle">
-                                        <button type="button" class="btn btn-outline-secondary {{ 'active' if power_mode|default('high') == 'high' }}"
-                                                data-mode="high" title="All features">High</button>
-                                        <button type="button" class="btn btn-outline-secondary {{ 'active' if power_mode|default('high') == 'mid' }}"
-                                                data-mode="mid" title="More controls">Mid</button>
-                                        <button type="button" class="btn btn-outline-secondary {{ 'active' if power_mode|default('high') == 'low' }}"
-                                                data-mode="low" title="Core features only">Low</button>
+                                                data-level="1" title="Expert — no hints">Expert</button>
                                     </div>
                                 </span>
                             </li>
@@ -720,36 +707,6 @@
     })();
     </script>
 
-    <script>
-    // ── Power Mode Toggle ──────────────────────────────────────────
-    (function() {
-        const toggle = document.getElementById('powerModeToggle');
-        if (!toggle) return;
-        toggle.querySelectorAll('button').forEach(function(btn) {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                const mode = this.dataset.mode;
-                toggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-
-                fetch('{{ site_url("dashboard.api_power_mode") }}', {
-                    method: 'POST',
-                    body: JSON.stringify({ mode: mode }),
-                    credentials: 'same-origin',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.ok) window.location.reload();
-                });
-            });
-        });
-    })();
-    </script>
 
     <script>
     // Parse emoji in navbar brand and any .twemoji-parse elements into crisp SVGs
