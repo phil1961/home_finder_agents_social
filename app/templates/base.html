@@ -19,6 +19,27 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.2/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .navbar .nav-link.nav-active {
+            position: relative;
+            opacity: 1 !important;
+        }
+        .navbar .nav-link.nav-active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 1.2em);
+            height: 2px;
+            border-radius: 1px;
+        }
+        /* Left nav: underline matches icon's pastel color */
+        .navbar-nav.me-auto .nav-link.nav-active i { filter: brightness(1.3); }
+        .navbar-nav.me-auto .nav-link.nav-active::after { background: var(--nav-color, #93c5fd); }
+        /* Right nav: consistent slate blue-grey underline */
+        .navbar-nav:not(.me-auto) .nav-link.nav-active::after { background: #94a3b8; }
+    </style>
     <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
     {% if current_user.is_authenticated and current_user.assigned_agent %}
     {% set ab = current_user.assigned_agent %}
@@ -71,44 +92,46 @@
             </button>
             <div class="collapse navbar-collapse" id="navMain">
                 <!-- Left nav — browsing links visible to everyone -->
+                {% set _ep = request.endpoint|default('') %}
+                {% set _flag = request.args.get('flag', '') %}
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('dashboard.index') }}"
-                           data-help="Your listing feed — filtered, scored, and sorted">
+                        <a class="nav-link {{ 'nav-active' if _ep == 'dashboard.index' and _flag != 'favorite' }}" href="{{ site_url('dashboard.index') }}"
+                           data-help="Your listing feed — filtered, scored, and sorted" style="--nav-color:#7dd3fc;">
                             <i class="bi bi-grid" style="color:#7dd3fc;"></i> Dashboard
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('dashboard.map_view') }}"
-                           data-help="See all listings on an interactive map">
+                        <a class="nav-link {{ 'nav-active' if _ep == 'dashboard.map_view' }}" href="{{ site_url('dashboard.map_view') }}"
+                           data-help="See all listings on an interactive map" style="--nav-color:#86efac;">
                             <i class="bi bi-geo-alt" style="color:#86efac;"></i> Map
                         </a>
                     </li>
                     {% if power_mode|default('high') != 'low' %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('dashboard.digest') }}"
-                           data-help="Tabular view of all listings with CSV export">
+                        <a class="nav-link {{ 'nav-active' if _ep == 'dashboard.digest' }}" href="{{ site_url('dashboard.digest') }}"
+                           data-help="Tabular view of all listings with CSV export" style="--nav-color:#fcd34d;">
                             <i class="bi bi-newspaper" style="color:#fcd34d;"></i> Digest
                         </a>
                     </li>
                     {% endif %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('dashboard.index', flag='favorite') }}"
-                           data-help="Jump to your favorited listings">
+                        <a class="nav-link {{ 'nav-active' if _ep == 'dashboard.index' and _flag == 'favorite' }}" href="{{ site_url('dashboard.index', flag='favorite') }}"
+                           data-help="Jump to your favorited listings" style="--nav-color:#fbbf24;">
                             <i class="bi bi-star" style="color:#fbbf24;"></i> Favorites
                         </a>
                     </li>
                     {% if power_mode|default('high') != 'low' %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('dashboard.watch_manage') }}"
-                           data-help="Get email alerts when new listings appear on streets you watch">
+                        <a class="nav-link {{ 'nav-active' if _ep == 'dashboard.watch_manage' }}" href="{{ site_url('dashboard.watch_manage') }}"
+                           data-help="Get email alerts when new listings appear on streets you watch" style="--nav-color:#c4b5fd;">
                             <i class="bi bi-eye" style="color:#c4b5fd;"></i> Watch
                         </a>
                     </li>
                     <!-- Social dropdown -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button"
-                           data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle {{ 'nav-active' if _ep and _ep.startswith('social.') }}" href="#" role="button"
+                           data-bs-toggle="dropdown" style="--nav-color:#f0abfc;">
                             <i class="bi bi-share" style="color:#f0abfc;"></i>
                             <span>Social
                             {% if current_user.is_authenticated and current_user.points_account and current_user.points_account.balance > 0 %}
@@ -152,21 +175,21 @@
                     {% endif %}
                     {% if current_user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('dashboard.itinerary') }}"
-                           data-help="Plan property visits from your flagged listings">
+                        <a class="nav-link {{ 'nav-active' if _ep == 'dashboard.itinerary' }}" href="{{ site_url('dashboard.itinerary') }}"
+                           data-help="Plan property visits from your flagged listings" style="--nav-color:#fdba74;">
                             <i class="bi bi-map" style="color:#fdba74;"></i> Tour
                         </a>
                     </li>
                     {% endif %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('dashboard.preferences') }}"
-                           data-help="Customize scoring weights and search criteria">
+                        <a class="nav-link {{ 'nav-active' if _ep == 'dashboard.preferences' }}" href="{{ site_url('dashboard.preferences') }}"
+                           data-help="Customize scoring weights and search criteria" style="--nav-color:#a5b4fc;">
                             <i class="bi bi-sliders" style="color:#a5b4fc;"></i> Preferences
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('dashboard.settings') }}"
-                           data-help="Help level, power mode, and display settings">
+                        <a class="nav-link {{ 'nav-active' if _ep == 'dashboard.settings' }}" href="{{ site_url('dashboard.settings') }}"
+                           data-help="Help level, power mode, and display settings" style="--nav-color:#93c5fd;">
                             <i class="bi bi-toggles" style="color:#93c5fd;"></i> Settings
                         </a>
                     </li>
@@ -186,8 +209,8 @@
                     </li>
                     {% endif %}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button"
-                           data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle {{ 'nav-active' if _ep == 'dashboard.help_page' }}" href="#" role="button"
+                           data-bs-toggle="dropdown" style="--nav-color:#d9f99d;">
                             <i class="bi bi-question-circle" style="color:#d9f99d;"></i> <span>Help</span>
                         </a>
                         <ul class="dropdown-menu">
@@ -229,32 +252,32 @@
                 <ul class="navbar-nav">
                     {% if current_user.is_owner %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('dashboard.admin_agents') }}">
+                        <a class="nav-link {{ 'nav-active' if _ep == 'dashboard.admin_agents' }}" href="{{ site_url('dashboard.admin_agents') }}">
                             <i class="bi bi-shield-check" style="color:#94a3b8;"></i> Admin
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('dashboard.admin_users') }}">
+                        <a class="nav-link {{ 'nav-active' if _ep == 'dashboard.admin_users' }}" href="{{ site_url('dashboard.admin_users') }}">
                             <i class="bi bi-people-fill" style="color:#94a3b8;"></i> Users
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('dashboard.admin_metrics') }}">
+                        <a class="nav-link {{ 'nav-active' if _ep == 'dashboard.admin_metrics' }}" href="{{ site_url('dashboard.admin_metrics') }}">
                             <i class="bi bi-bar-chart-line" style="color:#94a3b8;"></i> Metrics
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('dashboard.admin_billing') }}">
+                        <a class="nav-link {{ 'nav-active' if _ep == 'dashboard.admin_billing' }}" href="{{ site_url('dashboard.admin_billing') }}">
                             <i class="bi bi-credit-card" style="color:#94a3b8;"></i> Billing
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('dashboard.admin_prompts') }}">
+                        <a class="nav-link {{ 'nav-active' if _ep == 'dashboard.admin_prompts' }}" href="{{ site_url('dashboard.admin_prompts') }}">
                             <i class="bi bi-pencil-square" style="color:#94a3b8;"></i> Prompts
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link position-relative" href="{{ site_url('dashboard.admin_feedback') }}">
+                        <a class="nav-link position-relative {{ 'nav-active' if _ep == 'dashboard.admin_feedback' }}" href="{{ site_url('dashboard.admin_feedback') }}">
                             <i class="bi bi-chat-square-text" style="color:#94a3b8;"></i> Feedback
                             {% if feedback_unread_count is defined and feedback_unread_count > 0 %}
                             <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.55rem;">
@@ -271,26 +294,26 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('site_manager.sites_list') }}">
+                        <a class="nav-link {{ 'nav-active' if _ep == 'site_manager.sites_list' }}" href="{{ url_for('site_manager.sites_list') }}">
                             <i class="bi bi-gear" style="color:#94a3b8;"></i> Manage
                         </a>
                     </li>
                     {% endif %}
                     {% if current_user.is_agent %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('dashboard.agent_dashboard') }}">
+                        <a class="nav-link {{ 'nav-active' if _ep == 'dashboard.agent_dashboard' }}" href="{{ site_url('dashboard.agent_dashboard') }}">
                             <i class="bi bi-people" style="color:#94a3b8;"></i> My Clients
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('dashboard.agent_prompts') }}">
+                        <a class="nav-link {{ 'nav-active' if _ep == 'dashboard.agent_prompts' }}" href="{{ site_url('dashboard.agent_prompts') }}">
                             <i class="bi bi-pencil-square" style="color:#94a3b8;"></i> Prompts
                         </a>
                     </li>
                     {% endif %}
                     {% if current_user.is_admin %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ site_url('docs.index') }}">
+                        <a class="nav-link {{ 'nav-active' if _ep and _ep.startswith('docs.') }}" href="{{ site_url('docs.index') }}">
                             <i class="bi bi-folder2-open" style="color:#94a3b8;"></i> Docs
                         </a>
                     </li>
