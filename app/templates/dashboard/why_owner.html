@@ -1,10 +1,10 @@
 <!--
   File: app/templates/dashboard/why_owner.html
-  App Version: 2026.03.12 | File Version: 1.1.0
-  Last Modified: 2026-03-12
+  App Version: 2026.03.14 | File Version: 1.2.0
+  Last Modified: 2026-03-18
 -->
 {% extends "base.html" %}
-{% block title %}Why HomeFinder — Platform Overview{% endblock %}
+{% block title %}Launch a Market – HomeFinder{% endblock %}
 
 {% block head %}
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,700;0,900;1,400&family=Libre+Franklin:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -17,24 +17,22 @@
     --lt:     #f9fafb;
     --muted:  #6b7280;
     --rule:   #e5e7eb;
+    --gold:   #d97706;
 }
 body { background: var(--lt); font-family: 'Libre Franklin', sans-serif; color: var(--ink); }
 
 .hero {
-    background: var(--forest);
+    background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%);
     color: #fff; padding: 80px 0 64px;
     position: relative; overflow: hidden;
 }
 .hero::before {
     content:''; position:absolute; inset:0;
-    background: repeating-linear-gradient(
-        -45deg, rgba(255,255,255,0.02) 0, rgba(255,255,255,0.02) 1px,
-        transparent 1px, transparent 12px
-    );
+    background: radial-gradient(ellipse at 80% 50%, rgba(6,78,59,0.5) 0%, transparent 60%);
 }
 .hero-eyebrow {
     font-size:0.68rem; letter-spacing:3px; text-transform:uppercase;
-    color:var(--green); font-weight:600; margin-bottom:20px;
+    color:#6ee7b7; font-weight:600; margin-bottom:20px;
 }
 .hero h1 {
     font-family:'Fraunces', serif;
@@ -43,8 +41,8 @@ body { background: var(--lt); font-family: 'Libre Franklin', sans-serif; color: 
 }
 .hero h1 em { font-style:italic; color:#6ee7b7; }
 .hero .sub {
-    font-size:1.05rem; font-weight:300; color:rgba(255,255,255,0.78);
-    max-width:580px; line-height:1.75;
+    font-size:1.05rem; font-weight:300; color:rgba(255,255,255,0.82);
+    max-width:600px; line-height:1.75;
 }
 .hero-rule { width:40px; height:3px; background:var(--green); margin:28px 0; }
 
@@ -55,52 +53,66 @@ h2 { font-family:'Fraunces', serif; font-size:clamp(1.6rem,3vw,2.3rem);
      margin-bottom:16px; line-height:1.2; font-weight:700; }
 .body-text { color:var(--muted); line-height:1.75; font-size:1rem; }
 
-/* Architecture diagram */
-.arch-row { display:grid; grid-template-columns:1fr auto 1fr auto 1fr; gap:0; align-items:center; }
-@media (max-width:640px) { .arch-row { grid-template-columns:1fr; gap:12px; } .arch-arrow { display:none; } }
-.arch-box {
+.divider { border:none; border-top:1px solid var(--rule); margin:0; }
+
+/* Opportunity cards */
+.opp-card {
     background:#fff; border:1px solid var(--rule); border-radius:10px;
-    padding:20px 16px; text-align:center;
+    padding:28px 24px; position:relative; transition: box-shadow 0.2s;
 }
-.arch-box .ab-icon { font-size:2rem; margin-bottom:8px; }
-.arch-box .ab-label { font-weight:600; font-size:0.9rem; margin-bottom:4px; }
-.arch-box .ab-desc  { font-size:0.78rem; color:var(--muted); }
-.arch-arrow { text-align:center; font-size:1.5rem; color:var(--green); padding:0 8px; }
-
-/* Metrics preview */
-.metric-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:16px; }
-.metric-box {
-    background:#fff; border:1px solid var(--rule); border-radius:8px;
-    padding:20px 12px; text-align:center;
+.opp-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+.opp-card .opp-icon {
+    font-size:2rem; width:56px; height:56px; border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    margin-bottom:16px;
 }
-.metric-box .mn { font-family:'Fraunces',serif; font-size:2rem; font-weight:900;
-                  color:var(--green); line-height:1; }
-.metric-box .ml { font-size:0.72rem; color:var(--muted); text-transform:uppercase;
-                  letter-spacing:0.8px; margin-top:4px; }
+.opp-card h5 {
+    font-family:'Fraunces', serif; font-size:1.1rem; font-weight:700;
+    margin-bottom:8px;
+}
+.opp-card p { font-size:0.9rem; color:var(--muted); line-height:1.6; margin:0; }
 
-/* Responsibility list */
-.resp-list { list-style:none; padding:0; margin:0; }
-.resp-list li {
-    display:flex; gap:12px; padding:14px 0;
+/* How it works steps */
+.step-num {
+    font-family:'Fraunces', serif; font-size:2.5rem; font-weight:900;
+    color:var(--sage); line-height:1; margin-bottom:4px;
+}
+
+/* Revenue model boxes */
+.rev-box {
+    background:#fff; border:1px solid var(--rule); border-radius:10px;
+    padding:24px; text-align:center;
+}
+.rev-box .rev-label { font-size:0.7rem; letter-spacing:1.5px; text-transform:uppercase;
+                     color:var(--muted); font-weight:600; margin-bottom:8px; }
+.rev-box .rev-value { font-family:'Fraunces',serif; font-size:1.8rem; font-weight:900;
+                     color:var(--green); line-height:1; }
+.rev-box .rev-desc { font-size:0.82rem; color:var(--muted); margin-top:8px; }
+
+/* What you get list */
+.get-list { list-style:none; padding:0; margin:0; }
+.get-list li {
+    display:flex; gap:14px; padding:16px 0;
     border-bottom:1px solid var(--rule); align-items:flex-start;
 }
-.resp-list li:last-child { border-bottom:none; }
-.resp-icon { font-size:1.2rem; flex-shrink:0; margin-top:1px; }
-.resp-list strong { display:block; font-size:0.95rem; margin-bottom:2px; }
-.resp-list span   { font-size:0.85rem; color:var(--muted); }
+.get-list li:last-child { border-bottom:none; }
+.get-icon { flex-shrink:0; width:36px; height:36px; border-radius:8px;
+           display:flex; align-items:center; justify-content:center;
+           font-size:1rem; }
+.get-list strong { display:block; font-size:0.95rem; margin-bottom:3px; }
+.get-list span   { font-size:0.85rem; color:var(--muted); line-height:1.5; }
 
-/* Tech stack table */
-.stack-table { width:100%; font-size:0.85rem; border-collapse:separate; border-spacing:0; }
-.stack-table th { background:var(--forest); color:#fff; padding:10px 14px;
-                  font-weight:500; text-align:left; }
-.stack-table th:first-child { border-radius:8px 0 0 0; }
-.stack-table th:last-child  { border-radius:0 8px 0 0; }
-.stack-table td { padding:9px 14px; border-bottom:1px solid var(--rule);
-                  background:#fff; color:var(--muted); }
-.stack-table td:first-child { color:var(--ink); font-weight:500; }
-.stack-table code { background:var(--sage); color:var(--forest);
-                    padding:1px 5px; border-radius:3px; font-size:0.8rem; }
+/* Scenario */
+.scenario {
+    background: var(--ink); color: #fff; border-radius: 10px; padding: 40px;
+}
+.scenario h4 {
+    font-family: 'Fraunces', serif; font-size: 1.4rem;
+    color: #6ee7b7; margin-bottom: 20px;
+}
+.scenario p { color: rgba(255,255,255,0.8); line-height: 1.75; }
 
+/* CTA */
 .cta-band { background:var(--ink); color:#fff; padding:56px 0; text-align:center; }
 .cta-band h3 { font-family:'Fraunces',serif; font-size:2rem; font-weight:900; margin-bottom:12px; }
 .cta-band p  { color:rgba(255,255,255,0.65); font-size:1rem; margin-bottom:28px; }
@@ -109,6 +121,11 @@ h2 { font-family:'Fraunces', serif; font-size:clamp(1.6rem,3vw,2.3rem);
              border-radius:6px; text-decoration:none; display:inline-block;
              transition:opacity 0.2s; }
 .btn-green:hover { opacity:0.85; color:#fff; }
+.btn-outline-light-custom { background:transparent; color:#fff; border:2px solid rgba(255,255,255,0.3);
+             padding:12px 36px; font-size:1rem; font-weight:500;
+             border-radius:6px; text-decoration:none; display:inline-block;
+             transition:all 0.2s; }
+.btn-outline-light-custom:hover { border-color:#fff; color:#fff; background:rgba(255,255,255,0.08); }
 </style>
 {% endblock %}
 
@@ -116,195 +133,156 @@ h2 { font-family:'Fraunces', serif; font-size:clamp(1.6rem,3vw,2.3rem);
 <!-- ── Hero ────────────────────────────────────────── -->
 <div class="hero">
     <div class="container">
-        <div class="hero-eyebrow">HomeFinder &mdash; Platform Overview</div>
-        <h1>A real estate intelligence<br>platform built from <em>scratch</em><br>for the buyer's side.</h1>
+        <div class="hero-eyebrow">HomeFinder &mdash; Market Opportunities</div>
+        <h1>Bring HomeFinder<br>to <em>your city</em>.</h1>
         <div class="hero-rule"></div>
         <p class="sub">
-            HomeFinder is a multi-tenant listing aggregator, scoring engine, and AI analyst
-            that serves buyers, agents, and the platform owner from a single Flask application.
-            This document explains the business model, the technical architecture, and your
-            responsibilities as the platform owner.
+            Every real estate market needs a buyer's advocate. HomeFinder is a turnkey
+            platform that gives home buyers AI-powered scoring, deal analysis, and negotiation
+            advice — and gives you the tools to run it as a business in your market.
         </p>
     </div>
 </div>
 
-<!-- ── Business model ──────────────────────────────── -->
+<!-- ── The Opportunity ─────────────────────────────── -->
 <div class="section" style="background:#fff;">
     <div class="container">
-        <div class="eyebrow">Business Model</div>
-        <h2>Three tiers, one purpose.</h2>
-        <p class="body-text mb-5" style="max-width:620px;">
-            The platform operates on a three-tier model. You own the infrastructure.
-            Agents are approved operators who bring buyers to the platform.
-            Buyers are end users who get a buyer-only search tool unlike anything Zillow offers.
+        <div class="eyebrow">The Opportunity</div>
+        <h2>Why this market is wide open.</h2>
+        <p class="body-text mb-5" style="max-width:640px;">
+            Zillow and Realtor.com make money from listing agents. They'll never give buyers
+            honest deal analysis, negotiation strategies, or tell them when a house is overpriced.
+            That gap is your opportunity. HomeFinder fills it — and you run the show for your area.
         </p>
-        <div class="arch-row">
-            <div class="arch-box">
-                <div class="ab-icon">🏛</div>
-                <div class="ab-label">Owner (You)</div>
-                <div class="ab-desc">Run the platform.<br>Approve agents.<br>Control infrastructure.</div>
-            </div>
-            <div class="arch-arrow">→</div>
-            <div class="arch-box">
-                <div class="ab-icon">🤝</div>
-                <div class="ab-label">Agents</div>
-                <div class="ab-desc">Licensed operators.<br>Brand the platform.<br>Bring buyer clients.</div>
-            </div>
-            <div class="arch-arrow">→</div>
-            <div class="arch-box">
-                <div class="ab-icon">🏠</div>
-                <div class="ab-label">Buyers</div>
-                <div class="ab-desc">Search, score, flag,<br>analyze. Find the<br>right house faster.</div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ── Owner responsibilities ──────────────────────── -->
-<div class="section">
-    <div class="container">
-        <div class="eyebrow">Your Role</div>
-        <h2>What the platform owner does.</h2>
-        <ul class="resp-list mt-4">
-            <li>
-                <span class="resp-icon">🔐</span>
-                <div>
-                    <strong>Agent Approval &amp; Management</strong>
-                    <span>Review agent applications from the Admin page. Approve, suspend, or reject agents. Each agent must verify their email and receive your approval before logging in.</span>
-                </div>
-            </li>
-            <li>
-                <span class="resp-icon">📊</span>
-                <div>
-                    <strong>API Usage &amp; Cost Monitoring</strong>
-                    <span>The Metrics page tracks every API call by user: Zillow/Realtor fetches, Anthropic AI calls (deal, portfolio, preferences), and Google lookups. All-time and 30-day summaries with estimated costs. You control the API keys and bear the costs.</span>
-                </div>
-            </li>
-            <li>
-                <span class="resp-icon">⚙️</span>
-                <div>
-                    <strong>Infrastructure &amp; Deployment</strong>
-                    <span>The app runs on IIS + waitress at toughguycomputing.com/home_finder_agents. You manage the server, SSL, IIS app pool, and deployment. Database is SQLite — single file, zero server process.</span>
-                </div>
-            </li>
-            <li>
-                <span class="resp-icon">🔑</span>
-                <div>
-                    <strong>API Key Management</strong>
-                    <span>You hold the RapidAPI key (Zillow + Realtor.com), Anthropic API key, and optional Google Maps key. These live in <code>.env</code> and are never exposed to agents or users.</span>
-                </div>
-            </li>
-            <li>
-                <span class="resp-icon">🗓</span>
-                <div>
-                    <strong>Data Freshness</strong>
-                    <span>The background scheduler fetches listings every 6 hours. You can trigger manual fetches. Monitor the digest for gaps or stale data, especially when your family's search timelines are active.</span>
-                </div>
-            </li>
-            <li>
-                <span class="resp-icon">👨‍👩‍👧</span>
-                <div>
-                    <strong>Personal Search</strong>
-                    <span>You are also the primary buyer on this platform — searching for a 4BR/3BA single-story retirement home in West Ashley, James Island, or Johns Island, under $600K, above flood plain, near a community pool.</span>
-                </div>
-            </li>
-        </ul>
-    </div>
-</div>
-
-<!-- ── Metrics summary ─────────────────────────────── -->
-<div class="section" style="background:#fff;">
-    <div class="container">
-        <div class="eyebrow">Cost &amp; Usage</div>
-        <h2>Know exactly what<br>every user costs you.</h2>
-        <p class="body-text mb-4" style="max-width:580px;">
-            Every API call is logged with the user who triggered it.
-            The Metrics page breaks down costs per user, per call type,
-            all-time and last 30 days. Estimated costs per call:
-        </p>
-        <div class="metric-row">
-            {% for label, cost in [
-                ('Zillow fetch','$0.005'),
-                ('Realtor fetch','$0.005'),
-                ('AI Deal','$0.015'),
-                ('AI Portfolio','$0.025'),
-                ('AI Prefs','$0.012'),
-                ('Google Places','$0.017'),
-                ('Geocode','$0.005'),
-            ] %}
-            <div class="metric-box">
-                <div class="mn">{{ cost }}</div>
-                <div class="ml">{{ label }}</div>
-            </div>
-            {% endfor %}
-        </div>
-        <p class="body-text mt-3 small">
-            Update these in <code>ApiCallLog.COST_MAP</code> in <code>app/models.py</code> as pricing changes.
-        </p>
-    </div>
-</div>
-
-<!-- ── Tech stack ──────────────────────────────────── -->
-<div class="section">
-    <div class="container">
-        <div class="eyebrow">Architecture</div>
-        <h2>What's running under the hood.</h2>
-        <table class="stack-table mt-4">
-            <thead>
-                <tr><th>Layer</th><th>Technology</th><th>Notes</th></tr>
-            </thead>
-            <tbody>
-                {% for row in [
-                    ('Backend','Python 3.12 / Flask','App factory pattern, blueprints for auth and dashboard'),
-                    ('Database','SQLite via Flask-SQLAlchemy','Single file at instance/homefinder.db — auto-migrated on startup'),
-                    ('Auth','Flask-Login + Flask-Mail','Email verification, password reset, remember-me, role system'),
-                    ('WSGI Server','waitress','Replaces wfastcgi; runs on IIS via HttpPlatformHandler'),
-                    ('Web Server','IIS + HttpPlatformHandler','Proxies to waitress; app pool: HomeFinderAgents'),
-                    ('Data APIs','RapidAPI (Zillow + Realtor)','US Property Data + Realty in US subscriptions on RapidAPI'),
-                    ('AI','Anthropic Claude Sonnet','Deal, Portfolio, and Preferences analysis via /v1/messages'),
-                    ('Geocoding','Nominatim (fallback)','Used when listing coordinates are missing'),
-                    ('Scheduler','APScheduler','Background fetch every 6 hours'),
-                    ('Frontend','Bootstrap 5.3 + Leaflet.js','No build step, CDN-loaded, vanilla JS'),
-                ] %}
-                <tr>
-                    <td>{{ row[0] }}</td>
-                    <td><code>{{ row[1] }}</code></td>
-                    <td>{{ row[2] }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- ── Key files ───────────────────────────────────── -->
-<div class="section" style="background:#fff;">
-    <div class="container">
-        <div class="eyebrow">Key Files</div>
-        <h2>Files you'll touch most often.</h2>
-        <div class="row g-3 mt-2">
-            {% for path, desc in [
-                ('config.py','Search criteria constants, target areas, scoring defaults'),
-                ('.env','All API keys and secrets — never commit to source control'),
-                ('app/__init__.py','App factory, auto-migrations, owner auto-set on startup'),
-                ('app/models.py','All database models: User, Listing, DealScore, UserFlag, ListingNote, ApiCallLog'),
-                ('app/routes/dashboard.py','All dashboard routes — the largest file (~1000 lines)'),
-                ('app/scraper/scorer.py','17 scoring functions — tune these as your criteria evolve'),
-                ('app/services/deal_analyst.py','All three Claude AI analysis modes and their prompts'),
-                ('instance/homefinder.db','The SQLite database — back this up regularly'),
-                ('run_waitress.py','IIS production launcher — url_prefix must match IIS application path'),
-                ('web.config','IIS HttpPlatformHandler config — processPath points to run_waitress.py'),
+        <div class="row g-4">
+            {% for icon, bg, color, title, desc in [
+                ("bi-bullseye", "#dbeafe", "#2563eb", "Untapped Demand",
+                 "Every buyer wants honest deal analysis. No major platform provides it. You're the first in your market to offer AI-powered buyer advocacy."),
+                ("bi-people", "#dcfce7", "#16a34a", "Agent Partnerships",
+                 "Local agents sign up under your market. They bring clients, you provide the platform. Agents get branded experiences; you get distribution."),
+                ("bi-graph-up-arrow", "#fef3c7", "#d97706", "Recurring Value",
+                 "Listings refresh daily. Scores update with each fetch. Buyers come back every day during their search — weeks or months of engagement per user."),
+                ("bi-shield-check", "#f3e8ff", "#7c3aed", "Full Control",
+                 "You approve agents, set billing tiers, control AI prompts, manage zip codes, and configure the buyer experience for your specific market."),
             ] %}
             <div class="col-md-6">
-                <div class="d-flex gap-3 p-3 bg-light rounded">
-                    <i class="bi bi-file-code text-muted mt-1" style="flex-shrink:0;"></i>
-                    <div>
-                        <code style="font-size:0.82rem; color:var(--forest);">{{ path }}</code>
-                        <div style="font-size:0.82rem; color:var(--muted); margin-top:2px;">{{ desc }}</div>
+                <div class="opp-card h-100">
+                    <div class="opp-icon" style="background:{{ bg }}; color:{{ color }};">
+                        <i class="bi {{ icon }}"></i>
                     </div>
+                    <h5>{{ title }}</h5>
+                    <p>{{ desc }}</p>
                 </div>
             </div>
             {% endfor %}
+        </div>
+    </div>
+</div>
+
+<hr class="divider">
+
+<!-- ── How It Works ────────────────────────────────── -->
+<div class="section">
+    <div class="container">
+        <div class="eyebrow">How It Works</div>
+        <h2>From signup to live<br>in your market.</h2>
+        <div class="row g-4 mt-3">
+            {% for num, title, desc in [
+                ("01", "Choose Your Market",
+                 "Pick your city or metro area. Define the zip codes, map center, and target neighborhoods. Each market gets its own database — completely isolated."),
+                ("02", "Invite Agents",
+                 "Approved agents get their own branded experience — custom colors, logos, taglines. Their clients see the agent's branding throughout the platform."),
+                ("03", "Listings Flow In",
+                 "The pipeline fetches from Zillow and Realtor.com daily. Every listing is scored across 17 factors. Buyers see results immediately."),
+                ("04", "AI Handles Analysis",
+                 "Claude provides buyer-focused deal briefs, portfolio comparisons, and preference coaching. With Tune mode, analysis is personalized to each buyer's life stage and interests."),
+                ("05", "You Manage & Grow",
+                 "Monitor usage and costs from your dashboard. Approve agents, configure billing tiers, review user feedback, and adjust AI prompts for your market."),
+            ] %}
+            <div class="col-md-4 {% if loop.index > 3 %}offset-md-2{% endif %}">
+                <div class="step-num">{{ num }}</div>
+                <h5 style="font-family:'Fraunces',serif; font-weight:700;">{{ title }}</h5>
+                <p class="body-text" style="font-size:0.9rem;">{{ desc }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<hr class="divider">
+
+<!-- ── What You Get ────────────────────────────────── -->
+<div class="section" style="background:#fff;">
+    <div class="container">
+        <div class="eyebrow">What You Get</div>
+        <h2>Everything to run<br>a market. Nothing to build.</h2>
+        <div class="row">
+            <div class="col-lg-8">
+                <ul class="get-list mt-3">
+                    <li>
+                        <div class="get-icon" style="background:#dbeafe; color:#2563eb;"><i class="bi bi-speedometer2"></i></div>
+                        <div><strong>18-Factor Scoring Engine</strong>
+                        <span>Every listing scored on price, size, yard, flood risk, year built, HOA, days on market, walkability, and more. Buyers set their own weights.</span></div>
+                    </li>
+                    <li>
+                        <div class="get-icon" style="background:#dcfce7; color:#16a34a;"><i class="bi bi-robot"></i></div>
+                        <div><strong>Three AI Analysis Modes</strong>
+                        <span>Deal Analyst (per listing), Portfolio Analyst (compare favorites), Preferences Coach (scoring advice). Plus Tune mode for buyer-personalized analysis.</span></div>
+                    </li>
+                    <li>
+                        <div class="get-icon" style="background:#fef3c7; color:#d97706;"><i class="bi bi-people"></i></div>
+                        <div><strong>Agent Management</strong>
+                        <span>Approve agents, assign clients, branded experiences per agent. Agents manage their own clients and AI prompts.</span></div>
+                    </li>
+                    <li>
+                        <div class="get-icon" style="background:#f3e8ff; color:#7c3aed;"><i class="bi bi-credit-card"></i></div>
+                        <div><strong>Billing & Usage Controls</strong>
+                        <span>Four billing tiers (free/basic/pro/unlimited). Budget caps with email alerts at 80% and 100%. Per-call cost tracking for every API call.</span></div>
+                    </li>
+                    <li>
+                        <div class="get-icon" style="background:#fce7f3; color:#db2777;"><i class="bi bi-share"></i></div>
+                        <div><strong>Social & Referral System</strong>
+                        <span>Listing sharing, collections, reactions, referral tracking, points leaderboard, friend listings, and social digest emails.</span></div>
+                    </li>
+                    <li>
+                        <div class="get-icon" style="background:#ecfdf5; color:#047857;"><i class="bi bi-bar-chart-line"></i></div>
+                        <div><strong>Full Admin Dashboard</strong>
+                        <span>User management, API metrics, cost tracking, feedback inbox, site configuration, and global prompt editing.</span></div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr class="divider">
+
+<!-- ── Scenario ────────────────────────────────────── -->
+<div class="section">
+    <div class="container">
+        <div class="eyebrow">In Practice</div>
+        <h2 class="mb-4">What running a market looks like.</h2>
+        <div class="scenario">
+            <h4>Week one in Denver.</h4>
+            <p>
+                You set up the Denver market — define zip codes for the metro area,
+                set the map center, and name your target neighborhoods (Capitol Hill,
+                Wash Park, Highlands, Stapleton). The pipeline runs overnight and pulls
+                280 active listings from Zillow and Realtor.com. By morning, every listing
+                has a deal score.
+            </p>
+            <p class="mt-3">
+                You invite two local agents. They sign up, customize their branding, and
+                start sending their buyer clients to the platform. One agent's client
+                favorites eight listings and runs an AI portfolio analysis. The AI ranks them,
+                flags a 120-day listing with two price cuts as the best negotiation opportunity,
+                and suggests an opening offer $18K below ask.
+            </p>
+            <p class="mt-3">
+                From your admin dashboard you see the usage: 14 AI calls, 2 pipeline fetches,
+                total estimated cost: $0.47. You check the feedback inbox — one buyer says
+                "this is the best home search tool I've ever used." You approve a third agent.
+            </p>
         </div>
     </div>
 </div>
@@ -312,10 +290,10 @@ h2 { font-family:'Fraunces', serif; font-size:clamp(1.6rem,3vw,2.3rem);
 <!-- ── CTA ─────────────────────────────────────────── -->
 <div class="cta-band">
     <div class="container">
-        <h3>Your platform. Your search. Your rules.</h3>
-        <p>Start with the Admin page to manage agents, and Metrics to track costs.</p>
-        <a href="{{ site_url('dashboard.admin_agents') }}" class="btn-green me-3">Agent Admin</a>
-        <a href="{{ site_url('dashboard.admin_metrics') }}" class="btn-green">View Metrics</a>
+        <h3>Ready to launch your market?</h3>
+        <p>Every city needs a buyer's advocate. Be the first in yours.</p>
+        <a href="{{ site_url('auth.register') }}" class="btn-green me-3">Get Started</a>
+        <a href="{{ site_url('dashboard.help_page') }}" class="btn-outline-light-custom">Learn More</a>
     </div>
 </div>
 {% endblock %}

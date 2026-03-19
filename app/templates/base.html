@@ -208,42 +208,11 @@
                         </a>
                     </li>
                     {% endif %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {{ 'nav-active' if _ep == 'dashboard.help_page' }}" href="#" role="button"
-                           data-bs-toggle="dropdown" style="--nav-color:#d9f99d;">
-                            <i class="bi bi-question-circle" style="color:#d9f99d;"></i> <span>Help</span>
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'nav-active' if _ep == 'dashboard.help_page' }}" href="{{ site_url('dashboard.help_page') }}"
+                           data-help="Help guide, FAQs, and feature reference" style="--nav-color:#d9f99d;">
+                            <i class="bi bi-question-circle" style="color:#d9f99d;"></i> Help
                         </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ site_url('dashboard.help_page') }}">
-                                <i class="bi bi-book me-2"></i>Help &amp; Guide</a></li>
-                            {% if app_version %}
-                            <li><span class="dropdown-item-text text-muted" style="font-size:0.7rem; padding-top:0; padding-left:2.5rem;">
-                                v{{ app_version }}</span></li>
-                            {% endif %}
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ site_url('dashboard.why_user') }}">
-                                <i class="bi bi-person me-2"></i>Why HomeFinder? (Buyers)</a></li>
-                            <li><a class="dropdown-item" href="{{ site_url('dashboard.why_agent') }}">
-                                <i class="bi bi-briefcase me-2"></i>Why HomeFinder? (Agents)</a></li>
-                            {% if current_user.is_authenticated and current_user.is_owner %}
-                            <li><a class="dropdown-item" href="{{ site_url('dashboard.why_owner') }}">
-                                <i class="bi bi-shield-check me-2"></i>Owner Operations Guide</a></li>
-                            {% endif %}
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <span class="dropdown-item-text">
-                                    <span class="small text-muted d-block mb-1">Help Level</span>
-                                    <div class="btn-group btn-group-sm w-100" id="helpLevelToggle">
-                                        <button type="button" class="btn btn-outline-secondary {{ 'active' if help_level|default(2) == 3 }}"
-                                                data-level="3" title="Guided — tooltips + inline help">Guided</button>
-                                        <button type="button" class="btn btn-outline-secondary {{ 'active' if help_level|default(2) == 2 }}"
-                                                data-level="2" title="Standard — tooltips on hover">Standard</button>
-                                        <button type="button" class="btn btn-outline-secondary {{ 'active' if help_level|default(2) == 1 }}"
-                                                data-level="1" title="Expert — no hints">Expert</button>
-                                    </div>
-                                </span>
-                            </li>
-                        </ul>
                     </li>
                 </ul>
 
@@ -278,7 +247,7 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link position-relative {{ 'nav-active' if _ep == 'dashboard.admin_feedback' }}" href="{{ site_url('dashboard.admin_feedback') }}">
-                            <i class="bi bi-chat-square-text" style="color:#94a3b8;"></i> Feedback
+                            <i class="bi bi-inbox" style="color:#94a3b8;"></i> Inbox
                             {% if feedback_unread_count is defined and feedback_unread_count > 0 %}
                             <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.55rem;">
                                 {{ feedback_unread_count }}
@@ -694,42 +663,6 @@
 
     })();
     </script>
-
-    <script>
-    // ── Help Level Toggle ──────────────────────────────────────────
-    (function() {
-        const toggle = document.getElementById('helpLevelToggle');
-        if (!toggle) return;
-        toggle.querySelectorAll('button').forEach(function(btn) {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                const level = parseInt(this.dataset.level);
-                toggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-
-                fetch('{{ site_url("dashboard.api_help_level") }}', {
-                    method: 'POST',
-                    body: JSON.stringify({ level: level }),
-                    credentials: 'same-origin',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.ok) {
-                        window.HF_HELP_LEVEL = level;
-                        // Reload to apply new help level across all elements
-                        window.location.reload();
-                    }
-                });
-            });
-        });
-    })();
-    </script>
-
 
     <script>
     // Parse emoji in navbar brand and any .twemoji-parse elements into crisp SVGs

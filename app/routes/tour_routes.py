@@ -157,8 +157,6 @@ def why_agent():
 
 @dashboard_bp.route("/why/owner")
 def why_owner():
-    if not current_user.is_authenticated or not current_user.is_owner:
-        return _site_redirect("dashboard.why_user")
     return render_template("dashboard/why_owner.html", user=current_user)
 
 
