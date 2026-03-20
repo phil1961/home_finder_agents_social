@@ -85,10 +85,14 @@
                 <label class="form-label small fw-semibold">
                     <i class="bi bi-geo-alt me-1 text-danger"></i>Starting Address
                 </label>
-                <input type="text" class="form-control" id="start-address"
-                       placeholder="Your home address or hotel…"
-                       value="">
-                <div class="form-text">Leave blank to start from the first selected listing.</div>
+                <div class="position-relative">
+                    <input type="text" class="form-control" id="start-address"
+                           placeholder="Start typing an address…"
+                           value="" autocomplete="off"
+                           oninput="updateRoute(); startAddrTypeahead(this.value);">
+                    <div id="start-addr-results" class="list-group position-absolute w-100 shadow-sm" style="z-index:1050; max-height:220px; overflow-y:auto; display:none;"></div>
+                </div>
+                <div class="form-text">Leave blank to use your landmark or current location.</div>
             </div>
             <div class="col-md-3">
                 <label class="form-label small fw-semibold">
@@ -138,16 +142,17 @@
 
 {# ── Macro for a listing row ────────────────────────────────── #}
 {% macro render_listing_row(listing, note, flag_type) %}
+{% set _site_state = current_site.display_name.split(',')[-1].strip()[:2] if current_site and ',' in current_site.display_name else '' %}
 {% if note %} {% set vs = note.visit_status %} {% else %} {% set vs = none %} {% endif %}
 <div class="card listing-row border-0 shadow-sm mb-2"
      data-listing-id="{{ listing.id }}"
-     data-address="{{ listing.address }}, {{ listing.city }}, SC {{ listing.zip_code }}">
+     data-address="{{ listing.address }}, {{ listing.city }}, {{ _site_state }} {{ listing.zip_code }}">
     <div class="card-body py-2 px-3">
         <div class="d-flex align-items-start gap-3">
 
             <!-- Checkbox to include in route -->
             <input type="checkbox" class="form-check-input check-include mt-1"
-                   data-address="{{ listing.address }}, {{ listing.city }}, SC {{ listing.zip_code }}"
+                   data-address="{{ listing.address }}, {{ listing.city }}, {{ _site_state }} {{ listing.zip_code }}"
                    onchange="updateRoute()"
                    {% if vs and vs[0] in ['Visit Scheduled'] %}checked{% endif %}>
 
@@ -163,9 +168,9 @@
                     {% endif %}
                 </div>
                 <a class="addr-link"
-                   href="https://maps.apple.com/?q={{ (listing.address + ', ' + listing.city + ', SC')|urlencode }}"
+                   href="https://maps.apple.com/?q={{ (listing.address + ', ' + listing.city + ', ' + _site_state)|urlencode }}"
                    target="_blank">
-                    {{ listing.city }}, SC {{ listing.zip_code }}
+                    {{ listing.city }}, {{ _site_state }} {{ listing.zip_code }}
                     <i class="bi bi-box-arrow-up-right" style="font-size:0.7rem;"></i>
                 </a>
                 {% if note and note.note_text %}
@@ -197,13 +202,26 @@ function updateRoute() {
     const count = checked.length;
     document.getElementById('selected-count').textContent =
         count + ' house' + (count !== 1 ? 's' : '');
-    document.getElementById('gmaps-btn').disabled = count === 0;
+    const btn = document.getElementById('gmaps-btn');
+    btn.disabled = count === 0;
+    if (count === 1) {
+        const start = document.getElementById('start-address').value.trim();
+        if (start || LANDMARK_ADDRESS) {
+            btn.innerHTML = '<i class="bi bi-map-fill me-2"></i>Get Directions';
+        } else {
+            btn.innerHTML = '<i class="bi bi-map-fill me-2"></i>Show on Map';
+        }
+    } else {
+        btn.innerHTML = '<i class="bi bi-map-fill me-2"></i>Open Route in Google Maps';
+    }
 }
 
 function selectAll(state) {
     document.querySelectorAll('.check-include').forEach(cb => cb.checked = state);
     updateRoute();
 }
+
+const LANDMARK_ADDRESS = '{{ landmark_address|default("")|e }}';
 
 function openGoogleMaps() {
     const checked = Array.from(document.querySelectorAll('.check-include:checked'));
@@ -212,13 +230,18 @@ function openGoogleMaps() {
     const waypoints = checked.map(cb => encodeURIComponent(cb.dataset.address));
     const start = document.getElementById('start-address').value.trim();
 
-    // Google Maps directions URL:
-    // /maps/dir/origin/waypoint1/waypoint2/.../destination
-    // Using the last waypoint as destination, rest as waypoints
     let url;
     if (waypoints.length === 1) {
-        const origin = start ? encodeURIComponent(start) : waypoints[0];
-        url = `https://www.google.com/maps/dir/${origin}/${waypoints[0]}`;
+        if (start) {
+            // Starting address provided — use it as origin
+            url = `https://www.google.com/maps/dir/${encodeURIComponent(start)}/${waypoints[0]}`;
+        } else if (LANDMARK_ADDRESS) {
+            // No starting address but user has a landmark — use that
+            url = `https://www.google.com/maps/dir/${encodeURIComponent(LANDMARK_ADDRESS)}/${waypoints[0]}`;
+        } else {
+            // No origin available — open as a pin/search instead of directions
+            url = `https://www.google.com/maps/search/${waypoints[0]}`;
+        }
     } else {
         const origin = start ? encodeURIComponent(start) : waypoints[0];
         const dest   = waypoints[waypoints.length - 1];
@@ -231,5 +254,70 @@ function openGoogleMaps() {
 
 // Init count on load
 updateRoute();
+
+// ── Starting address typeahead via Nominatim ─────────────────
+(function() {
+    const _siteLat = {{ current_site.map_center_lat if current_site else 39.5 }};
+    const _siteLon = {{ current_site.map_center_lon if current_site else -98.35 }};
+    let _timer = null;
+    let _highlight = -1;
+
+    window.startAddrTypeahead = function(q) {
+        clearTimeout(_timer);
+        const results = document.getElementById('start-addr-results');
+        q = q.trim();
+        if (q.length < 3) { results.style.display = 'none'; return; }
+        _timer = setTimeout(() => {
+            const r = 1.0;
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=6&countrycodes=us&addressdetails=1&viewbox=${_siteLon-r},${_siteLat+r},${_siteLon+r},${_siteLat-r}&bounded=0`;
+            fetch(url, {headers:{'Accept':'application/json'}}).then(r=>r.json()).then(data => {
+                results.innerHTML = '';
+                if (!data.length) { results.style.display = 'none'; return; }
+                data.forEach(item => {
+                    const a = document.createElement('a');
+                    a.href = '#';
+                    a.className = 'list-group-item list-group-item-action py-2 px-3 small';
+                    a.textContent = item.display_name.split(',').slice(0, 4).join(', ');
+                    a.onclick = function(e) {
+                        e.preventDefault();
+                        document.getElementById('start-address').value = item.display_name.split(',').slice(0, 4).join(', ');
+                        results.style.display = 'none';
+                        updateRoute();
+                    };
+                    results.appendChild(a);
+                });
+                results.style.display = 'block';
+            }).catch(() => { results.style.display = 'none'; });
+        }, 350);
+    };
+
+    // Close dropdown on click outside
+    document.addEventListener('click', function(e) {
+        const results = document.getElementById('start-addr-results');
+        if (!e.target.closest('#start-address') && !e.target.closest('#start-addr-results')) {
+            results.style.display = 'none';
+        }
+    });
+
+    // Keyboard nav
+    document.getElementById('start-address').addEventListener('keydown', function(e) {
+        const results = document.getElementById('start-addr-results');
+        const items = results.querySelectorAll('.list-group-item-action');
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            _highlight = Math.min(_highlight + 1, items.length - 1);
+            items.forEach((el, i) => el.style.background = i === _highlight ? '#e8f0fe' : '');
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            _highlight = Math.max(_highlight - 1, 0);
+            items.forEach((el, i) => el.style.background = i === _highlight ? '#e8f0fe' : '');
+        } else if (e.key === 'Enter' && _highlight >= 0 && items[_highlight]) {
+            e.preventDefault();
+            items[_highlight].click();
+        } else if (e.key === 'Escape') {
+            results.style.display = 'none';
+        }
+    });
+})();
 </script>
 {% endblock %}

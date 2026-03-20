@@ -87,10 +87,20 @@ def itinerary():
     favorites.sort(key=sort_key)
     maybes.sort(key=sort_key)
 
+    # Pass user's POI landmark for single-listing fallback origin
+    prefs = current_user.get_prefs()
+    poi_name = prefs.get("proximity_poi_name", "")
+    poi_lat = prefs.get("proximity_poi_lat", 0)
+    poi_lng = prefs.get("proximity_poi_lng", 0)
+    landmark_address = ""
+    if poi_name and poi_lat and poi_lng:
+        landmark_address = f"{poi_name} ({poi_lat:.5f},{poi_lng:.5f})"
+
     return render_template(
         "dashboard/itinerary.html",
         favorites=favorites,
         maybes=maybes,
+        landmark_address=landmark_address,
         user=current_user,
     )
 
