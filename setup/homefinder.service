@@ -1,0 +1,24 @@
+# DEPLOYMENT LOCATION: /etc/systemd/system/homefinder.service
+# Gathered by gather_configs.sh on 2026-03-21 11:42:20
+
+[Unit]
+Description=HomeFinder Social Flask App
+After=network.target
+
+[Service]
+User=homefinder
+Group=homefinder
+WorkingDirectory=/home/homefinder/home_finder_agents_social
+Environment="PATH=/home/homefinder/home_finder_agents_social/venv/bin"
+ExecStart=/home/homefinder/home_finder_agents_social/venv/bin/gunicorn \
+    --workers 3 \
+    --bind unix:/home/homefinder/homefinder.sock \
+    --timeout 120 \
+    wsgi:app
+
+Restart=always
+StandardOutput=append:/home/homefinder/home_finder_agents_social/logs/gunicorn.log
+StandardError=append:/home/homefinder/home_finder_agents_social/logs/gunicorn-error.log
+
+[Install]
+WantedBy=multi-user.target
