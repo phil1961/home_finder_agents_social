@@ -113,10 +113,17 @@ def index():
     is_auth = current_user.is_authenticated
     area = request.args.get("area", "all")
     sort_by = request.args.get("sort", "score")
-    flag_filter = request.args.get("flag", "all")
     source_filter = request.args.get("source", "all")
     min_score = request.args.get("min_score", 0, type=int)
     max_distance = request.args.get("max_distance", 0, type=float)
+
+    # Check for share-link session hint: default to Favorites if user just viewed a share
+    from flask import session as _dash_sess
+    _default_flag = "all"
+    if "_default_flag" in _dash_sess:
+        _default_flag = _dash_sess.pop("_default_flag")
+        _dash_sess.modified = True
+    flag_filter = request.args.get("flag", _default_flag)
 
     # Compute user prefs early — needed for avoid_areas filter and scoring
     user_prefs = current_user.get_prefs() if is_auth else _guest_prefs()

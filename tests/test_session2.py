@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────
 # File: tests/test_session2.py
-# App Version: 2026.03.14 | File Version: 1.0.0
-# Last Modified: 2026-03-19
+# App Version: 2026.03.14 | File Version: 1.1.0
+# Last Modified: 2026-03-20
 # ─────────────────────────────────────────────
 """Integration and regression tests for session-2 features:
 feedback visibility, most-shared dismiss, go-to-site routing,

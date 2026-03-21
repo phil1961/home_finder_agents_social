@@ -1,6 +1,6 @@
 # HomeFinder — Technical Reference
 
-**Version:** 2026.03.20a
+**Version:** 2026.03.20b
 **Last Updated:** 2026-03-20
 
 ---
@@ -546,6 +546,25 @@ The flag toggle endpoint (`POST /listing/<id>/flag`) returns JSON for authentica
 ### Feedback Button
 
 The Feedback button requires authentication and `power_mode != 'low'`. It uses an `onclick` JavaScript handler to open the feedback modal rather than Bootstrap's `data-bs-toggle` attribute.
+
+### Social URL Fixes
+
+Social share, referral, and collection links must include the `/site/<key>/` prefix to work correctly in a multi-tenant context. Three changes enforce this:
+
+1. **`_share_url()` helper** (`app/routes/social.py`) — Builds absolute share/referral/collection URLs with the site prefix baked in. Used wherever a shareable link is generated (email templates, copy-link AJAX, share records). Replaces raw `url_for()` calls that omitted the site key.
+
+2. **Template `url_for` to `site_url` conversion** — All social templates (`share_landing`, `shared_with_me`, `collection_public`, `collection_detail`, `referral_landing`, `referral`) now use `site_url()` for internal navigation links, matching the convention used elsewhere in the app.
+
+3. **Share modal placement fix** — The share modal is rendered outside the listing card `<div>` to prevent an `onclick` conflict where clicking the share button also triggered the card's listing-detail navigation. The share button uses an explicit `onclick` handler (with `event.stopPropagation()`) instead of `data-bs-toggle="modal"`.
+
+Additional social fixes:
+- **Sharer name field** is always visible in the share modal, pre-filled with the logged-in username but editable. The `share_listing` route reads the form's `sharer_name` value instead of hardcoding `current_user.username`.
+- **Referral code persistence** — Referral codes are now created and persisted to the DB on first visit to the referral dashboard (previously only created when an invite was sent, making the code ephemeral).
+- **Email photo fallback** — The share notification email template falls back to `primary_photo` when `primary_photo_large` is unavailable.
+
+### Test Count Update
+
+~248 integration tests across 11 test files.
 
 ---
 

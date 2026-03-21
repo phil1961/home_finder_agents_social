@@ -1,4 +1,4 @@
-<!-- v20260320a -->
+<!-- v20260320b -->
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -71,6 +71,9 @@ python pipeline.py --site charleston --rescore # re-score only
 - **Feedback button:** Requires authentication and `power_mode != 'low'`. Uses an `onclick` handler to open the modal (not `data-bs-toggle`).
 - **Nav-active hover animation:** Active nav items use a CSS `scaleX` transition on `::after` pseudo-element for an underline grow effect.
 - **Tooltip placement:** Nav link tooltips use `placement="bottom"` to avoid blocking neighboring icons; other tooltips default to `"top"`.
+- **Share URLs:** All share/referral/collection links include `/site/<key>/` prefix via `_share_url()` helper in `social.py`. Social templates use `site_url()` not `url_for()` for cross-site correctness.
+- **Share modal placement:** The share modal must be rendered outside the listing card `<div>` to prevent `onclick` conflicts (modal battle fix). The share button uses an `onclick` handler instead of `data-bs-toggle="modal"`.
+- **Referral codes:** Persisted to DB on first dashboard visit so referral links work immediately (no need to send an invite first).
 - **Guest defaults:** `help_level=2`, `power_mode="low"`, `ai_mode="off"`.
 
 ## Core Modules
@@ -121,7 +124,7 @@ Four tiers: **free**, **basic**, **pro**, **unlimited**. Each tier defines usage
 
 ## Testing
 
-~240 integration tests across 11 test files (including `test_ai_tune.py`, `test_great_deal.py`, and `test_session2.py`). Run with `pytest` from the project root.
+~248 integration tests across 11 test files (including `test_ai_tune.py`, `test_great_deal.py`, and `test_session2.py`). Run with `pytest` from the project root.
 
 ## Docs
 

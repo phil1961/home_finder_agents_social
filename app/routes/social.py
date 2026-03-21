@@ -114,6 +114,28 @@ def view_share(token):
             share.recipient_user_id = current_user.id
             db.session.commit()
 
+    # Auto-favorite the shared listing so it appears in Favorites on the dashboard
+    if listing:
+        if current_user.is_authenticated:
+            from app.models import UserFlag
+            existing = UserFlag.query.filter_by(
+                user_id=current_user.id, listing_id=listing.id
+            ).first()
+            if not existing:
+                uf = UserFlag(user_id=current_user.id, listing_id=listing.id, flag="favorite")
+                db.session.add(uf)
+                db.session.commit()
+        else:
+            guest_flags = session.get("guest_flags", {})
+            lid_key = str(listing.id)
+            if lid_key not in guest_flags:
+                guest_flags[lid_key] = "favorite"
+                session["guest_flags"] = guest_flags
+                session.modified = True
+        # Set session hint so dashboard defaults to Favorites filter
+        session["_default_flag"] = "favorite"
+        session.modified = True
+
     return render_template(
         "social/share_landing.html",
         share=share,
