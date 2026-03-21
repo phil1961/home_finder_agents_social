@@ -1,6 +1,6 @@
 <!--
   File: app/templates/dashboard/index.html
-  App Version: 2026.03.14 | File Version: 1.11.0
+  App Version: 2026.03.14 | File Version: 1.12.0
   Last Modified: 2026-03-19
 -->
 {% extends "base.html" %}
@@ -381,7 +381,6 @@
     <div class="col-lg-6 mb-3">
         <div class="card listing-card h-100 border-0 shadow-sm {% if score >= great_deal_threshold %}great-deal{% endif %}"
              style="cursor:pointer;"
-             data-help="Click anywhere on this card to see full details" data-help-placement="top"
              onclick="if(!event.target.closest('a,button,form,.btn,.modal')){window.location='{{ site_url('dashboard.listing_detail', listing_id=listing.id) }}';}">
             <div class="d-flex">
                 <!-- Photo -->
@@ -495,8 +494,8 @@
 
                     <div class="d-flex gap-1">
                         <button class="btn btn-sm btn-outline-primary py-0 px-1"
-                                title="Share" style="font-size:0.8rem;"
-                                data-bs-toggle="modal" data-bs-target="#shareModal{{ listing.id }}">
+                                style="font-size:0.8rem;"
+                                onclick="event.stopPropagation(); bootstrap.Modal.getOrCreateInstance(document.getElementById('shareModal{{ listing.id }}')).show();">
                             <i class="bi bi-share"></i>
                             {% if share_counts and share_counts.get(listing.id, 0) > 0 %}
                             <span class="badge rounded-pill bg-primary" style="font-size:0.55rem;">{{ share_counts[listing.id] }}</span>
@@ -512,52 +511,53 @@
                 </div>
             </div>
             </div><!-- close d-flex photo+body -->
+        </div><!-- close card -->
 
-            <!-- Share Modal for this listing -->
-            <div class="modal fade" id="shareModal{{ listing.id }}" tabindex="-1">
-                <div class="modal-dialog modal-sm">
-                    <div class="modal-content">
-                        <div class="modal-header py-2">
-                            <h6 class="modal-title"><i class="bi bi-share me-1"></i>Share Listing</h6>
-                            <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
-                        </div>
-                        <form method="POST" action="{{ site_url('social.share_listing') }}">
-                            <div class="modal-body py-2">
-                                <input type="hidden" name="listing_id" value="{{ listing.id }}">
-                                {% if not current_user.is_authenticated %}
-                                <div class="mb-2">
-                                    <input type="text" name="sharer_name" class="form-control form-control-sm" placeholder="Your name" required>
-                                </div>
-                                <div class="mb-2">
-                                    <input type="email" name="sharer_email" class="form-control form-control-sm" placeholder="Your email" required>
-                                </div>
-                                {% endif %}
-                                <div class="mb-2">
-                                    <input type="email" name="recipient_email" class="form-control form-control-sm" placeholder="Recipient's email" required>
-                                </div>
-                                <div class="mb-2">
-                                    <input type="text" name="recipient_name" class="form-control form-control-sm" placeholder="Their name (optional)">
-                                </div>
-                                <div class="mb-2">
-                                    <select name="relationship" class="form-select form-select-sm">
-                                        <option value="friend">Friend</option>
-                                        <option value="family">Family</option>
-                                        <option value="coworker">Coworker</option>
-                                        <option value="neighbor">Neighbor</option>
-                                    </select>
-                                </div>
-                                <div class="mb-0">
-                                    <textarea name="message" class="form-control form-control-sm" rows="2" placeholder="Personal message (optional)"></textarea>
-                                </div>
-                            </div>
-                            <div class="modal-footer py-2">
-                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyShareLink({{ listing.id }})">
-                                    <i class="bi bi-link-45deg"></i> Link
-                                </button>
-                                <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-send me-1"></i>Share</button>
-                            </div>
-                        </form>
+        <!-- Share Modal (outside card to prevent onclick conflict) -->
+        <div class="modal fade" id="shareModal{{ listing.id }}" tabindex="-1">
+            <div class="modal-dialog modal-sm modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header py-2">
+                        <h6 class="modal-title"><i class="bi bi-share me-1"></i>Share Listing</h6>
+                        <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
                     </div>
+                    <form method="POST" action="{{ site_url('social.share_listing') }}">
+                        <div class="modal-body py-2">
+                            <input type="hidden" name="listing_id" value="{{ listing.id }}">
+                            <div class="mb-2">
+                                <input type="text" name="sharer_name" class="form-control form-control-sm" placeholder="Your name"
+                                       value="{{ current_user.username if current_user.is_authenticated else '' }}" required>
+                            </div>
+                            {% if not current_user.is_authenticated %}
+                            <div class="mb-2">
+                                <input type="email" name="sharer_email" class="form-control form-control-sm" placeholder="Your email" required>
+                            </div>
+                            {% endif %}
+                            <div class="mb-2">
+                                <input type="email" name="recipient_email" class="form-control form-control-sm" placeholder="Recipient's email" required>
+                            </div>
+                            <div class="mb-2">
+                                <input type="text" name="recipient_name" class="form-control form-control-sm" placeholder="Their name (optional)">
+                            </div>
+                            <div class="mb-2">
+                                <select name="relationship" class="form-select form-select-sm">
+                                    <option value="friend">Friend</option>
+                                    <option value="family">Family</option>
+                                    <option value="coworker">Coworker</option>
+                                    <option value="neighbor">Neighbor</option>
+                                </select>
+                            </div>
+                            <div class="mb-0">
+                                <textarea name="message" class="form-control form-control-sm" rows="2" placeholder="Personal message (optional)"></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer py-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyShareLink({{ listing.id }})">
+                                <i class="bi bi-link-45deg"></i> Link
+                            </button>
+                            <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-send me-1"></i>Share</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -597,7 +597,7 @@
     {% endif %}
 </div>
 {% endif %}
-<div class="small text-muted text-center mt-4" style="font-size:0.6rem; opacity:0.4;">index v1.11.0</div>
+<div class="small text-muted text-center mt-4" style="font-size:0.6rem; opacity:0.4;">index v1.12.0</div>
 {% endblock %}
 
 {% block scripts %}
@@ -692,7 +692,7 @@ function runPortfolioAnalysis() {
 
 <script>
 function copyShareLink(listingId) {
-    fetch("{{ url_for('social.copy_link', listing_id=0) }}".replace('/0', '/' + listingId))
+    fetch("{{ site_url('social.copy_link', listing_id=0) }}".replace('/0', '/' + listingId))
         .then(r => r.json())
         .then(data => {
             if (data.ok) {

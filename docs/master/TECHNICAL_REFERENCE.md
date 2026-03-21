@@ -1,7 +1,7 @@
 # HomeFinder — Technical Reference
 
-**Version:** 2026.03.19a
-**Last Updated:** 2026-03-19
+**Version:** 2026.03.20a
+**Last Updated:** 2026-03-20
 
 ---
 
@@ -535,6 +535,18 @@ Settings are persisted in `preferences_json` for authenticated users and in the 
 
 The "Nearest to Me" sort option has been removed from the dashboard sort dropdown.
 
+### Manage Dropdown & Cross-Site Login
+
+Master users see a **Manage** dropdown in the nav that consolidates the former separate "Sites" and "Manage" nav items. Clicking a site triggers the `go_to_site` route, which performs cross-site login by looking up the user's email in the target site's database and logging in as the matching account. This email-based user ID remapping is necessary because user IDs differ across per-site SQLite databases.
+
+### AJAX Flag Toggle
+
+The flag toggle endpoint (`POST /listing/<id>/flag`) returns JSON for authenticated users, allowing the dashboard to update flag icons without a page reload. Guest flag toggles continue to use session-based storage.
+
+### Feedback Button
+
+The Feedback button requires authentication and `power_mode != 'low'`. It uses an `onclick` JavaScript handler to open the feedback modal rather than Bootstrap's `data-bs-toggle` attribute.
+
 ---
 
 ## Dependencies
@@ -607,7 +619,9 @@ All "nothing here" empty states replaced with value-first messaging across 9 tem
 | `test_social_phase2.py` | Points system, referral loops, social models, agent listing workflow, user suspension, share counts/social proof, collections |
 | `test_ai_tune.py` | AI Tune settings, buyer profile persistence, ai_mode transitions |
 | `test_great_deal.py` | Great Deal threshold, badge rendering, visual effects |
+| `test_session.py` | Session handling, guest state management |
+| `test_session2.py` | Extended session tests, cross-site login, flag toggle AJAX |
 
 **Fixtures** (`conftest.py`): Creates a temporary registry + site DB per test, with helpers `make_user()`, `make_listing()`, `make_agent_profile()`.
 
-**Total: 217 tests**
+**Total: ~240 tests across 11 files**

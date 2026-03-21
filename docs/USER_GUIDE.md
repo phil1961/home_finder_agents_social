@@ -1,7 +1,7 @@
 # HomeFinder — User Guide
 
-**Version:** 2026.03.19a
-**Last Updated:** 2026-03-19
+**Version:** 2026.03.20a
+**Last Updated:** 2026-03-20
 
 ---
 
@@ -10,7 +10,7 @@
 ### Creating an Account
 
 1. Visit your market's welcome page (e.g., `https://www.toughguycomputing.com/home_finder_agents/welcome`)
-2. Select your market from the available options
+2. Select your market from the available options (master users can also switch markets via the **Manage** dropdown in the navigation bar)
 3. Click **Register** in the top navigation
 4. Enter your email, username, and password
 5. Check your email for a verification link — click it to activate your account
@@ -310,7 +310,7 @@ Set a **Great Deal Threshold** on the Preferences page (default: 80) to highligh
 
 ## Help Page
 
-Click **Help** in the navigation bar to open the full Help page. It provides a comprehensive overview of features, keyboard shortcuts, and tips organized by topic. (Previously a dropdown menu, Help is now a dedicated page.)
+Click **Help** in the navigation bar to open the full Help page. It provides a comprehensive overview of features, keyboard shortcuts, and tips organized by topic. (Previously a dropdown menu, Help is now a dedicated page.) Tooltips on nav icons appear **below** the icons so they do not overlap neighboring navigation items.
 
 ---
 
@@ -411,7 +411,7 @@ The listing detail page shows a grouped reaction summary with icons and counts.
 
 ### Most Shared This Week
 
-The dashboard features a **"Most Shared This Week"** section showing the top 5 most-shared listings in a horizontal scroll. These are the properties generating the most community buzz.
+The dashboard features a **"Most Shared This Week"** section showing the top 5 most-shared listings in a horizontal scroll. These are the properties generating the most community buzz. You can dismiss this section by clicking the **X** button; the dismissal is persisted via a browser cookie so it stays hidden on future visits.
 
 ---
 

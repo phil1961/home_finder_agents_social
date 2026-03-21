@@ -123,7 +123,7 @@
 
 <script>
 function copyCollectionLink() {
-    const url = "{{ url_for('social.collection_public', token=collection.share_token, _external=True) }}";
+    const url = "{{ request.host_url.rstrip('/') }}{{ site_url('social.collection_public', token=collection.share_token) }}";
     navigator.clipboard.writeText(url).then(() => {
         const btn = event.target.closest('button');
         const orig = btn.innerHTML;

@@ -207,7 +207,7 @@
         <div class="row g-2" id="reaction-buttons">
             {% for rtype, rlabel, ricon, rcolor in reaction_types %}
             <div class="col">
-                <form method="POST" action="{{ url_for('social.react_to_share', share_id=share.id) }}" class="d-inline w-100">
+                <form method="POST" action="{{ site_url('social.react_to_share', share_id=share.id) }}" class="d-inline w-100">
                     <input type="hidden" name="reaction_type" value="{{ rtype }}">
                     <input type="hidden" name="reactor_email" value="{{ share.recipient_email }}">
                     <button type="submit" class="reaction-btn w-100">
@@ -220,7 +220,7 @@
         </div>
 
         <!-- Optional comment -->
-        <form method="POST" action="{{ url_for('social.react_to_share', share_id=share.id) }}" class="mt-3">
+        <form method="POST" action="{{ site_url('social.react_to_share', share_id=share.id) }}" class="mt-3">
             <input type="hidden" name="reaction_type" value="interested">
             <input type="hidden" name="reactor_email" value="{{ share.recipient_email }}">
             <div class="input-group">
@@ -250,7 +250,7 @@
     <div class="card-body p-4 text-center">
         <h5 class="mb-2"><i class="bi bi-house-heart me-2"></i>Want to discover more great deals?</h5>
         <p class="text-muted">Create a free account to save favorites, get AI-powered deal analysis, and more.</p>
-        <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">
+        <a href="{{ site_url('auth.register') }}" class="btn btn-primary btn-lg">
             <i class="bi bi-person-plus me-2"></i>Create Free Account
         </a>
     </div>
@@ -265,7 +265,7 @@
                 <h5 class="modal-title"><i class="bi bi-share me-2"></i>Share This Listing</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{{ url_for('social.share_listing') }}">
+            <form method="POST" action="{{ site_url('social.share_listing') }}">
                 <div class="modal-body">
                     <input type="hidden" name="listing_id" value="{{ listing.id }}">
                     {% if not current_user.is_authenticated %}

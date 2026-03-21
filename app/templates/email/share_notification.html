@@ -25,8 +25,9 @@
 
         {% if listing %}
         <div style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin-bottom: 20px;">
-            {% if listing.primary_photo_large %}
-            <img src="{{ listing.primary_photo_large }}" alt="{{ listing.address }}"
+            {% set _photo = listing.primary_photo_large or listing.primary_photo %}
+            {% if _photo %}
+            <img src="{{ _photo }}" alt="{{ listing.address }}"
                  style="width: 100%; height: 200px; object-fit: cover;">
             {% endif %}
             <div style="padding: 16px;">

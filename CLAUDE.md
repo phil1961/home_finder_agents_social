@@ -1,4 +1,4 @@
-<!-- v20260319a -->
+<!-- v20260320a -->
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -66,6 +66,11 @@ python pipeline.py --site charleston --rescore # re-score only
 - **`ai_mode`** stored in `preferences_json` as `"off"`, `"on"`, or `"tune"`. Guest default is `"off"`. When `"tune"`, the buyer profile form is shown for AI Tune.
 - **`buyer_profile`** dict stored in `preferences_json` — contains structured buyer preferences (timeline, priorities, dealbreakers, etc.) used by AI Tune to personalize deal analysis.
 - **`great_deal_threshold`** stored in `preferences_json` (default 80). Listings scoring at or above this threshold get a "Great Deal!" badge, golden glow effect on cards, and a celebratory confetti animation on the detail page.
+- **Manage dropdown:** Master users see a "Manage" dropdown in the nav that lists all sites. Clicking a site triggers `go_to_site` which performs cross-site login via email-based user ID remapping (since user IDs differ across per-site DBs).
+- **AJAX flag toggle:** Dashboard flag buttons use AJAX (`POST /listing/<id>/flag`) for authenticated users — no page reload. Guest flags still use session storage.
+- **Feedback button:** Requires authentication and `power_mode != 'low'`. Uses an `onclick` handler to open the modal (not `data-bs-toggle`).
+- **Nav-active hover animation:** Active nav items use a CSS `scaleX` transition on `::after` pseudo-element for an underline grow effect.
+- **Tooltip placement:** Nav link tooltips use `placement="bottom"` to avoid blocking neighboring icons; other tooltips default to `"top"`.
 - **Guest defaults:** `help_level=2`, `power_mode="low"`, `ai_mode="off"`.
 
 ## Core Modules
@@ -116,7 +121,7 @@ Four tiers: **free**, **basic**, **pro**, **unlimited**. Each tier defines usage
 
 ## Testing
 
-217 integration tests across 9 test files (including `test_ai_tune.py` and `test_great_deal.py`). Run with `pytest` from the project root.
+~240 integration tests across 11 test files (including `test_ai_tune.py`, `test_great_deal.py`, and `test_session2.py`). Run with `pytest` from the project root.
 
 ## Docs
 

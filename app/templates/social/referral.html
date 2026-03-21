@@ -87,7 +87,7 @@
 
 <script>
 function copyReferralLink() {
-    const url = "{{ url_for('social.referral_landing', code=my_code, _external=True) }}";
+    const url = "{{ request.host_url.rstrip('/') }}{{ site_url('social.referral_landing', code=my_code) }}";
     navigator.clipboard.writeText(url).then(() => {
         const btn = event.target.closest('button');
         const orig = btn.innerHTML;

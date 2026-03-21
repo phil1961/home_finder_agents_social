@@ -28,6 +28,15 @@ log = logging.getLogger(__name__)
 social_bp = Blueprint("social", __name__, url_prefix="/social")
 
 
+def _share_url(token):
+    """Build a share URL with the correct /site/<key> prefix."""
+    site = getattr(g, "site", None)
+    if site:
+        script = request.script_root or ""
+        return f"{request.host_url.rstrip('/')}{script}/site/{site['site_key']}/social/s/{token}"
+    return url_for("social.view_share", token=token, _external=True)
+
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  SHARING
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -61,13 +70,14 @@ def share_listing():
         share_token=SocialShare.generate_token(),
     )
 
-    # Set sharer info
+    # Set sharer info — use the name from the form (user can customize it)
+    form_name = request.form.get("sharer_name", "").strip()
     if current_user.is_authenticated:
         share.sharer_id = current_user.id
-        share.sharer_name = current_user.username
+        share.sharer_name = form_name or current_user.username
         share.sharer_email = current_user.email
     else:
-        share.sharer_name = request.form.get("sharer_name", "Someone").strip()
+        share.sharer_name = form_name or "Someone"
         share.sharer_email = request.form.get("sharer_email", "").strip()
 
     db.session.add(share)
@@ -213,7 +223,7 @@ def copy_link(listing_id):
     db.session.add(share)
     db.session.commit()
 
-    share_url = url_for("social.view_share", token=share.share_token, _external=True)
+    share_url = _share_url(share.share_token)
     return jsonify({"ok": True, "url": share_url})
 
 
@@ -402,9 +412,21 @@ def referral_dashboard():
         referrer_id=current_user.id,
     ).order_by(Referral.created_at.desc()).all()
 
-    # Generate a referral code if user doesn't have one yet
+    # Generate and persist a referral code if user doesn't have one yet
     existing_code = Referral.query.filter_by(referrer_id=current_user.id).first()
-    my_code = existing_code.referral_code if existing_code else Referral.generate_code()
+    if existing_code:
+        my_code = existing_code.referral_code
+    else:
+        my_code = Referral.generate_code()
+        # Persist so the link works immediately (even before sending an invite)
+        placeholder = Referral(
+            referrer_id=current_user.id,
+            referred_email="pending",
+            referral_code=my_code,
+            status="invited",
+        )
+        db.session.add(placeholder)
+        db.session.commit()
 
     return render_template("social/referral.html", referrals=referrals, my_code=my_code)
 
@@ -683,7 +705,7 @@ def send_digest():
 def _send_share_email(share, listing):
     """Send the share notification email."""
     try:
-        share_url = url_for("social.view_share", token=share.share_token, _external=True)
+        share_url = _share_url(share.share_token)
         sharer = share.sharer_name or "Someone"
 
         msg = Message(
