@@ -237,7 +237,17 @@ def create_app(config_class=None):
                     return f"{script}/site/{site_key}{path}"
             return base
 
-        return {"current_site": site, "site_url": site_url}
+        # Inject all sites list for master nav dropdown
+        _all_sites = None
+        try:
+            from flask_login import current_user as _su
+            if _su.is_authenticated and _su.is_master:
+                from app.services.registry import get_all_sites as _gas
+                _all_sites = _gas()
+        except Exception:
+            pass
+
+        return {"current_site": site, "site_url": site_url, "all_sites": _all_sites}
 
     # Register blueprints
     from app.routes.auth import auth_bp

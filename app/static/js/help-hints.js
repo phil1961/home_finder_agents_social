@@ -1,7 +1,7 @@
 /* ─────────────────────────────────────────────
    File: app/static/js/help-hints.js
-   App Version: 2026.03.17 | File Version: 1.0.0
-   Last Modified: 2026-03-17
+   App Version: 2026.03.14 | File Version: 1.1.0
+   Last Modified: 2026-03-19
    ───────────────────────────────────────────── */
 
 /**
@@ -21,8 +21,13 @@
         // ── Level 2+: Activate Bootstrap tooltips on [data-help] ──
         if (level >= 2) {
             document.querySelectorAll('[data-help]').forEach(function (el) {
+                // Nav links: place tooltip below so it doesn't cover neighboring icons
+                var placement = el.dataset.helpPlacement || 'top';
+                if (el.classList.contains('nav-link')) {
+                    placement = 'bottom';
+                }
                 el.setAttribute('data-bs-toggle', 'tooltip');
-                el.setAttribute('data-bs-placement', el.dataset.helpPlacement || 'top');
+                el.setAttribute('data-bs-placement', placement);
                 el.setAttribute('title', el.dataset.help);
                 new bootstrap.Tooltip(el, {
                     trigger: 'hover focus',

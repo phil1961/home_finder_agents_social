@@ -48,18 +48,62 @@ def welcome():
 
 
 @dashboard_bp.route("/go/<site_key>")
-@login_required
 def go_to_site(site_key):
-    """Redirect master / admin to a specific site instance.
+    """Redirect master to a specific site instance.
 
-    Builds the correct /site/<key>/ URL respecting the app's
-    script_root so it works behind IIS / httpPlatformHandler.
-    Non-master users are sent to their own dashboard.
+    Looks up the master user in the target site's DB by email (since user
+    IDs differ across site databases) and rebinds the session to that user.
     """
-    from flask import request as _req
-    if not current_user.is_master:
-        return _site_redirect("dashboard.index")
+    from flask import request as _req, session as _sess
+
+    # Must have an active session
+    if "_user_id" not in _sess:
+        return redirect(_req.script_root or "/")
+
+    # Get the current user's email before switching
+    current_email = None
+    if current_user.is_authenticated:
+        current_email = current_user.email
+    else:
+        # Try to load from current site DB
+        try:
+            user = db.session.get(User, int(_sess["_user_id"]))
+            if user:
+                current_email = user.email
+        except Exception:
+            pass
+
+    if not current_email:
+        return redirect(_req.script_root or "/")
+
+    # Switch to the target site's DB and find the master user by email
+    from app.services.registry import get_site
+    from app import _get_site_engine
+    target_site = get_site(site_key)
+    if not target_site:
+        return redirect(_req.script_root or "/")
+
+    from sqlalchemy import text
+    target_engine = _get_site_engine(target_site["db_path"])
+    with target_engine.connect() as conn:
+        row = conn.execute(
+            text("SELECT id FROM users WHERE email = :email AND role = 'master' LIMIT 1"),
+            {"email": current_email},
+        ).fetchone()
+
+    if not row:
+        # Master doesn't exist in target site — fall back to dashboard
+        return redirect(f"{_req.script_root or ''}/site/{site_key}/")
+
+    # Rebind session to the target site's master user ID
+    _sess["_user_id"] = str(row[0])
+    _sess["_site_key"] = site_key
+    _sess.modified = True
+
     script = _req.script_root or ""
+    if _req.args.get("next") == "manage":
+        from flask import url_for
+        return redirect(url_for("site_manager.sites_list"))
     return redirect(f"{script}/site/{site_key}/")
 
 

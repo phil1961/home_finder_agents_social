@@ -503,11 +503,10 @@
                             {% endif %}
                         </button>
                         {% for f, icon, tip in [('favorite','⭐','Favorite'), ('maybe','🤔','Maybe'), ('hidden','🙈','Hide')] %}
-                        <form method="POST" action="{{ site_url('dashboard.toggle_flag', listing_id=listing.id) }}" class="d-inline">
-                            <input type="hidden" name="flag" value="{{ f }}">
-                            <button class="btn btn-sm {% if user_flags.get(listing.id) == f %}btn-primary{% else %}btn-outline-secondary{% endif %} py-0 px-1"
-                                    title="{{ tip }}" style="font-size:0.8rem;">{{ icon }}</button>
-                        </form>
+                        <button class="btn btn-sm {% if user_flags.get(listing.id) == f %}btn-primary{% else %}btn-outline-secondary{% endif %} py-0 px-1 flag-btn"
+                                title="{{ tip }}" style="font-size:0.8rem;"
+                                data-listing-id="{{ listing.id }}" data-flag="{{ f }}"
+                                onclick="toggleFlag(this, event)">{{ icon }}</button>
                         {% endfor %}
                     </div>
                 </div>
@@ -786,5 +785,44 @@ function copyShareLink(listingId) {
         });
     }, 2000);  // 2 second delay so the page renders first
 })();
+// ── AJAX flag toggle (no page reload) ──────────────────────
+function toggleFlag(btn, e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const listingId = btn.dataset.listingId;
+    const flag = btn.dataset.flag;
+
+    {% if current_user.is_authenticated %}
+    fetch('{{ site_url("dashboard.api_toggle_flag") }}', {
+        method: 'POST',
+        body: JSON.stringify({ listing_id: parseInt(listingId), flag: flag }),
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    })
+    .then(r => r.json())
+    .then(data => {
+        // Update button states in this card
+        const card = btn.closest('.listing-card');
+        card.querySelectorAll('.flag-btn').forEach(b => {
+            b.classList.remove('btn-primary');
+            b.classList.add('btn-outline-secondary');
+        });
+        if (data.status === 'set') {
+            btn.classList.remove('btn-outline-secondary');
+            btn.classList.add('btn-primary');
+        }
+    });
+    {% else %}
+    // Guest: full form submit fallback
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ site_url("dashboard.toggle_flag", listing_id=0) }}'.replace('/0/', '/' + listingId + '/');
+    const input = document.createElement('input');
+    input.type = 'hidden'; input.name = 'flag'; input.value = flag;
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+    {% endif %}
+}
 </script>
 {% endblock %}
